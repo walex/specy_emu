@@ -36,29 +36,25 @@ void display_draw() {
 	
 	unsigned char* mem_atrib_video = system_memory_ptr + 0x5800;
 	unsigned char* mem_video = system_memory_ptr + 0x4000;
-	unsigned char mask = 0x80;
-	unsigned char byte;
+	unsigned char mask;
+	unsigned char byte, attrib;
 	unsigned long ink, paper, flash, bright;
-	int i, xPos;
-
-	for (int yPos = 0; yPos < kDisplayBufferResolutionY; yPos++) {
+	int r, i, xPos, jPos, yPos, color_mode;
+	auto frame_count = specy_rom_get_system_var_value(SPECY_48K_SYS_VAR_FRAMES);
+	for (yPos = 0; yPos < kDisplayBufferResolutionY; yPos++) {
 		xPos = 0;
-		for (int jPos = 0;jPos < 32;jPos++)
-		{
+		for (jPos = 0;jPos < 32;jPos++)
+		{			
 			mask = 0x80;
 			byte = *(mem_video + (static_cast<size_t>(kScanConvert[yPos]) << 5) + jPos);
-			i = (jPos / 8) * yPos;
-			//i = (((kScanConvert[yPos]) / 8 ) + 1) * jPos;
-			//printf("%d\n", i);
-			unsigned char attrib = (unsigned char)*(mem_atrib_video + i);
-			auto frame_count = specy_rom_get_system_var_value(SPECY_48K_SYS_VAR_FRAMES);
+			i = ((yPos >> 3) * 32) + (xPos >> 3);
+			attrib = (unsigned char)*(mem_atrib_video + i);
 			flash = attrib & 0x80;
 			bright = attrib & 0x40;
-			int color_mode = bright ? BRIGHT_MODE : OPAQUE_MODE;
+			color_mode = bright ? BRIGHT_MODE : OPAQUE_MODE;
 			ink = KVideoColorPalleteHILO[((attrib) & 0x7)][color_mode];
 			paper = KVideoColorPalleteHILO[(((attrib) & 0x38) >> 3)][color_mode];
-			bool flash_phase = (frame_count & FLASH_FASE_FRAMES) != 0;
-			if (flash && flash_phase) {
+			if (flash && ((frame_count & FLASH_FASE_FRAMES) != 0)) {
 				std::swap(ink, paper);
 			}
 			/* 
@@ -66,16 +62,16 @@ void display_draw() {
 			bit 6  = BRIGHT
 			bit 5–3 = PAPER (0–7)
 			bit 2–0 = INK   (0–7)
-			*/ 
-
-			for (int r = 0;r < 8;r++)
-			{
+			*/
+			for (r = 0;r < 8;r++)
+			{	
 				display_buffer[(yPos * kDisplayBufferResolutionX) + xPos + r] = byte & mask ? ink : paper;
 				mask >>= 1;
 			}
 			xPos += 8;
 		}
 	}
+
 }
 
 void display_thread_proc() {
