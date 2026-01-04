@@ -12,6 +12,7 @@ void ula_assert_INT_line();
 extern "C" {
 #endif
 	void __stdcall ula_read_port(unsigned short int addr, unsigned char* value);
+	void __stdcall ula_write_port(unsigned short int addr, unsigned char value);
 #ifdef __cplusplus
 }
 #endif

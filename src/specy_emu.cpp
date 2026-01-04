@@ -3,9 +3,10 @@
 // https://wiki.speccy.org/cursos/ensamblador/interrupciones
 // http://www.breakintoprogram.co.uk/hardware/computers/zx-spectrum/memory-map
 // https://worldofspectrum.org/faq/reference/48kreference.htm
-
+// http://www.zxdesign.info/memoryToScreen.shtml
 #include "z80.h"
 #include "ula.h"
+#include "specy_rom.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
@@ -86,6 +87,7 @@ int main(int argc, char* argv[]) {
 
 	printf("ROM %p\n", (void*)system_memory);
 
+	specy_rom_set_pointer(system_memory);
 	ula_init(system_memory);
 	Z80CPU(system_memory, 0);
 	destroy_system_memory(system_memory);

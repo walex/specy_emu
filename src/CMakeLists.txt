@@ -48,8 +48,8 @@ add_subdirectory(./render)
 add_library(z80_emu STATIC ${Z80_SOURCES} ${Z80_HEADERS})
 target_compile_options(z80_emu PRIVATE /I${Z80_CPU_INCLUDE_DIRS} /I${Z80_TOOLS_INCLUDE_DIRS})
 
-add_executable(specy_emu specy_emu.cpp ${ULA_SOURCES} ${ULA_HEADERS} ${RENDER_SOURCES} ${RENDER_HEADERS})
-target_include_directories(specy_emu PRIVATE ${Z80_INCLUDE_DIRS} ${ULA_INCLUDE_DIRS} ${RENDER_INCLUDE_DIRS})
+add_executable(specy_emu specy_emu.cpp specy_rom.c specy_rom.h ${ULA_SOURCES} ${ULA_HEADERS} ${RENDER_SOURCES} ${RENDER_HEADERS})
+target_include_directories(specy_emu PRIVATE ${CMAKE_CURRENT_SOURCE_DIR} ${Z80_INCLUDE_DIRS} ${ULA_INCLUDE_DIRS} ${RENDER_INCLUDE_DIRS})
 target_link_libraries(specy_emu PRIVATE z80_emu SDL3::SDL3)
 add_custom_command(TARGET specy_emu POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy_if_different

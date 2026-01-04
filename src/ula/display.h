@@ -5,5 +5,8 @@
 
 void display_init(unsigned char* system_memory);
 void display_end();
+void display_set_border_color(unsigned char border_color);
+
+const int FLASH_FASE_FRAMES = 32;
 
 #endif

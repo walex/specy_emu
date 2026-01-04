@@ -28,6 +28,15 @@ void ula_read_port(unsigned short int addr, unsigned char* value) {
 	}
 }
 
+void ula_write_port(unsigned short int addr, unsigned char value) {
+
+   // border = value & 0x7;
+   // mic = value & 0x8;
+   // ear = value & 0x10;
+
+	display_set_border_color(value & 0x7);
+}
+
 void ula_assert_INT_line() {
 
 	trigger_MI();

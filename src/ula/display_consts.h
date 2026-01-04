@@ -50,6 +50,6 @@ static const int kWindowWidth = 1024;
 static const int kWindowHeight = 768;
 static const int BRIGHT_MODE = 0;
 static const int OPAQUE_MODE = 1;
-static int color_mode = BRIGHT_MODE;
+
 
 #endif

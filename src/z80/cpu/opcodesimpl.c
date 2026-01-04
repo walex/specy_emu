@@ -1,4 +1,5 @@
 extern void ula_read_port(unsigned short int addr, unsigned char* value);
+extern void ula_write_port(unsigned short int addr, unsigned char value);
 
 extern void __stdcall Inst_IN_Impl(unsigned short int addr, unsigned char* value) {
 	
@@ -8,18 +9,14 @@ extern void __stdcall Inst_IN_Impl(unsigned short int addr, unsigned char* value
 extern void __stdcall Inst_OUT_Impl(unsigned short int addr, unsigned char value) {
 
 
-//#ifndef TEST_CPU
-//	addr = addr & 0x00FF;
-//	switch (addr) {
-//	case 0xFE:
-//		ula_write(value);
-//		break;
-//	default:
-//		break;
-//	}
-//#else
-//
-//#endif
+	addr = addr & 0x00FF;
+	switch (addr) {
+	case 0xFE:
+		ula_write_port(addr, value);
+		break;
+	default:
+		break;
+	}
 
 }
 
