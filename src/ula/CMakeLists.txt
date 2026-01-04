@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.10)
+
+file(GLOB ULA_SOURCES "*.asm" "*.cpp" "*.c")
+file(GLOB ULA_HEADERS "*.inc" "*.h" "*.hpp")
+
+set(ULA_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
+set(ULA_SOURCES ${ULA_SOURCES} PARENT_SCOPE)
+set(ULA_HEADERS ${ULA_HEADERS} PARENT_SCOPE)

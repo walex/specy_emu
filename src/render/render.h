@@ -1,0 +1,11 @@
+#ifndef _RENDER_H_
+#define _RENDER_H_
+#include <stdint.h>
+
+void render_init(unsigned long* display_buffer, size_t buffer_size_x, 
+	size_t buffer_size_y, size_t display_size_x, size_t display_size_y,
+	size_t window_size_x, size_t window_size_y);
+void render_end();
+void render_draw();
+void render_set_border_color(uint32_t color);
+#endif

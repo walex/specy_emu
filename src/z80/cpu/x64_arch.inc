@@ -1,0 +1,10 @@
+reg_pc TEXTEQU <r10>
+reg_si TEXTEQU <rsi>
+reg_di TEXTEQU <rdi>
+x_ax   TEXTEQU <rax>
+x_bx   TEXTEQU <rbx>
+x_cx   TEXTEQU <rcx>
+x_dx   TEXTEQU <rdx>
+x_bp   TEXTEQU <rbp>
+PTR_DATA_TYPE TEXTEQU <dq>	
+PTR_SIZE TEXTEQU <8> 
