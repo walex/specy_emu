@@ -8,15 +8,16 @@
 
 static std::thread display_thread;
 static std::atomic<int> display_running{ 0 };
-static unsigned char* system_memory_ptr = nullptr;
-static unsigned long display_buffer[kDisplayBufferResolutionX * kDisplayBufferResolutionY];
+static uint8_t* system_memory_ptr = nullptr;
+static uint32_t display_buffer[kDisplayBufferResolutionX * kDisplayBufferResolutionY];
 
 void display_thread_proc();
 
-void display_init(unsigned char* system_memory) {
+void display_init(uint8_t* system_memory) {
 
 	if (display_running.load() != 0)
 		return;
+
 	system_memory_ptr = system_memory;
 	display_thread = std::thread(display_thread_proc);
 	while (display_running.load() == 0)
@@ -32,13 +33,13 @@ void display_end() {
 		display_thread.join();
 }
 
-void display_draw() {
+void display_draw_paper() {
 	
-	unsigned char* mem_atrib_video = system_memory_ptr + 0x5800;
-	unsigned char* mem_video = system_memory_ptr + 0x4000;
-	unsigned char mask;
-	unsigned char byte, attrib;
-	unsigned long ink, paper, flash, bright;
+	uint8_t* mem_atrib_video = system_memory_ptr + 0x5800;
+	uint8_t* mem_video = system_memory_ptr + 0x4000;
+	uint8_t mask;
+	uint8_t byte, attrib;
+	uint32_t ink, paper, flash, bright;
 	int r, i, xPos, jPos, yPos, color_mode;
 	auto frame_count = specy_rom_get_system_var_value(SPECY_48K_SYS_VAR_FRAMES);
 	for (yPos = 0; yPos < kDisplayBufferResolutionY; yPos++) {
@@ -48,7 +49,7 @@ void display_draw() {
 			mask = 0x80;
 			byte = *(mem_video + (static_cast<size_t>(kScanConvert[yPos]) << 5) + jPos);
 			i = ((yPos >> 3) * 32) + (xPos >> 3);
-			attrib = (unsigned char)*(mem_atrib_video + i);
+			attrib = (uint8_t)*(mem_atrib_video + i);
 			flash = attrib & 0x80;
 			bright = attrib & 0x40;
 			color_mode = bright ? BRIGHT_MODE : OPAQUE_MODE;
@@ -74,31 +75,40 @@ void display_draw() {
 
 }
 
+void display_draw_border() {
+}
+
+void display_draw() {
+
+	display_draw_border();
+	display_draw_paper();
+}
+
+void display_clock_sync() {
+	
+	ula_assert_INT_line();
+	display_draw();
+	render_draw();
+}
+
 void display_thread_proc() {
 
+	clock_master_handle cmh = clk_master_create("display_sync_clock", 50.0); // 50 Hz
 	render_init(display_buffer, kDisplayBufferResolutionX, kDisplayBufferResolutionY, 
 				kDisplayResolutionX, kDisplayResolutionY,
 				kWindowWidth, kWindowHeight);
 	display_running++;
-	auto next = std::chrono::steady_clock::now();
 	while (true) {
 
 		if (display_running.load() == 0)
 			break;
 
-		next += std::chrono::milliseconds(20);
-
-		clk_master_stop();
-		display_draw();
-		render_draw();
-		clk_master_start();
-		ula_assert_INT_line();
-
-		std::this_thread::sleep_until(next);
+		clk_master_tick(cmh, display_clock_sync);
 	}
 	render_end();
+	clk_master_destroy(cmh);
 }
 
-void display_set_border_color(unsigned char border_color) {
+void display_set_border_color(uint8_t border_color) {
 	render_set_border_color(KVideoColorPalleteHILO[border_color & 0x7][OPAQUE_MODE]);
 }

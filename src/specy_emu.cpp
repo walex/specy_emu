@@ -1,12 +1,22 @@
 // http://www.breakintoprogram.co.uk/hardware/computers/zx-spectrum/hardware/ula
 // https://sinclair.wiki.zxnet.co.uk/wiki/ZX_Spectrum_ULA
 // https://wiki.speccy.org/cursos/ensamblador/interrupciones
+// http://www.z80.info/zip/z80-interrupts_rewritten.pdf
+// http://www.z80.info/interrup.htm
 // http://www.breakintoprogram.co.uk/hardware/computers/zx-spectrum/memory-map
 // https://worldofspectrum.org/faq/reference/48kreference.htm
 // http://www.zxdesign.info/memoryToScreen.shtml
+// https://zx.remysharp.com/tools
+// https://skoolkid.github.io/rom/buffers/sysvars.html
+// https://www.retroleum.co.uk/plusparts
+// https://worldofspectrum.net/zx-modules/fileformats/tapformat.html#any_datablock
+// https://softspectrum48.weebly.com/notes/category/tape-loading
+// https://softspectrum48.weebly.com/notes/flash-loader-part-3-basic-programs-revisited
+
 #include "z80.h"
 #include "ula.h"
 #include "specy_rom.h"
+#include "tap_loader.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
@@ -14,7 +24,7 @@
 
 const char* SPECY_48K_ROM_FILE = "spec_48.rom";
 const char* SPECY_128K_ROM_FILE = "spec_128.rom";
-const char* TK95_48K_ROM_FILE = "tk95.rom";
+const char* TK95_48K_ROM_FILE = "TK95.Spanish.rom";
 const char* Z80_ZEXALL_TAP_PATH = "zexall.tap";
 const char* Z80_ZEXALL_BIN_PATH = "zexall.bin";
 const char* Z80_ZEXDOC_BIN_PATH = "zexdoc.bin";
@@ -42,7 +52,7 @@ std::filesystem::path get_executable_directory() {
 
 #endif
 
-unsigned char* create_system_memory(const char* rom_path, size_t mem_size) {
+uint8_t* create_system_memory(const char* rom_path, size_t mem_size) {
 
 	FILE* rom = nullptr;
 	fopen_s(&rom, rom_path, "rb");
@@ -55,7 +65,7 @@ unsigned char* create_system_memory(const char* rom_path, size_t mem_size) {
 	size_t rom_size = ftell(rom);
 	fseek(rom, 0, SEEK_SET);
 
-	unsigned char* mem = (unsigned char*)malloc(mem_size);
+	uint8_t* mem = (uint8_t*)malloc(mem_size);
 	if (mem == nullptr) {
 
 		perror("RAM memory error");
@@ -69,23 +79,25 @@ unsigned char* create_system_memory(const char* rom_path, size_t mem_size) {
 	return mem;
 }
 
-void destroy_system_memory(unsigned char* system_memory) {
+void destroy_system_memory(uint8_t* system_memory) {
 
 	free(system_memory);
 }
 
 int main(int argc, char* argv[]) {
-	
+
 	auto exe_dir = get_executable_directory();
 	exe_dir.append("roms");
 	auto rom_path = exe_dir.append(SPECY_48K_ROM_FILE);
-	unsigned char* system_memory = create_system_memory(rom_path.string().c_str(), SPECY_48K_ROM_SIZE + RAM_48K_SIZE);
+	uint8_t* system_memory = create_system_memory(rom_path.string().c_str(), SPECY_48K_ROM_SIZE + RAM_48K_SIZE);
 	if (!system_memory) {
 		perror("cannot load rom file");
 		return -1;
 	}
 
 	printf("ROM %p\n", (void*)system_memory);
+
+	//load_tap_to_memory("..\\..\\..\\media\\automania.tap", system_memory, 5, false);
 
 	specy_rom_set_pointer(system_memory);
 	ula_init(system_memory);

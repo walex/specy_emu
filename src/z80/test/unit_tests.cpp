@@ -12,8 +12,8 @@
 extern "C" {
 #endif
 
-	void __stdcall InitRegisters(unsigned short*);
-	void __stdcall GetRegisters(unsigned short*);
+	void __stdcall InitRegisters(uint16_t*);
+	void __stdcall GetRegisters(uint16_t*);
 
 #ifdef __cplusplus
 }
@@ -81,7 +81,7 @@ const char* reg_names[] = { "pc",
 "iff2"
 };
 
-void print_registers(const std::vector<unsigned short int>& regs) {
+void print_registers(const std::vector<uint16_t>& regs) {
 
 	for (int i = 0; i < regs.size(); i++) {
 
@@ -104,16 +104,16 @@ double calculate_cycle_time_nanosecs(double clock_frequency_mhz) {
 
 void getZ80AndHostCPUFreq(double& z80CpuCycleTimeInNanoseconds, double& hostCpuCycleTimeInNanoseconds) {
 	// Get the initial time stamp counter value
-	unsigned long long startCycles = __rdtsc();  // rdtsc provides the number of cycles
+	uint32_t long startCycles = __rdtsc();  // rdtsc provides the number of cycles
 
 	// Sleep for a known amount of time (e.g., 1 second)
 	std::this_thread::sleep_for(std::chrono::seconds(1));  // Sleep for 1 second
 
 	// Get the final time stamp counter value
-	unsigned long long endCycles = __rdtsc();
+	uint32_t long endCycles = __rdtsc();
 
 	// Calculate the difference in cycles
-	unsigned long long cycleDifference = endCycles - startCycles;
+	uint32_t long cycleDifference = endCycles - startCycles;
 
 	// The number of nanoseconds in one second is 1e9
 	double cyclesPerSecond = (double)cycleDifference;  // This is the total cycles over 1 second
@@ -121,13 +121,13 @@ void getZ80AndHostCPUFreq(double& z80CpuCycleTimeInNanoseconds, double& hostCpuC
 	z80CpuCycleTimeInNanoseconds = calculate_cycle_time_nanosecs(Z80_CPU_FREQ_MHZ);
 }
 
-std::map<unsigned short, std::list<unsigned char>> io_test_data;
+std::map<uint16_t, std::list<uint8_t>> io_test_data;
 
-unsigned char get_io_next_test_data(unsigned short portId) {
+uint8_t get_io_next_test_data(uint16_t portId) {
 
-	unsigned char result = 0;
+	uint8_t result = 0;
 	if (io_test_data.find(portId) != io_test_data.end()) {
-		std::list<unsigned char>& dataPtr = io_test_data[portId];
+		std::list<uint8_t>& dataPtr = io_test_data[portId];
 		if (dataPtr.size() > 0) {
 			result = dataPtr.front();
 			dataPtr.pop_front();
@@ -136,11 +136,11 @@ unsigned char get_io_next_test_data(unsigned short portId) {
 	return result;
 }
 
-void put_io_next_test_data(unsigned short portId, unsigned char data) {
+void put_io_next_test_data(uint16_t portId, uint8_t data) {
 
 	if (io_test_data.find(portId) == io_test_data.end())
 		io_test_data[portId] = {};
-	std::list<unsigned char>& dataPtr = io_test_data[portId];
+	std::list<uint8_t>& dataPtr = io_test_data[portId];
 	dataPtr.push_back(data);
 }
 
@@ -149,11 +149,11 @@ void clear_io_test_data() {
 	io_test_data.clear();
 }
 
-void test_opcode(const char* test_name, unsigned char* mem, std::vector<unsigned short int>& parameters, bool print_regs = false) {
+void test_opcode(const char* test_name, uint8_t* mem, std::vector<uint16_t>& parameters, bool print_regs = false) {
 
 	// Create a new vector with the first REGISTERS_COUNT elements
-	std::vector<unsigned short int> init_data(parameters.begin(), parameters.begin() + REGISTERS_COUNT);
-	std::vector<unsigned short int> result_data(REGISTERS_COUNT);
+	std::vector<uint16_t> init_data(parameters.begin(), parameters.begin() + REGISTERS_COUNT);
+	std::vector<uint16_t> result_data(REGISTERS_COUNT);
 
 	InitRegisters(init_data.data());
 
@@ -161,12 +161,12 @@ void test_opcode(const char* test_name, unsigned char* mem, std::vector<unsigned
 	parameters.erase(parameters.begin(), parameters.begin() + REGISTERS_COUNT);
 
 	// Copy initial ram data
-	unsigned short int ram_positions_count = (parameters[0] * 2);
+	uint16_t ram_positions_count = (parameters[0] * 2);
 	// Erase ram_positions_count from parameters
 	parameters.erase(parameters.begin(), parameters.begin() + 1);
-	for (unsigned short int i = 0; i < ram_positions_count; i += 2) {
+	for (uint16_t i = 0; i < ram_positions_count; i += 2) {
 
-		mem[parameters[i]] = (unsigned char)parameters[i + 1];
+		mem[parameters[i]] = (uint8_t)parameters[i + 1];
 	}
 
 	// Erase initial ram data so parametes will have only the last REGISTERS_COUNT elements + result ram data + port data
@@ -175,13 +175,13 @@ void test_opcode(const char* test_name, unsigned char* mem, std::vector<unsigned
 	// read port data
 	clear_io_test_data();
 	// Copy port data
-	unsigned short int port_positions_count = (parameters[0] * 3);
+	uint16_t port_positions_count = (parameters[0] * 3);
 	// Erase port_positions_count from parameters
 	parameters.erase(parameters.begin(), parameters.begin() + 1);
 	// init port mem
-	for (unsigned short int i = 0; i < port_positions_count; i += 3) {
+	for (uint16_t i = 0; i < port_positions_count; i += 3) {
 
-		put_io_next_test_data(parameters[i], (unsigned char)parameters[i + 1]);
+		put_io_next_test_data(parameters[i], (uint8_t)parameters[i + 1]);
 	}
 
 	// Erase port data so parametes will have only the last REGISTERS_COUNT elements + result ram data
@@ -189,7 +189,7 @@ void test_opcode(const char* test_name, unsigned char* mem, std::vector<unsigned
 
 	// run opcode
 	const uint16_t kStartAddress = 0x8000;
-	int r = Z80CPU(mem, (unsigned char*)kStartAddress);
+	int r = Z80CPU(mem, (uint8_t*)kStartAddress);
 
 	// evaluate if is a invalid o not emulated opcode
 	if (r == -1 && (test_name[0] != '0' || test_name[1] != '0')) {
@@ -221,7 +221,7 @@ void test_opcode(const char* test_name, unsigned char* mem, std::vector<unsigned
 	ram_positions_count = (parameters[0] * 2);
 	// Erase ram_positions_count from parameters
 	parameters.erase(parameters.begin(), parameters.begin() + 1);
-	for (unsigned short int i = 0; i < ram_positions_count; i += 2) {
+	for (uint16_t i = 0; i < ram_positions_count; i += 2) {
 
 		if (mem[parameters[i]] != parameters[i + 1]) {
 
@@ -249,7 +249,7 @@ void test_opcode(const char* test_name, unsigned char* mem, std::vector<unsigned
 
 void run_test_case(FILE* file, double kZ80CpuCycleTimeInNanoseconds, double kHostCpuCycleTimeInNanoseconds) {
 
-	unsigned char mem[MEM_128K];
+	uint8_t mem[MEM_128K];
 
 	char line[MAX_LINE_LENGTH + 1];
 
@@ -263,7 +263,7 @@ void run_test_case(FILE* file, double kZ80CpuCycleTimeInNanoseconds, double kHos
 			op_cnt = op_cnt;
 		}*/
 
-		std::vector<unsigned short int> parameters;
+		std::vector<uint16_t> parameters;
 		parameters.reserve((REGISTERS_COUNT * 2) + 100);
 		memset(mem, 0, MEM_128K);
 		char* token = strtok(line, ";");  // Split by space, tab, or newline

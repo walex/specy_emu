@@ -113,24 +113,6 @@ PRINT_HEXA_64 MACRO value
 
 ENDM
 
-INC_REG_PC MACRO mem
-
-ADD_REG_PC mem, 1
-
-ENDM
-
-ADD_REG_PC MACRO mem, value
-
-push x_ax	
-mov x_ax, reg_pc
-sub x_ax, mem
-add ax, value
-mov reg_pc, mem
-add reg_pc, x_ax
-pop x_ax
-
-ENDM
-
 CopyMemToMem8 MACRO org, dest
 	mov al, [org]
 	mov [dest], al
@@ -141,19 +123,19 @@ CopyMemToMem16 MACRO org, dest
 	mov [dest], ax
 ENDM
 
-ProcesarOpcodeFromRom MACRO JumpTable	
+ProcessNextOpcode MACRO JumpTable, addr	
 		
 	push x_bp
 	xor x_bp, x_bp
 	xor x_ax, x_ax	
-	mov al, [reg_pc]             ; Select index
+	mov al, [addr]             ; Select index
 
 	shl Rec_Opcode, 8
 	or Rec_Opcode, x_ax
 
 	mov x_bp, OFFSET JumpTable ; Load the base address of the jump table into RBP
 	mov x_bx, [x_bp + x_ax*PTR_SIZE]    ; Load the function address from the table
-	INC_REG_PC memPtr
+	add addr, 1
 	pop x_bp
 	jmp x_bx
 

@@ -1,6 +1,6 @@
 .code
 
-DIR_INMEDIATO PROC 
+immediate_addressing_mode PROC 
 
 ; parameters 
 ; memPtr -> x_cx
@@ -9,12 +9,12 @@ xor x_ax,x_ax
 mov al,[reg_pc]                
 mov Reg_Tmp,x_ax
 mov reg_di, OFFSET Reg_Tmp
-INC_REG_PC x_cx
+inc reg_pc
 ret
     
-DIR_INMEDIATO ENDP
+immediate_addressing_mode ENDP
 
-DIR_INMEDIATO_EXT PROC
+immediate_addressing_mode_ext PROC
 
 ; parameters 
 ; memPtr -> x_cx
@@ -22,49 +22,49 @@ DIR_INMEDIATO_EXT PROC
 xor x_ax, x_ax
 xor x_bx, x_bx
 mov al, [reg_pc]
-INC_REG_PC x_cx
+inc reg_pc
 mov bl, [reg_pc]
-INC_REG_PC x_cx
+inc reg_pc
 shl bx, 8
 or ax, bx
 mov Reg_Tmp, x_ax
 mov reg_di, OFFSET Reg_Tmp
 ret
 
-DIR_INMEDIATO_EXT ENDP
+immediate_addressing_mode_ext ENDP
 
-DIR_RELATIVO PROC 
+relative_addressing_mode PROC 
 
 ; parameters 
 ; memPtr -> x_cx
 
 xor x_bx,x_bx
 movsx x_bx, BYTE PTR [reg_pc] ;e
-INC_REG_PC x_cx ; PC+1 
-ADD_REG_PC x_cx, bx ;PC + e
+inc reg_pc ; PC+1 
+add reg_pc, x_bx ;PC + e
 ret
 
-DIR_RELATIVO ENDP
+relative_addressing_mode ENDP
 
-DIR_EXT PROC 
+extended_indirect_addressing_mode PROC 
 
 ; parameters 
 ; memPtr -> x_cx
 
 xor x_ax, x_ax
 mov ax, [reg_pc]
-INC_REG_PC x_cx
+inc reg_pc
 mov bx, [reg_pc]
-INC_REG_PC x_cx
+inc reg_pc
 shl bx, 8
 or ax, bx
 mov reg_di, x_ax
 
 ret
 
-DIR_EXT ENDP
+extended_indirect_addressing_mode ENDP
 
-DIR_INDEXADO PROC
+indexed_addressing_mode PROC
 
 ; parameters
 ; memPtr:PTR BYTE -> x_cx
@@ -76,12 +76,12 @@ movsx x_ax,BYTE PTR [reg_pc]
 add si,ax
 mov reg_di,x_cx
 add reg_di,reg_si
-INC_REG_PC x_cx
+inc reg_pc
 ret
 
-DIR_INDEXADO ENDP
+indexed_addressing_mode ENDP
 
-DIR_REGISTRO_INDIRECTO PROC
+register_indirect_addressing_mode PROC
 
 ; parameters
 ; memPtr:PTR BYTE -> x_cx
@@ -93,7 +93,7 @@ mov reg_di,x_cx
 add reg_di,reg_si 
 ret 
 
-DIR_REGISTRO_INDIRECTO ENDP
+register_indirect_addressing_mode ENDP
 
 DCB_REGISTER_FROM_MASK PROC
 

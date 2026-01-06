@@ -101,9 +101,9 @@
 	 A_LINE		dw  0
 	 HALT		db  0
 
-	 Reg_Tmp PTR_DATA_TYPE 0
-	 Reg_Tmp16	dw	0
-	 Reg_Tmp8	db	0
+	 ;Reg_Tmp PTR_DATA_TYPE 0
+	 ;Reg_Tmp16	dw	0
+	 ;Reg_Tmp8	db	0
 
    _CPU ENDS		
 
@@ -180,10 +180,13 @@ D_LINE EQU [Z80_CPU.D_LINE]
 A_LINE EQU [Z80_CPU.A_LINE]
 HALT EQU [Z80_CPU.HALT]
 
-Reg_Tmp EQU [Z80_CPU.Reg_Tmp]
-Reg_Tmp16 EQU [Z80_CPU.Reg_Tmp16]
-Reg_Tmp8 EQU [Z80_CPU.Reg_Tmp8]
-
+;Reg_Tmp EQU [Z80_CPU.Reg_Tmp]
+;Reg_Tmp16 EQU [Z80_CPU.Reg_Tmp16]
+;Reg_Tmp8 EQU [Z80_CPU.Reg_Tmp8]
+Reg_Tmp PTR_DATA_TYPE 0
+Reg_Tmp16 dw 0
+Reg_Tmp8 db	0
+Reg_DataBus8 db 0
 .code
 
 InitRegisters PROC
@@ -274,3 +277,73 @@ GetTestRegValue8 IFF2
 ret
 
 GetRegisters ENDP
+
+SetRegPC PROC
+	mov r10, rcx
+	ret
+SetRegPC ENDP
+
+SetRegSP PROC
+	mov RegSP, cx
+	ret
+SetRegSP ENDP
+
+SetRegA PROC
+	mov RegA, cl
+	ret
+SetRegA ENDP
+
+SetRegB PROC
+	mov RegB, cl
+	ret
+SetRegB ENDP
+
+SetRegC PROC
+	mov RegC, cl
+	ret
+SetRegC ENDP
+
+SetRegD PROC
+	mov RegD, cl
+	ret
+SetRegD ENDP
+
+SetRegE PROC
+	mov RegE, cl
+	ret
+SetRegE ENDP
+
+SetRegF PROC
+	mov RegF, cl
+	ret
+SetRegF ENDP
+
+SetRegH PROC
+	mov RegH, cl
+	ret
+SetRegH ENDP
+
+SetRegL PROC
+	mov RegL, cl
+	ret
+SetRegL ENDP
+
+SetRegI PROC
+	mov RegI, cl
+	ret
+SetRegI ENDP
+
+SetRegR PROC
+	mov RegR, cl
+	ret
+SetRegR ENDP
+
+SetRegIX PROC
+	mov RegIX, cx
+	ret
+SetRegIX ENDP
+
+SetRegIY PROC
+	mov RegIY, cx
+	ret
+SetRegIY ENDP

@@ -204,7 +204,9 @@ void keyboard_unset_input(uint32_t key) {
 	keyboard_map[pos] &= (uint8_t)~(1 << shift);
 }
 
-unsigned char keyboard_get_map_addr(unsigned char addr) {
-
+uint8_t keyboard_get_map_addr(uint8_t addr) {
+    if (keyboard_map.find(addr) == keyboard_map.end()) {
+        return 0xFF;
+	}
     return ~(keyboard_map[addr]);
 }

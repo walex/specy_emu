@@ -23,7 +23,7 @@ static std::mutex render_mutex;
 static std::condition_variable render_signal;
 static std::thread render_thread;
 static std::atomic<int> render_running{ 0 };
-static unsigned long* display_buffer_ptr = nullptr;
+static uint32_t* display_buffer_ptr = nullptr;
 static size_t display_buffer_width = 0;
 static size_t display_buffer_height = 0;
 static size_t window_size_width = 0;
@@ -137,7 +137,7 @@ void render_thread_proc() {
 	SDL_AppQuit(nullptr, SDL_APP_SUCCESS);
 }
 
-void render_init(unsigned long* display_buffer, size_t buffer_size_x,
+void render_init(uint32_t* display_buffer, size_t buffer_size_x,
     size_t buffer_size_y, size_t display_size_x, size_t display_size_y,
     size_t window_size_x, size_t window_size_y) {
     

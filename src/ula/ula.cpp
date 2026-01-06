@@ -1,34 +1,28 @@
 #include "ula.h"
 #include "z80.h"
 
-void ula_init(unsigned char* system_memory) {
+void ula_init(uint8_t* system_memory) {
 
-	clk_master_start();
 	display_init(system_memory);
 }
 
-void ula_read_port(unsigned short int addr, unsigned char* value) {
+void ula_read_port(uint16_t addr, uint8_t* value) {
 
-	unsigned char key;
-	switch (addr) {
-	case 0xFEFE:
-	case 0xFDFE:
-	case 0xFBFE:
-	case 0xF7FE:
-	case 0xEFFE:
-	case 0xDFFE:
-	case 0xBFFE:
-	case 0x7FFE:
+	uint8_t key;
+	uint16_t port = addr & 0x00FF;
+	switch (port) {
+	case 0XFE:
 		key = ((addr & 0xFF00) >> 8);
 		*value = keyboard_get_map_addr(key);
+		*value |= tape_audio_read();
 		break;
 	default:
-		*value = 0;
-		break;
+		*value = 0x0;
+		return;
 	}
 }
 
-void ula_write_port(unsigned short int addr, unsigned char value) {
+void ula_write_port(uint16_t addr, uint8_t value) {
 
    // border = value & 0x7;
    // mic = value & 0x8;
@@ -39,5 +33,5 @@ void ula_write_port(unsigned short int addr, unsigned char value) {
 
 void ula_assert_INT_line() {
 
-	trigger_MI();
+	trigger_MI(0);
 }
