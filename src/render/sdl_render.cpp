@@ -28,9 +28,6 @@ static size_t display_buffer_width = 0;
 static size_t display_buffer_height = 0;
 static size_t window_size_width = 0;
 static size_t window_size_height = 0;
-static size_t display_width = 0;
-static size_t display_height = 0;
-Uint32 border_color = 0xFFFFFFFF;
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void** appstate, int argc, char* argv[])
@@ -78,24 +75,8 @@ SDL_AppResult SDL_AppIterate(void* appstate)
         SDL_UnlockTexture(texture);  /* upload the changes (and frees the temporary surface)! */
     }
     
-	Uint8 r = (border_color & 0x00FF0000) >> 16;
-	Uint8 g = (border_color & 0x0000FF00) >> 8;
-	Uint8 b = (border_color & 0x000000FF);
-    SDL_FRect dst_rect;
-
-    SDL_SetRenderDrawColor(renderer, r, g, b, 0);
-    SDL_RenderClear(renderer);
-    
-    float w_factor = (float)display_buffer_width / (float)display_width;
-    float h_factor = (float)display_buffer_height / (float)display_height;
-	float text_size_w = ((float)window_size_width) * w_factor;
-	float text_size_h = ((float)window_size_height) * h_factor;
-
-    dst_rect.x = (((float)window_size_width) - text_size_w) / 2.0f;
-    dst_rect.y = (((float)window_size_height) - text_size_h) / 2.0f;
-    dst_rect.w = text_size_w;
-	dst_rect.h = text_size_h;
-    SDL_RenderTexture(renderer, texture, NULL, &dst_rect);
+	SDL_RenderClear(renderer);    
+    SDL_RenderTexture(renderer, texture, nullptr, nullptr);
     SDL_RenderPresent(renderer);  /* put it all on the screen! */
 
     return SDL_APP_CONTINUE;  /* carry on with the program! */
@@ -138,16 +119,13 @@ void render_thread_proc() {
 }
 
 void render_init(uint32_t* display_buffer, size_t buffer_size_x,
-    size_t buffer_size_y, size_t display_size_x, size_t display_size_y,
-    size_t window_size_x, size_t window_size_y) {
+    size_t buffer_size_y, size_t window_size_x, size_t window_size_y) {
     
     if (render_running.load() != 0)
         return;
     display_buffer_ptr = display_buffer;
 	display_buffer_width = buffer_size_x;
 	display_buffer_height = buffer_size_y;
-    display_width = display_size_x;
-    display_height = display_size_y;
     window_size_width = window_size_x;
     window_size_height = window_size_y;
     render_thread = std::thread(render_thread_proc);
@@ -173,8 +151,4 @@ void render_draw() {
         std::lock_guard lk(render_mutex);
         render_signal.notify_one();
     }
-}
-
-void render_set_border_color(uint32_t color) {
-    border_color = color;
 }

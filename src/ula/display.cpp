@@ -8,9 +8,10 @@
 
 static std::thread display_thread;
 static std::atomic<int> display_running{ 0 };
+static std::atomic<uint32_t> border_color{ 0 };
 static uint8_t* system_memory_ptr = nullptr;
-static uint32_t display_buffer[kDisplayBufferResolutionX * kDisplayBufferResolutionY];
-
+static uint32_t display_buffer_paper[kDisplayBufferResolutionX * kDisplayBufferResolutionY];
+static uint32_t display_buffer_full[kDisplayResolutionX * kDisplayResolutionY];
 void display_thread_proc();
 
 void display_init(uint8_t* system_memory) {
@@ -33,8 +34,8 @@ void display_end() {
 		display_thread.join();
 }
 
-void display_draw_paper() {
-	
+void display_draw() {
+
 	uint8_t* mem_atrib_video = system_memory_ptr + 0x5800;
 	uint8_t* mem_video = system_memory_ptr + 0x4000;
 	uint8_t mask;
@@ -45,11 +46,11 @@ void display_draw_paper() {
 	for (yPos = 0; yPos < kDisplayBufferResolutionY; yPos++) {
 		xPos = 0;
 		for (jPos = 0;jPos < 32;jPos++)
-		{			
+		{
 			mask = 0x80;
 			byte = *(mem_video + (static_cast<size_t>(kScanConvert[yPos]) << 5) + jPos);
 			i = ((yPos >> 3) * 32) + (xPos >> 3);
-			attrib = (uint8_t)*(mem_atrib_video + i);
+			attrib = (uint8_t) * (mem_atrib_video + i);
 			flash = attrib & 0x80;
 			bright = attrib & 0x40;
 			color_mode = bright ? BRIGHT_MODE : OPAQUE_MODE;
@@ -58,30 +59,37 @@ void display_draw_paper() {
 			if (flash && ((frame_count & FLASH_FASE_FRAMES) != 0)) {
 				std::swap(ink, paper);
 			}
-			/* 
+			/*
 			bit 7  = FLASH
 			bit 6  = BRIGHT
 			bit 5–3 = PAPER (0–7)
 			bit 2–0 = INK   (0–7)
 			*/
 			for (r = 0;r < 8;r++)
-			{	
-				display_buffer[(yPos * kDisplayBufferResolutionX) + xPos + r] = byte & mask ? ink : paper;
+			{
+				display_buffer_paper[(yPos * kDisplayBufferResolutionX) + xPos + r] = byte & mask ? ink : paper;
 				mask >>= 1;
 			}
 			xPos += 8;
 		}
 	}
-
-}
-
-void display_draw_border() {
-}
-
-void display_draw() {
-
-	display_draw_border();
-	display_draw_paper();
+	auto offset_x = (kDisplayResolutionX - kDisplayBufferResolutionX) / 2;
+	auto offset_y = (kDisplayResolutionY - kDisplayBufferResolutionY) / 2;
+	for (int x = 0; x < kDisplayResolutionY; x++) {
+		for (int y = 0; y < kDisplayResolutionX; y++) {
+			if (x < offset_x ||
+				x >= (kDisplayBufferResolutionY + offset_y) ||
+				y < offset_y ||
+				y >= (kDisplayBufferResolutionX + offset_x)) {
+				display_buffer_full[x * kDisplayResolutionX + y] = border_color.load();
+			}
+			else {
+				display_buffer_full[x * kDisplayResolutionX + y] =
+					display_buffer_paper[(x - 48) *
+					kDisplayBufferResolutionX + (y - 48)];
+			}
+		}
+	}
 }
 
 void display_clock_sync() {
@@ -94,8 +102,7 @@ void display_clock_sync() {
 void display_thread_proc() {
 
 	clock_master_handle cmh = clk_master_create("display_sync_clock", 50.0); // 50 Hz
-	render_init(display_buffer, kDisplayBufferResolutionX, kDisplayBufferResolutionY, 
-				kDisplayResolutionX, kDisplayResolutionY,
+	render_init(display_buffer_full, kDisplayResolutionX, kDisplayResolutionY,
 				kWindowWidth, kWindowHeight);
 	display_running++;
 	while (true) {
@@ -109,6 +116,6 @@ void display_thread_proc() {
 	clk_master_destroy(cmh);
 }
 
-void display_set_border_color(uint8_t border_color) {
-	render_set_border_color(KVideoColorPalleteHILO[border_color & 0x7][OPAQUE_MODE]);
+void display_set_border_color(uint8_t color) {
+	border_color = KVideoColorPalleteHILO[color & 0x7][OPAQUE_MODE];;
 }

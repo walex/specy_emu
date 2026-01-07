@@ -1,5 +1,8 @@
 // http://www.breakintoprogram.co.uk/hardware/computers/zx-spectrum/hardware/ula
+// I/O Contention ???
+// Snow effect ???
 // https://sinclair.wiki.zxnet.co.uk/wiki/ZX_Spectrum_ULA
+// https://scratchpad.fandom.com/wiki/Contended_memory
 // https://wiki.speccy.org/cursos/ensamblador/interrupciones
 // http://www.z80.info/zip/z80-interrupts_rewritten.pdf
 // http://www.z80.info/interrup.htm
@@ -12,6 +15,8 @@
 // https://worldofspectrum.net/zx-modules/fileformats/tapformat.html#any_datablock
 // https://softspectrum48.weebly.com/notes/category/tape-loading
 // https://softspectrum48.weebly.com/notes/flash-loader-part-3-basic-programs-revisited
+// http://www.zxdesign.info/vidparam.shtml 
+
 
 #include "z80.h"
 #include "ula.h"
