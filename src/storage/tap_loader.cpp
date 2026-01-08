@@ -1,17 +1,19 @@
 #include "tap_loader.h"
 #include <stdio.h>
 #include <memory.h>
+#include <vector>
 
-tap_info* tape_load_from_file(const char* filename) {
+const uint8_t TAP_HEADER_TYPE = 0;
+const uint8_t TAP_DATA_BLOCK = 0xFF;
+const uint32_t TAP_HEADER_BLOCK_SIZE = 19;
 
-	
-	const uint8_t TAP_HEADER_TYPE = 0;
-	const uint8_t TAP_DATA_BLOCK = 0xFF;
-	const uint32_t TAP_HEADER_BLOCK_SIZE = 19;
+tap_info_head* tape_load_from_file(const char* filename) {
+
+	uint32_t total_data_size = 0;
 	FILE* f = nullptr;
 	fopen_s(&f, filename, "rb");
 	if (!f) return nullptr;
-	tap_info* list_head = nullptr;
+	tap_info_head* list_head = new tap_info_head();
 	uint8_t header_block_info[TAP_HEADER_BLOCK_SIZE];
 	while (!feof(f)) {
 
@@ -77,6 +79,9 @@ tap_info* tape_load_from_file(const char* filename) {
 			break;
 		}
 
+		// data_len + 1 (for crc)
+		total_data_size += data_len + 1;
+
 		tap_info* info = new tap_info();
 		info->header.file_name[10] = 0;
 		memcpy(info->header.file_name, file_name, 10);
@@ -90,69 +95,98 @@ tap_info* tape_load_from_file(const char* filename) {
 		info->crc = crc;
 		info->next = nullptr;
 
-		if (list_head == nullptr) {
-			list_head = info;
+		if (list_head->node == nullptr) {
+			list_head->node = info;
 		}
 		else {
-			tap_info* current = list_head;
+			tap_info* current = list_head->node;
 			while (current->next != nullptr) {
 				current = current->next;
 			}
 			current->next = info;
 		}
 	}
-
+	list_head->data_size = total_data_size;
 	fclose(f);
 	return list_head;
 }
 
-void tape_free(tap_info* tape) {
-	tap_info* current = tape;
+void tape_free(tap_info_head* tape) {
+	tap_info* current = tape->node;
 	while (current != nullptr) {
 		tap_info* next = current->next;
 		delete[] current->data;
 		delete current;
 		current = next;
 	}
+	delete tape;
 }
 
-#include <thread>
-#include "clk_master.h"
-extern "C" void __stdcall SetRegPC(uint64_t value);
-extern "C" void __stdcall SetRegIX(uint16_t value);
-extern "C" void __stdcall SetRegD(uint8_t value);
-extern "C" void __stdcall SetRegE(uint8_t value);
-void thread_load_tape(const char* file_name, uint8_t* mem, uint32_t delay_secs) {
+void tape_file_to_bytes(const char* filename, uint8_t** buffer_out, size_t* size_out) {
 
+	FILE* f = nullptr;
+	fopen_s(&f, filename, "rb");
+	if (!f) return;
+	uint64_t block_offset = 0;
+	*buffer_out = nullptr;
+	*size_out = 0;
+	std::vector<uint8_t> block_info;
+	while (!feof(f)) {
+
+		// header block
+		uint16_t len;
+		if (fread(&len, 2, 1, f) != 1) {
+			perror("error reading header block size");
+			break;
+		}
+
+		if (len != TAP_HEADER_BLOCK_SIZE) {
+			perror("invalid header block size");
+			break;
+		}
+
+		block_info.resize(block_offset + len);
+		if (fread(&block_info[block_offset], len, 1, f) != 1) {
+			perror("error reading header block info");
+			break;
+		}
+		if (block_info[block_offset] != TAP_HEADER_TYPE) {
+
+			perror("expected header block");
+			break;
+		}
+
+		uint16_t data_len = block_info[block_offset+12] | (block_info[block_offset+13] << 8);
+
+		// data block
+		if (fread(&len, 2, 1, f) != 1) {
+
+			perror("error reading data block size");
+			break;
+		}
+
+		if (data_len != (len - 2)) {
+			perror("data length and header length value mismatch");
+			break;
+		}
+		block_offset += block_info.size();
+		block_info.resize(block_offset+len);
+
+		if (fread(&block_info[block_offset], len, 1, f) != 1) {
+			perror("error reading data block");
+			break;
+		}
+
+		if (block_info[block_offset] != TAP_DATA_BLOCK) {
+			perror("expected data block");
+			break;
+		}
+
+	}
 	
-	std::this_thread::sleep_for(std::chrono::seconds(5));
-
-	tap_info* info = tape_load_from_file(file_name);
-
-	// load BASIC
-	const uint16_t VARS = 0x5C4B;
-	const uint16_t PROG = 0x5C53;
-	const uint16_t E_LINE = 0x5C59;
-	uint16_t loadAddr = *((uint16_t*)(mem + PROG));
-
-	uint16_t last_pos = loadAddr + info->header.program_length;
-	uint16_t I = (last_pos / 256);
-	uint16_t X = last_pos - 256 * I;
-	I <<= 8;
-	uint16_t v = I | X;
-	std::this_thread::sleep_for(std::chrono::seconds(5));
-	SetRegPC(((uint64_t)mem) + 0x0805);
-	SetRegIX(v);
-	SetRegD(0);
-	SetRegE(0);
-	memcpy(mem + loadAddr, info->data, info->header.program_length);
-
-	// load screen
-	//memcpy(mem + info->next->offset, info->next->data, info->next->size);
-
-
-	// load CODE
-	//memcpy(mem + info->next->next->offset, info->next->next->data, info->next->next->size);
-
-	tape_free(info);
+	uint8_t* buffer = new uint8_t[block_info.size()];
+	memcpy(buffer, block_info.data(), block_info.size());
+	
+	*buffer_out = buffer;
+	*size_out = block_info.size();
 }

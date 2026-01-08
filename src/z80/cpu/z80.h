@@ -12,8 +12,11 @@ extern "C" {
 #endif
 	int __stdcall Z80CPU(uint8_t*, uint8_t* pc);
 	void __stdcall trigger_MI(uint8_t bus_data);
+	void __stdcall lock_cpu();
+	void __stdcall unlock_cpu();
 #ifdef __cplusplus
 	}
+#else
 #endif
 
 #endif

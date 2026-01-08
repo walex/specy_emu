@@ -1,4 +1,4 @@
-#include "render.h"
+#include "video_render.h"
 #include "keyboard.h"
 #include <thread>
 #include <mutex>
@@ -118,7 +118,7 @@ void render_thread_proc() {
 	SDL_AppQuit(nullptr, SDL_APP_SUCCESS);
 }
 
-void render_init(uint32_t* display_buffer, size_t buffer_size_x,
+void video_render_init(uint32_t* display_buffer, size_t buffer_size_x,
     size_t buffer_size_y, size_t window_size_x, size_t window_size_y) {
     
     if (render_running.load() != 0)
@@ -133,7 +133,7 @@ void render_init(uint32_t* display_buffer, size_t buffer_size_x,
         std::this_thread::sleep_for(std::chrono::microseconds(1));
 }
 
-void render_end() {
+void video_render_end() {
 
     if (render_running.load() == 0)
         return;
@@ -146,7 +146,7 @@ void render_end() {
         render_thread.join();
 }
 
-void render_draw() {
+void video_render_draw() {
     {
         std::lock_guard lk(render_mutex);
         render_signal.notify_one();

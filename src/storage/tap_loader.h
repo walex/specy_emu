@@ -3,6 +3,8 @@
 
 #include <stdint.h>
 
+
+
 struct tap_header {
 
 	char file_name[10 + 1];
@@ -22,7 +24,14 @@ struct tap_info {
 	tap_info* next;
 };
 
-tap_info* tape_load_from_file(const char* filename);
-void tape_free(tap_info* tape);
+struct tap_info_head {
+
+	tap_info* node = nullptr;
+	uint32_t data_size = 0;
+};
+
+tap_info_head* tape_load_from_file(const char* filename);
+void tape_free(tap_info_head* tape);
+void tape_file_to_bytes(const char* filename, uint8_t** buffer_out, size_t* size_out);
 
 #endif
