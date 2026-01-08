@@ -3,7 +3,7 @@
 
 #include <stdint.h>
 
-void audio_render_init();
+void audio_render_init(uint32_t sample_rate);
 void audio_render_play(uint8_t* buffer, size_t buffer_size);
 void audio_render_end();	
 

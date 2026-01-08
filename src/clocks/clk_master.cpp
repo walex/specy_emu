@@ -54,7 +54,8 @@ void clk_master_tick(clock_master_handle cmh, clock_master_callback_function cb)
 	cm->clock += std::chrono::milliseconds(cm->duration_ms);
 	std::this_thread::sleep_until(cm->clock);
 	ReleaseSemaphore(cm->sem, 1, nullptr);
-	cb();    
+	if (cb != nullptr)
+		cb();    
 }
 
 void clk_master_wait(clock_master_handle cmh) {

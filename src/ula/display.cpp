@@ -84,7 +84,7 @@ void display_draw() {
 					display_buffer[xy + xy_offset] = byte & mask ? ink : paper;
 					mask >>= 1;
 				}
-				for (x = xy_offset+1; x < xy_offset + offset_x; x++) {
+				for (x = xy_offset+1; x < xy_offset + offset_x + 1; x++) {
 					display_buffer[xy + x] = border_color.load();
 				}				
 				scan_pos_x += 8;
@@ -107,7 +107,9 @@ void display_clock_sync() {
 
 void display_thread_proc() {
 
-	clock_master_handle cmh = clk_master_create("display_sync_clock", 50.0); // 50 Hz
+	clock_master_handle cmh = clk_master_create("display_sync_clock", DISPLAY_REFRESH_RATE_HZ); // 50 Hz
+	clock_master_handle cmh2 = clk_master_create("display_sync_clock2", DISPLAY_REFRESH_RATE_HZ); // 50 Hz
+
 	video_render_init(display_buffer, kDisplayResolutionX, kDisplayResolutionY,
 				kWindowWidth, kWindowHeight);
 	display_running++;
@@ -117,9 +119,11 @@ void display_thread_proc() {
 			break;
 
 		clk_master_tick(cmh, display_clock_sync);
+		clk_master_tick(cmh2, nullptr);
 	}
 	video_render_end();
 	clk_master_destroy(cmh);
+	clk_master_destroy(cmh2);
 }
 
 void display_set_border_color(uint8_t color) {

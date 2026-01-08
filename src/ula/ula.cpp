@@ -1,6 +1,9 @@
 #include "ula.h"
 #include "tap_loader.h"
 #include "z80.h"
+#include "keyboard.h"
+#include "display.h"
+#include "audio.h"
 
 static uint8_t* tape_data = nullptr;
 static size_t tape_data_size = 0;
@@ -8,7 +11,9 @@ static size_t tape_data_size = 0;
 void ula_init(uint8_t* system_memory) {
 
 	display_init(system_memory);
+	audio_init();
 }
+
 int first_time = 0;
 void ula_read_port(uint16_t addr, uint8_t* value) {
 
@@ -38,7 +43,7 @@ void ula_write_port(uint16_t addr, uint8_t value) {
    // ear = value & 0x10;
 
 	display_set_border_color(value & 0x7);
-	//ound_emit(value & 0x18);
+	audio_play(value & 0x18);
 }
 
 void ula_assert_INT_line() {

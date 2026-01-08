@@ -1,12 +1,9 @@
 #ifndef _ULA_HPP_
 #define _ULA_HPP_
 
-#include "keyboard.h"
 #include "clk_master.h"
-#include "display.h"
-#include "tape_audio.h"
+#include <stdint.h>
 
-struct tap_info;
 void ula_init(uint8_t* system_memory);
 void ula_assert_INT_line();
 

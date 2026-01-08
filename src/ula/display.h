@@ -8,5 +8,6 @@ void display_end();
 void display_set_border_color(uint8_t border_color);
 
 const int FLASH_FASE_FRAMES = 32;
+const double DISPLAY_REFRESH_RATE_HZ = 50.0;
 
 #endif

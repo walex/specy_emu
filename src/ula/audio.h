@@ -5,5 +5,6 @@
 
 void audio_init();
 void audio_end();
+void audio_play(uint8_t value);
 
 #endif
