@@ -1,6 +1,8 @@
 #include "z80.h"
 #include "clk_master.h"
 #include <atomic>
+#include <thread>
+
 static std::atomic<bool> cpu_lock_t;
 static std::atomic<uint64_t> clk_cycles{ 0 };
 static std::atomic<uint64_t> sync_cycles{ 0 };
@@ -17,7 +19,10 @@ void __stdcall cpu_unlock() {
 }
 
 void __stdcall cpu_wait() {
-    while (cpu_lock_t.load());
+    
+    while (cpu_lock_t.load()) {
+        std::this_thread::sleep_for(std::chrono::microseconds(1));
+    }
 }
 
 void __stdcall cpu_sync(uint8_t cycles) {

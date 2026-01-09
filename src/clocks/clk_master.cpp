@@ -3,15 +3,14 @@
 #include <thread>
 #include <mutex>
 #include <map>
-
-#include <Windows.h>
+#include <semaphore>
 
 struct clock_master {
 
     std::chrono::steady_clock::time_point clock;
 	uint64_t duration_ms;
 	double frequency;
-	HANDLE sem;
+	std::counting_semaphore<1> sem{ 1 };
 };
 std::map<const char*, clock_master_handle> clock_masters;
 
@@ -24,12 +23,6 @@ clock_master_handle clk_master_create(const char* name, double frequency_hz) {
     cm->clock = std::chrono::steady_clock::now();
 	cm->duration_ms = (1 / frequency_hz) * 1000;
 	cm->frequency = frequency_hz;
-	cm->sem = CreateSemaphoreA(
-		NULL,   // seguridad
-		1,      // valor inicial
-		1,      // valor máximo
-		name
-	);
 	clock_masters[name] = cm;
 	return (void*)cm;
 }
@@ -53,7 +46,7 @@ void clk_master_tick(clock_master_handle cmh, clock_master_callback_function cb)
 	clock_master* cm = (clock_master*)cmh;
 	cm->clock += std::chrono::milliseconds(cm->duration_ms);
 	std::this_thread::sleep_until(cm->clock);
-	ReleaseSemaphore(cm->sem, 1, nullptr);
+	cm->sem.release();
 	if (cb != nullptr)
 		cb();    
 }
@@ -61,7 +54,7 @@ void clk_master_tick(clock_master_handle cmh, clock_master_callback_function cb)
 void clk_master_wait(clock_master_handle cmh) {
 
 	clock_master* cm = (clock_master*)cmh;
-	WaitForSingleObject(cm->sem, INFINITE);
+	cm->sem.acquire();
 }
 
 double clk_master_get_frequency(clock_master_handle cmh) {

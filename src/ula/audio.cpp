@@ -16,16 +16,16 @@ static std::atomic<int> audio_running{ 0 };
 static std::mutex audio_buffer_mutex;
 
 // Audio configuration
-const size_t SAMPLE_RATE = 44100;
-const double SAMPLES_TIME_SECS = (1.0 / DISPLAY_REFRESH_RATE_HZ);
-const size_t CHUNK_SIZE = SAMPLES_TIME_SECS * SAMPLE_RATE; // ~20ms de audio
-const size_t BUFFER_SAMPLES = CHUNK_SIZE * 50;
+constexpr size_t SAMPLE_RATE = 44100;
+constexpr double SAMPLES_TIME_SECS = DISPLAY_REFRESH_RATE_SECS;
+constexpr size_t CHUNK_SIZE = SAMPLES_TIME_SECS * SAMPLE_RATE; // ~20ms de audio
+constexpr size_t BUFFER_SAMPLES = CHUNK_SIZE * 50;
 
 // Number of Z80 cycles per audio sample
-const double CYCLES_PER_SAMPLE = 3500000.0 / SAMPLE_RATE; // ~79.4 tstates
+constexpr double CYCLES_PER_SAMPLE = 3500000.0 / SAMPLE_RATE; // ~79.4 tstates
 
 // Circular audio buffer
-static float* audio_buffer = nullptr;
+static float audio_buffer[BUFFER_SAMPLES];
 static int buffer_write = 0;
 static int buffer_read = 0;
 
@@ -43,7 +43,6 @@ void audio_init() {
     if (audio_running.load() != 0)
         return;
 
-    audio_buffer = new float[BUFFER_SAMPLES];
     audio_thread = std::thread(audio_thread_proc);
 
     // Wait for audio thread to start
@@ -58,7 +57,6 @@ void audio_end() {
     audio_running = 0;
     if (audio_thread.joinable())
         audio_thread.join();
-    delete[] audio_buffer;
 }
 
 // Internal function to push a sample into the circular buffer
