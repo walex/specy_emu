@@ -8,7 +8,7 @@ void audio_render_init(uint32_t sample_rate) {
 	SDL_Init(SDL_INIT_AUDIO);
 	SDL_AudioSpec spec;
 	SDL_zero(spec);
-	spec.format = SDL_AUDIO_F32;
+	spec.format = SDL_AUDIO_S16;
 	spec.channels = 1;
 	spec.freq = sample_rate;
 	

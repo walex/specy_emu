@@ -43,7 +43,7 @@ void ula_write_port(uint16_t addr, uint8_t value) {
    // ear = value & 0x10;
 
 	display_set_border_color(value & 0x7);
-	audio_play(value & 0x18);
+	audio_play(cpu_get_cycles(), value & 0x18);
 }
 
 void ula_assert_INT_line() {

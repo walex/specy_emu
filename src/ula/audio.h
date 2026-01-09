@@ -5,6 +5,6 @@
 
 void audio_init();
 void audio_end();
-void audio_play(uint8_t value);
+void audio_play(uint64_t tstates_cpu_total, uint8_t value);
 
 #endif

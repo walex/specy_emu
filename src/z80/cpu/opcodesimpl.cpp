@@ -3,11 +3,6 @@
 #include <stdint.h>
 #include <chrono>
 #include <thread>
-#include <atomic>
-
-static std::atomic<bool> cpu_lock;
-static std::atomic<uint64_t> clk_cycles{ 0 };
-static std::atomic<uint64_t> sync_cycles{ 0 };
 
 extern "C" void ula_read_port(uint16_t addr, uint8_t* value);
 extern "C" void ula_write_port(uint16_t addr, uint8_t value);
@@ -101,27 +96,6 @@ extern "C" void __stdcall inst_DAA_C(uint8_t* reg_a, uint8_t* reg_f)
 
 extern "C" void __stdcall acumulate_opcode_cycles_c(uint8_t cycles, uint8_t m_cycles) {
     
-    clock_master_handle cmh = clk_master_get("display_sync_clock");
-
-    const uint64_t FRAME_CYCLES = (uint64_t)(Z80_CPU_FREQ_HZ / clk_master_get_frequency(cmh));
-
-    while (cpu_lock.load());
-
-    clk_cycles += (uint64_t)cycles;
-    sync_cycles += (uint64_t)cycles;
-    if (sync_cycles >= FRAME_CYCLES) {
-        sync_cycles -= FRAME_CYCLES;        
-		clk_master_wait(cmh);
-        return;
-    }
+    cpu_sync(cycles);
 }
 
-void __stdcall lock_cpu() {
-    
-    cpu_lock.store(true);
-}
-
-void __stdcall unlock_cpu() {
-    
-    cpu_lock.store(false);
-}
