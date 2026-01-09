@@ -34,6 +34,7 @@ void display_end() {
 		display_thread.join();
 }
 
+// FixME: horizontal sync needed
 void display_draw() {
 	uint8_t* mem_atrib_video = system_memory_ptr + 0x5800;
 	uint8_t* mem_video = system_memory_ptr + 0x4000;

@@ -3,8 +3,6 @@
 
 #include <stdint.h>
 
-
-
 struct tap_header {
 
 	char file_name[10 + 1];

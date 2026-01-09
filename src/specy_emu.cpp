@@ -16,7 +16,7 @@
 // https://softspectrum48.weebly.com/notes/category/tape-loading
 // https://softspectrum48.weebly.com/notes/flash-loader-part-3-basic-programs-revisited
 // http://www.zxdesign.info/vidparam.shtml 
-
+// https://www.planetemu.net/roms/sinclair-zx-spectrum-tap?page=B
 
 #include "z80.h"
 #include "ula.h"
@@ -102,19 +102,19 @@ int main(int argc, char* argv[]) {
 
 	printf("ROM %p\n", (void*)system_memory);
 
-	/*uint8_t* tape_data;
+	uint8_t* tape_data;
 	size_t tape_data_size;
-	tape_file_to_bytes("..\\..\\..\\media\\automania.tap", &tape_data, &tape_data_size);*/
+	tape_file_to_bytes("..\\..\\..\\media\\Jetpac (1983)(Ultimate).tap", &tape_data, &tape_data_size);
 	
 	specy_rom_set_pointer(system_memory);
 	ula_init(system_memory);
 
-	//ula_set_tape_bytes(tape_data, tape_data_size);
+	ula_set_tape_bytes(tape_data, tape_data_size);
 
 	Z80CPU(system_memory, 0);
 	destroy_system_memory(system_memory);
 	
-	//free(tape_data);
+	free(tape_data);
 
 	return 0;
 }

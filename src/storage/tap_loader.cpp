@@ -1,11 +1,8 @@
 #include "tap_loader.h"
+#include "tape_audio.h"
 #include <stdio.h>
 #include <memory.h>
 #include <vector>
-
-const uint8_t TAP_HEADER_TYPE = 0;
-const uint8_t TAP_DATA_BLOCK = 0xFF;
-const uint32_t TAP_HEADER_BLOCK_SIZE = 19;
 
 tap_info_head* tape_load_from_file(const char* filename) {
 
@@ -127,66 +124,77 @@ void tape_file_to_bytes(const char* filename, uint8_t** buffer_out, size_t* size
 	FILE* f = nullptr;
 	fopen_s(&f, filename, "rb");
 	if (!f) return;
-	uint64_t block_offset = 0;
-	*buffer_out = nullptr;
-	*size_out = 0;
-	std::vector<uint8_t> block_info;
-	while (!feof(f)) {
+	fseek(f, 0, SEEK_END);
+	*size_out = (size_t)ftell(f);
+	fseek(f, 0, SEEK_SET);
+	*buffer_out = new uint8_t[*size_out];
+	fread(*buffer_out, *size_out, 1, f);
+	fclose(f);
 
-		// header block
-		uint16_t len;
-		if (fread(&len, 2, 1, f) != 1) {
-			perror("error reading header block size");
-			break;
-		}
+	//FILE* f = nullptr;
+	//fopen_s(&f, filename, "rb");
+	//if (!f) return;
+	//uint64_t block_offset = 0;
+	//*buffer_out = nullptr;
+	//*size_out = 0;
+	//std::vector<uint8_t> block_info;
+	//while (!feof(f)) {
 
-		if (len != TAP_HEADER_BLOCK_SIZE) {
-			perror("invalid header block size");
-			break;
-		}
+	//	// header block
+	//	uint16_t len;
+	//	if (fread(&len, 2, 1, f) != 1) {
+	//		perror("error reading header block size");
+	//		break;
+	//	}
 
-		block_info.resize(block_offset + len);
-		if (fread(&block_info[block_offset], len, 1, f) != 1) {
-			perror("error reading header block info");
-			break;
-		}
-		if (block_info[block_offset] != TAP_HEADER_TYPE) {
+	//	if (len != TAP_HEADER_BLOCK_SIZE) {
+	//		perror("invalid header block size");
+	//		break;
+	//	}
 
-			perror("expected header block");
-			break;
-		}
+	//	block_info.resize(block_offset + len);
+	//	if (fread(&block_info[block_offset], len, 1, f) != 1) {
+	//		perror("error reading header block info");
+	//		break;
+	//	}
 
-		uint16_t data_len = block_info[block_offset+12] | (block_info[block_offset+13] << 8);
+	//	if (block_info[block_offset] != TAP_HEADER_TYPE) {
 
-		// data block
-		if (fread(&len, 2, 1, f) != 1) {
+	//		perror("expected header block");
+	//		break;
+	//	}
 
-			perror("error reading data block size");
-			break;
-		}
+	//	uint16_t data_len = block_info[block_offset+12] | (block_info[block_offset+13] << 8);
 
-		if (data_len != (len - 2)) {
-			perror("data length and header length value mismatch");
-			break;
-		}
-		block_offset += block_info.size();
-		block_info.resize(block_offset+len);
+	//	// data block
+	//	if (fread(&len, 2, 1, f) != 1) {
 
-		if (fread(&block_info[block_offset], len, 1, f) != 1) {
-			perror("error reading data block");
-			break;
-		}
+	//		perror("error reading data block size");
+	//		break;
+	//	}
 
-		if (block_info[block_offset] != TAP_DATA_BLOCK) {
-			perror("expected data block");
-			break;
-		}
+	//	if (data_len != (len - 2)) {
+	//		perror("data length and header length value mismatch");
+	//		break;
+	//	}
+	//	block_offset += block_info.size();
+	//	block_info.resize(block_offset+len);
 
-	}
-	
-	uint8_t* buffer = new uint8_t[block_info.size()];
-	memcpy(buffer, block_info.data(), block_info.size());
-	
-	*buffer_out = buffer;
-	*size_out = block_info.size();
+	//	if (fread(&block_info[block_offset], len, 1, f) != 1) {
+	//		perror("error reading data block");
+	//		break;
+	//	}
+
+	//	if (block_info[block_offset] != TAP_DATA_BLOCK) {
+	//		perror("expected data block");
+	//		break;
+	//	}
+
+	//}
+	//
+	//uint8_t* buffer = new uint8_t[block_info.size()];
+	//memcpy(buffer, block_info.data(), block_info.size());
+	//
+	//*buffer_out = buffer;
+	//*size_out = block_info.size();
 }

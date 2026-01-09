@@ -25,6 +25,8 @@ void __stdcall cpu_wait() {
     }
 }
 
+#include <chrono>
+auto start = std::chrono::high_resolution_clock::now();
 void __stdcall cpu_sync(uint8_t cycles) {
 
     clock_master_handle cmh = clk_master_get("display_sync_clock");
@@ -36,7 +38,10 @@ void __stdcall cpu_sync(uint8_t cycles) {
     sync_cycles += (uint64_t)cycles;
     if (sync_cycles >= FRAME_CYCLES) {
         sync_cycles -= FRAME_CYCLES;
-        clk_master_wait(cmh);
+        if (std::chrono::high_resolution_clock::now() - start > std::chrono::seconds(20))
+            clk_master_wait(cmh);
+    /*    printf("wake: cycles=%llu ear=%d\n",
+            cpu_get_cycles(), current_ear);*/
         return;
     }
 }
