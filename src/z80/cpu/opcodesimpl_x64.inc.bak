@@ -897,15 +897,6 @@ pop x_dx
 mov bx,dx
 add x_ax,x_bx
 mov reg_pc,x_ax
-
-push reg_pc
-push reg_si
-push reg_di
-invoke cpu_call_addr_notify, bx
-pop reg_di
-pop reg_si
-pop reg_pc
-
 ret
 
 inst_CALL ENDP

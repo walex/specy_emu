@@ -4,40 +4,54 @@
 #include "keyboard.h"
 #include "display.h"
 #include "audio.h"
+#include <atomic>
 
 static uint8_t* tape_data = nullptr;
 static size_t tape_data_size = 0;
 
+// intercept calls functions
+static constexpr uint16_t LD_BYTES = 0x0556;
+static std::atomic<bool> tape_enabled = false;
+
+void ula_on_LD_BYTES() {
+
+	if (tape_enabled.load() == false && 
+		tape_data != nullptr 
+		&& tape_data_size > 0) {
+
+		tape_audio_set_bytes(cpu_get_cycles(), tape_data, tape_data_size);
+		tape_data = nullptr;
+		tape_data_size = 0;
+		tape_enabled.store(true);		
+	}
+}
+
 void ula_init(uint8_t* system_memory) {
+
+	cpu_add_call_interceptor(LD_BYTES, ula_on_LD_BYTES);
 
 	display_init(system_memory);
 	audio_init();
 }
 
-#include <chrono>
-auto start_time = std::chrono::high_resolution_clock::now();
 void ula_read_port(uint16_t addr, uint8_t* value) {
 
 	uint16_t port = addr & 0x00FF;
+	auto clk = cpu_get_cycles();
 
 	if (port == 0xFE) {
 
-		// ---- TECLADO ----
+		// ---- KEYBOARD ----
 		uint8_t key = (addr >> 8) & 0xFF;
 		uint8_t kbd = keyboard_get_map_addr(key);
 
-		auto end_time = std::chrono::high_resolution_clock::now();
-		if (end_time - start_time > std::chrono::seconds(5)) {
-			start_time = end_time;
-			if (tape_data != nullptr && tape_data_size > 0) {
-				tape_audio_set_bytes(cpu_get_cycles(), tape_data, tape_data_size);
-				tape_data = nullptr;
-				tape_data_size = 0;
-			}
-		}
-		
 		// Bit 6 = EAR
-		*value = (kbd & 0xBF) | (tape_audio_next_pulse(cpu_get_cycles()) ? 0x40 : 0x00);
+		*value = (kbd & 0xBF);
+
+		// ---- TAPE AUDIO ----
+		if (tape_enabled.load() == true)
+			*value |= (tape_audio_next_pulse(cpu_get_cycles()) ? 0x40 : 0x00);
+			
 		return;
 	}
 

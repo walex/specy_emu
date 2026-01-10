@@ -61,10 +61,9 @@ void audio_end() {
 
 // Internal function to push a sample into the circular buffer
 static void push_sample(float level) {
-    std::lock_guard<std::mutex> lock(audio_buffer_mutex);
+    //std::lock_guard<std::mutex> lock(audio_buffer_mutex);
     audio_buffer[buffer_write] = level;
     buffer_write = (buffer_write + 1) % BUFFER_SAMPLES;
-    // Si se llena, se descarta el sample más antiguo
     if (buffer_write == buffer_read)
         buffer_read = (buffer_read + 1) % BUFFER_SAMPLES;
 }
@@ -121,7 +120,6 @@ void audio_thread_proc() {
         // Llenar chunk con samples del buffer
         size_t fill_len = 0;
         {
-            std::lock_guard<std::mutex> lock(audio_buffer_mutex);
             while (buffer_read != buffer_write && fill_len < CHUNK_SIZE) {
                 samples_chunk[fill_len++] = audio_buffer[buffer_read];
                 buffer_read = (buffer_read + 1) % BUFFER_SAMPLES;

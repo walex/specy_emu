@@ -17,6 +17,7 @@
 // https://softspectrum48.weebly.com/notes/flash-loader-part-3-basic-programs-revisited
 // http://www.zxdesign.info/vidparam.shtml 
 // https://www.planetemu.net/roms/sinclair-zx-spectrum-tap?page=B
+// https://chatgpt.com/g/g-68fd3184e0ac81918bec585b374946d1-retroai-spectrumai?fbclid=IwY2xjawPOQTNleHRuA2FlbQIxMABicmlkETBPWVU0amtXZ1VlZkhJSzc4c3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHvmfNtvzlYimOBDev4Xrk0aQrCywA8mFsuPi3LXKhf2U6oYO3-dstjOyZL6V_aem_TexHC46MCxw5cmVlXU3yHw
 
 #include "z80.h"
 #include "ula.h"
@@ -30,9 +31,8 @@
 const char* SPECY_48K_ROM_FILE = "spec_48.rom";
 const char* SPECY_128K_ROM_FILE = "spec_128.rom";
 const char* TK95_48K_ROM_FILE = "TK95.Spanish.rom";
-const char* Z80_ZEXALL_TAP_PATH = "zexall.tap";
-const char* Z80_ZEXALL_BIN_PATH = "zexall.bin";
-const char* Z80_ZEXDOC_BIN_PATH = "zexdoc.bin";
+const char* TK90X_48K_ROM_FILE = "TK90X.v1.Spanish.rom";
+const char* TK90X_48K_ROM_V3_FILE = "TK90X_v3EN.rom";
 const size_t SPECY_48K_ROM_SIZE = 16 * 1024;
 const size_t ROM_16K_SIZE = 16 * 1024;
 const size_t RAM_48K_SIZE = 48 * 1024;
@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
 
 	auto exe_dir = get_executable_directory();
 	exe_dir.append("roms");
-	auto rom_path = exe_dir.append(SPECY_48K_ROM_FILE);
+	auto rom_path = exe_dir.append(TK90X_48K_ROM_V3_FILE);
 	uint8_t* system_memory = create_system_memory(rom_path.string().c_str(), SPECY_48K_ROM_SIZE + RAM_48K_SIZE);
 	if (!system_memory) {
 		perror("cannot load rom file");
@@ -104,7 +104,8 @@ int main(int argc, char* argv[]) {
 
 	uint8_t* tape_data;
 	size_t tape_data_size;
-	tape_file_to_bytes("..\\..\\..\\media\\Jetpac (1983)(Ultimate).tap", &tape_data, &tape_data_size);
+	// https://worldofspectrum.net/archive/games/
+	tape_file_to_bytes("..\\..\\..\\media\\Spy Hunter (19xx)(US Gold).TAP", &tape_data, &tape_data_size);
 	
 	specy_rom_set_pointer(system_memory);
 	ula_init(system_memory);

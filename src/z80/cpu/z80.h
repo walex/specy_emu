@@ -4,8 +4,10 @@
 
 #include <stdint.h>
 
-const double Z80_CPU_FREQ_MHZ = 3.5;
-const uint64_t Z80_CPU_FREQ_HZ = (uint64_t)(Z80_CPU_FREQ_MHZ * 1000000);
+constexpr double Z80_CPU_FREQ_MHZ = 3.5;
+constexpr uint64_t Z80_CPU_FREQ_HZ = (uint64_t)(Z80_CPU_FREQ_MHZ * 1000000);
+
+typedef void(*clock_call_interceptor_handler)();
 
 #ifdef __cplusplus
 extern "C" {
@@ -17,9 +19,13 @@ extern "C" {
 	void __stdcall cpu_wait();
 	void __stdcall cpu_sync(uint8_t cycles);
 	uint64_t __stdcall cpu_get_cycles();
+	void __stdcall cpu_add_call_interceptor(uint16_t addr, clock_call_interceptor_handler handler);
+	void __stdcall cpu_call_addr_notify(uint16_t addr);
 #ifdef __cplusplus
 	}
 #else
 #endif
+
+#define Z80_EMULATION_SYNC_CYCLES_DELAY 0 // seconds to wait before syncing CPU cycles to real time
 
 #endif
