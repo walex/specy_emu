@@ -24,9 +24,7 @@
 #include "specy_rom.h"
 #include "tap_loader.h"
 #include "tape_audio.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
+#include "tape_audio.h"
 #include <filesystem>
 
 const char* SPECY_48K_ROM_FILE = "spec_48.rom";
@@ -76,53 +74,17 @@ std::filesystem::path get_executable_directory() {
 
 #endif
 
-uint8_t* create_system_memory(const char* rom_path, size_t mem_size) {
-
-	FILE* rom = nullptr;
-	fopen_s(&rom, rom_path, "rb");
-	if (rom == nullptr) {
-		perror("Error opening file");
-		return nullptr;
-	}
-
-	fseek(rom, 0, SEEK_END); // Move the file pointer to the end
-	size_t rom_size = ftell(rom);
-	fseek(rom, 0, SEEK_SET);
-
-	uint8_t* mem = (uint8_t*)malloc(mem_size);
-	if (mem == nullptr) {
-
-		perror("RAM memory error");
-		fclose(rom);
-		return nullptr;
-	}
-	memset(mem, 0, mem_size);
-	fread(mem, rom_size, 1, rom);
-	fclose(rom);
-
-	return mem;
-}
-
-void destroy_system_memory(uint8_t* system_memory) {
-
-	free(system_memory);
-}
 
 int main(int argc, char* argv[]) {
 
 	auto exe_dir = get_executable_directory();
 	exe_dir.append("roms");
 	auto rom_path = exe_dir.append(TK90X_48K_ROM_V3_FILE);
-	uint8_t* system_memory = create_system_memory(rom_path.string().c_str(), SPECY_48K_ROM_SIZE + RAM_48K_SIZE);
-	if (!system_memory) {
-		perror("cannot load rom file");
+	if (!specy_rom_init(rom_path.string().c_str(), SPECY_48K_ROM_SIZE + RAM_48K_SIZE)) {
+		perror("specy rom init failed");
 		return -1;
 	}
-
-	printf("ROM %p\n", (void*)system_memory);
-	
-	specy_rom_init(system_memory);
-	ula_init(system_memory);
+	ula_init(specy_rom_get_pointer());
 
 #ifdef INJECT_TAP_FILE
 	uint8_t* tape_data;
@@ -132,10 +94,9 @@ int main(int argc, char* argv[]) {
 	tape_audio_set_bytes(tape_data, tape_data_size);
 #endif
 
-	Z80CPU(system_memory, 0);
-	destroy_system_memory(system_memory);
+	Z80CPU(specy_rom_get_pointer(), 0);
 	
-	free(tape_data);
+	specy_rom_end();
 
 	return 0;
 }
