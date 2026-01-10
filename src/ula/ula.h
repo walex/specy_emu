@@ -12,8 +12,7 @@ extern "C" {
 #endif
 	void __stdcall ula_read_port(uint16_t addr, uint8_t* value);
 	void __stdcall ula_write_port(uint16_t addr, uint8_t value);
-	uint8_t __stdcall ula_read_next_tap_pulse();
-	void __stdcall ula_set_tape_bytes(uint8_t* const data, const size_t size);
+	void __stdcall ula_on_audio_listen();
 #ifdef __cplusplus
 }
 #endif

@@ -48,7 +48,7 @@ uint8_t tape_audio_next_pulse(uint64_t cycles) {
 	if (tape_active && tape_pulse_index < tape_pulses.size()) {
 
 		while (tape_pulse_index < tape_pulses.size() &&
-			cycles >= tape_pulses[tape_pulse_index].end_cycle) {
+			cycles >= (cycles-tape_pulses[tape_pulse_index].end_cycle)) {
 
 			current_ear = tape_pulses[tape_pulse_index].ear_level;
 			tape_pulse_index++;
@@ -60,7 +60,9 @@ uint8_t tape_audio_next_pulse(uint64_t cycles) {
 	return current_ear;
 }
 
-void tape_audio_set_bytes(uint64_t cycles, const uint8_t* data, size_t size) {
+void tape_audio_set_bytes(const uint8_t* data, size_t size) {
+
+	uint64_t cycles = 0;
 
 	tape_audio_reset();
 
@@ -73,8 +75,6 @@ void tape_audio_set_bytes(uint64_t cycles, const uint8_t* data, size_t size) {
 		data += 2;
 		// header block
 		uint16_t data_len = data[12] | (data[13] << 8);
-		// tape_audio_add_block(&data[0], TAP_HEADER_BLOCK_SIZE, true);
-		// move to data block
 
 		// Pilot
 		for (int i = 0; i < PILOT_HEADER; i++)
@@ -120,3 +120,60 @@ void tape_audio_set_bytes(uint64_t cycles, const uint8_t* data, size_t size) {
 	tape_active = true;
 }
 
+void tape_audio_set_bytes2(uint64_t cycles, const uint8_t* data, size_t size) {
+
+	tape_audio_reset();
+
+	uint8_t level = 0;
+
+	uint8_t* data_end = (uint8_t*)(data + size);
+	while (data < data_end) {
+
+		// pass 2 bytes block length
+		data += 2;
+		// header block
+		uint16_t data_len = data[12] | (data[13] << 8);
+
+		// Pilot
+		for (int i = 0; i < PILOT_HEADER; i++)
+			tape_add_pulse(cycles, PILOT_PULSE_T, level);
+
+		// Sync
+		tape_add_pulse(cycles, SYNC1_T, level);
+		tape_add_pulse(cycles, SYNC2_T, level);
+
+		for (int i = 0; i < TAP_HEADER_BLOCK_SIZE; i++) {
+			uint8_t byte = data[i];
+			for (int b = 7; b >= 0; b--) {
+				uint32_t d = (byte & (1 << b)) ? BIT1_T : BIT0_T;
+				tape_add_pulse(cycles, d, level);
+				tape_add_pulse(cycles, d, level);
+			}
+		}
+		data += TAP_HEADER_BLOCK_SIZE;
+		// pass 2 bytes block length
+		data += 2;
+
+		// Pilot
+		for (int i = 0; i < PILOT_DATA; i++)
+			tape_add_pulse(cycles, PILOT_PULSE_T, level);
+
+		// Sync
+		tape_add_pulse(cycles, SYNC1_T, level);
+		tape_add_pulse(cycles, SYNC2_T, level);
+
+		for (int i = 0; i < data_len + 2; i++) {
+			uint8_t byte = data[i];
+			for (int b = 7; b >= 0; b--) {
+				uint32_t d = (byte & (1 << b)) ? BIT1_T : BIT0_T;
+				tape_add_pulse(cycles, d, level);
+				tape_add_pulse(cycles, d, level);
+			}
+		}
+		data += data_len + 2;
+	}
+
+	tape_add_pause((uint32_t&)cycles);
+	current_ear = 0;
+	tape_active = true;
+}

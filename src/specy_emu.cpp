@@ -23,6 +23,7 @@
 #include "ula.h"
 #include "specy_rom.h"
 #include "tap_loader.h"
+#include "tape_audio.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <memory.h>
@@ -38,6 +39,7 @@ const size_t ROM_16K_SIZE = 16 * 1024;
 const size_t RAM_48K_SIZE = 48 * 1024;
 const size_t ROM_128K_SIZE = 128 * 1024;
 
+#define INJECT_TAP_FILE
 #ifdef _WIN32
 #include <Windows.h>
 
@@ -50,7 +52,24 @@ std::filesystem::path get_executable_directory() {
 		std::filesystem::path path_obj(exePath);
 		return path_obj.parent_path();
 	}
+	perror("Failed to get executable path.");
+	return std::filesystem::path();
+}
 
+#else
+
+#include <unistd.h>
+#include <limits.h>
+std::filesystem::path get_executable_directory() {
+	char exePath[PATH_MAX];
+	// Get the full path of the current executable
+	ssize_t count = readlink("/proc/self/exe", exePath, PATH_MAX);
+	if (count != -1) {
+		exePath[count] = '\0'; // Null-terminate the string
+		// Use C++17 filesystem library to get the parent directory
+		std::filesystem::path path_obj(exePath);
+		return path_obj.parent_path();
+	}
 	perror("Failed to get executable path.");
 	return std::filesystem::path();
 }
@@ -101,16 +120,17 @@ int main(int argc, char* argv[]) {
 	}
 
 	printf("ROM %p\n", (void*)system_memory);
+	
+	specy_rom_init(system_memory);
+	ula_init(system_memory);
 
+#ifdef INJECT_TAP_FILE
 	uint8_t* tape_data;
 	size_t tape_data_size;
 	// https://worldofspectrum.net/archive/games/
-	tape_file_to_bytes("..\\..\\..\\media\\Spy Hunter (19xx)(US Gold).TAP", &tape_data, &tape_data_size);
-	
-	specy_rom_set_pointer(system_memory);
-	ula_init(system_memory);
-
-	ula_set_tape_bytes(tape_data, tape_data_size);
+	tape_file_to_bytes("..\\..\\..\\media\\Spy Vs. Spy (1985)(Beyond).tap", &tape_data, &tape_data_size);
+	tape_audio_set_bytes(tape_data, tape_data_size);
+#endif
 
 	Z80CPU(system_memory, 0);
 	destroy_system_memory(system_memory);

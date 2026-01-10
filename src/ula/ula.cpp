@@ -6,29 +6,17 @@
 #include "audio.h"
 #include <atomic>
 
-static uint8_t* tape_data = nullptr;
-static size_t tape_data_size = 0;
+static std::atomic<bool> audio_listen_enabled = false;
 
-// intercept calls functions
-static constexpr uint16_t LD_BYTES = 0x0556;
-static std::atomic<bool> tape_enabled = false;
+void ula_on_audio_listen() {
 
-void ula_on_LD_BYTES() {
+	if (audio_listen_enabled.load() == false) {
 
-	if (tape_enabled.load() == false && 
-		tape_data != nullptr 
-		&& tape_data_size > 0) {
-
-		tape_audio_set_bytes(cpu_get_cycles(), tape_data, tape_data_size);
-		tape_data = nullptr;
-		tape_data_size = 0;
-		tape_enabled.store(true);		
+		audio_listen_enabled.store(true);		
 	}
 }
 
 void ula_init(uint8_t* system_memory) {
-
-	cpu_add_call_interceptor(LD_BYTES, ula_on_LD_BYTES);
 
 	display_init(system_memory);
 	audio_init();
@@ -49,7 +37,7 @@ void ula_read_port(uint16_t addr, uint8_t* value) {
 		*value = (kbd & 0xBF);
 
 		// ---- TAPE AUDIO ----
-		if (tape_enabled.load() == true)
+		if (audio_listen_enabled.load() == true)
 			*value |= (tape_audio_next_pulse(cpu_get_cycles()) ? 0x40 : 0x00);
 			
 		return;
@@ -71,10 +59,4 @@ void ula_write_port(uint16_t addr, uint8_t value) {
 void ula_assert_INT_line() {
 
 	trigger_MI(0);
-}
-
-void ula_set_tape_bytes(uint8_t* data, size_t size) {
-
-	tape_data = data;
-	tape_data_size = size;
 }
