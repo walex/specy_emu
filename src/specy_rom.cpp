@@ -48,7 +48,7 @@ int specy_rom_init(const char* rom_path, size_t memory_size) {
 		perror("cannot load rom file");
 		return -1;
 	}
-	cpu_add_call_interceptor(LD_BYTES, specy_rom_on_call_LD_BYTES);
+	cpu_call_opcode_interceptor(LD_BYTES, specy_rom_on_call_LD_BYTES);
 }
 
 void specy_rom_end() {

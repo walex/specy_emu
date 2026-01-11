@@ -12,6 +12,7 @@ void ula_on_audio_listen() {
 
 	if (audio_listen_enabled.load() == false) {
 
+		tape_audio_sync(cpu_get_cycles());
 		audio_listen_enabled.store(true);		
 	}
 }
@@ -25,21 +26,23 @@ void ula_init(uint8_t* system_memory) {
 void ula_read_port(uint16_t addr, uint8_t* value) {
 
 	uint16_t port = addr & 0x00FF;
-	auto clk = cpu_get_cycles();
+	auto clock_cycle = cpu_get_cycles();
 
 	if (port == 0xFE) {
 
-		// ---- KEYBOARD ----
+		// keyboard 
 		uint8_t key = (addr >> 8) & 0xFF;
 		uint8_t kbd = keyboard_get_map_addr(key);
 
-		// Bit 6 = EAR
+		// bit 6 ear
 		*value = (kbd & 0xBF);
 
-		// ---- TAPE AUDIO ----
-		if (audio_listen_enabled.load() == true)
-			*value |= (tape_audio_next_pulse(cpu_get_cycles()) ? 0x40 : 0x00);
-			
+		// tape audio
+		if (audio_listen_enabled.load() == true) {
+			uint8_t next_pulse = (tape_audio_next_pulse(clock_cycle) ? 0x40 : 0x00);
+			audio_play(clock_cycle, (next_pulse >> 2));
+			*value |= next_pulse;
+		}
 		return;
 	}
 

@@ -4,7 +4,7 @@ EXTERNDEF inst_OUT_Impl:PROC
 EXTERNDEF inst_IN_Impl:PROC
 EXTERNDEF inst_DAA_C:PROC
 EXTERNDEF acumulate_opcode_cycles_c:PROC
-EXTERNDEF cpu_call_addr_notify:PROC
+EXTERNDEF cpu_call_opcode_notify:PROC
 
 .code
 
@@ -901,7 +901,7 @@ mov reg_pc,x_ax
 push reg_pc
 push reg_si
 push reg_di
-invoke cpu_call_addr_notify, bx
+invoke cpu_call_opcode_notify, bx
 pop reg_di
 pop reg_si
 pop reg_pc

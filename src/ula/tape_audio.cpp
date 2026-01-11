@@ -1,4 +1,5 @@
 #include "tape_audio.h"
+#include "z80.h" // TODO: replace for cpu.h
 #include <vector>
 
 static constexpr uint32_t PILOT_PULSE_T = 2168;
@@ -6,12 +7,13 @@ static constexpr uint32_t SYNC1_T = 667;
 static constexpr uint32_t SYNC2_T = 735;
 static constexpr uint32_t BIT0_T = 855;
 static constexpr uint32_t BIT1_T = 1710;
-constexpr uint32_t PAUSE_T = 3500000; // 1 segundo
+constexpr uint32_t PAUSE_T = 3500000; // 1 sec
 constexpr uint32_t PILOT_HEADER = 8063;
 constexpr uint32_t PILOT_DATA = 3223;
+static uint64_t sync_cycles = 0;
 
 struct TapePulse {
-	uint64_t end_cycle;   // ciclo absoluto
+	uint64_t end_cycle;   // absolute cycle when pulse ends
 	uint8_t  ear_level;   // 0 o 1
 };
 
@@ -23,6 +25,7 @@ bool tape_active = false;
 
 void tape_audio_reset() {
 	tape_pulses.clear();
+	tape_pulses.reserve(1024 * 1024);
 	tape_pulse_index = 0;
 	current_ear = 0;
 	tape_active = false;
@@ -30,7 +33,7 @@ void tape_audio_reset() {
 
 static void tape_add_pause(uint32_t& t) {
 	t += PAUSE_T;
-	tape_pulses.push_back({ t, 0 }); // EAR bajo durante pausa
+	tape_pulses.push_back({ t, 0 }); // EAR down during pause
 }
 
 static void tape_add_pulse(uint64_t& t, uint32_t duration, uint8_t& level) {
@@ -44,16 +47,18 @@ uint8_t tape_audio_next_pulse(uint64_t cycles) {
 	if (!tape_active)
 		return 0;
 
-	// ---- ACTUALIZAR TAPE SEGÚN CICLOS ----
+	// ---- update tape according to cycles ----
 	if (tape_active && tape_pulse_index < tape_pulses.size()) {
 
 		while (tape_pulse_index < tape_pulses.size() &&
-			cycles >= (cycles-tape_pulses[tape_pulse_index].end_cycle)) {
+			cycles >= (sync_cycles+tape_pulses[tape_pulse_index].end_cycle)) {
 
 			current_ear = tape_pulses[tape_pulse_index].ear_level;
 			tape_pulse_index++;
 		}
 
+		// TODO: support multi charge tape loading
+		// end tape
 		if (tape_pulse_index >= tape_pulses.size())
 			tape_active = false;
 	}
@@ -124,3 +129,7 @@ void tape_audio_set_bytes(uint8_t* data, size_t size) {
 	delete[] data_ptr;
 }
 
+void tape_audio_sync(uint64_t cycles) {
+
+	sync_cycles = cycles;
+}

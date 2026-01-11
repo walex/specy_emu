@@ -28,8 +28,8 @@ struct tap_info_head {
 	uint32_t data_size = 0;
 };
 
-tap_info_head* tape_load_from_file(const char* filename);
-void tape_free(tap_info_head* tape);
-void tape_file_to_bytes(const char* filename, uint8_t** buffer_out, size_t* size_out);
+tap_info_head* tap_load_from_file(const char* filename);
+void tap_free(tap_info_head* tape);
+void tap_file_to_bytes(const char* filename, uint8_t** buffer_out, size_t* size_out);
 
 #endif

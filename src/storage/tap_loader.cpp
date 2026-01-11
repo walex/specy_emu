@@ -4,7 +4,7 @@
 #include <memory.h>
 #include <vector>
 
-tap_info_head* tape_load_from_file(const char* filename) {
+tap_info_head* tap_load_from_file(const char* filename) {
 
 	uint32_t total_data_size = 0;
 	FILE* f = nullptr;
@@ -108,7 +108,7 @@ tap_info_head* tape_load_from_file(const char* filename) {
 	return list_head;
 }
 
-void tape_free(tap_info_head* tape) {
+void tap_free(tap_info_head* tape) {
 	tap_info* current = tape->node;
 	while (current != nullptr) {
 		tap_info* next = current->next;
@@ -119,7 +119,7 @@ void tape_free(tap_info_head* tape) {
 	delete tape;
 }
 
-void tape_file_to_bytes(const char* filename, uint8_t** buffer_out, size_t* size_out) {
+void tap_file_to_bytes(const char* filename, uint8_t** buffer_out, size_t* size_out) {
 
 	FILE* f = nullptr;
 	fopen_s(&f, filename, "rb");

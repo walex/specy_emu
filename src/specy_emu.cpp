@@ -90,7 +90,7 @@ int main(int argc, char* argv[]) {
 	uint8_t* tape_data;
 	size_t tape_data_size;
 	// https://worldofspectrum.net/archive/games/
-	tape_file_to_bytes("..\\..\\..\\media\\Spy Vs. Spy (1985)(Beyond).tap", &tape_data, &tape_data_size);
+	tap_file_to_bytes("..\\..\\..\\media\\RexA.tap", &tape_data, &tape_data_size);
 	tape_audio_set_bytes(tape_data, tape_data_size);
 #endif
 

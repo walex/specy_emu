@@ -73,10 +73,10 @@ static void push_sample(float level) {
 void audio_play(uint64_t tstates_cpu_total, uint8_t value) {
     int new_ear = (value >> 4) & 1;
     int new_mic = (value >> 3) & 1;
-    float new_level = new_ear * 1.0f; // Puedes sumar new_mic * 0.5f si quieres
+    float new_level = new_ear * 1.0f;// +new_mic * 0.5f;
 
     if (first_call) {
-        // Primera llamada: generar al menos un sample
+        // Fist call: generate one sample at least
         last_tstate = tstates_cpu_total;
         first_call = false;
         tstate_accum = 0;

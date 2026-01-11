@@ -19,8 +19,8 @@ extern "C" {
 	void __stdcall cpu_wait();
 	void __stdcall cpu_sync(uint8_t cycles);
 	uint64_t __stdcall cpu_get_cycles();
-	void __stdcall cpu_add_call_interceptor(uint16_t addr, clock_call_interceptor_handler handler);
-	void __stdcall cpu_call_addr_notify(uint16_t addr);
+	void __stdcall cpu_call_opcode_interceptor(uint16_t addr, clock_call_interceptor_handler handler);
+	void __stdcall cpu_call_opcode_notify(uint16_t addr);
 #ifdef __cplusplus
 	}
 #else
