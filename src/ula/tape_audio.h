@@ -12,4 +12,6 @@ void tape_add_pulse(uint64_t& t, uint32_t duration, uint8_t& level);
 uint8_t tape_audio_next_pulse(uint64_t cycles);
 void tape_audio_set_bytes(uint8_t* data, size_t size);
 void tape_audio_sync(uint64_t cycles);
+void tape_audio_load_wav(const char* filename, uint8_t** out_buffer, size_t* out_size);
+
 #endif

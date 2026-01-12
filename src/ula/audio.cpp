@@ -43,6 +43,8 @@ void audio_init() {
     if (audio_running.load() != 0)
         return;
 
+    audio_render_init(SAMPLE_RATE);
+
     audio_thread = std::thread(audio_thread_proc);
 
     // Wait for audio thread to start
@@ -57,6 +59,8 @@ void audio_end() {
     audio_running = 0;
     if (audio_thread.joinable())
         audio_thread.join();
+
+    audio_render_end();
 }
 
 // Internal function to push a sample into the circular buffer
@@ -112,12 +116,11 @@ void audio_thread_proc() {
     int16_t* sdl_chunk = new int16_t[CHUNK_SIZE];
 
     clock_master_handle cmh = clk_master_get("display_sync_clock2");
-    audio_render_init(SAMPLE_RATE);
 
     while (audio_running.load() != 0) {
         clk_master_wait(cmh);
 
-        // Llenar chunk con samples del buffer
+        // Fill chunk with samples from buffer
         size_t fill_len = 0;
         {
             while (buffer_read != buffer_write && fill_len < CHUNK_SIZE) {
@@ -126,20 +129,19 @@ void audio_thread_proc() {
             }
         }
 
-        // Si no hay suficientes samples, rellenar con el último nivel
+        // If there are not enough samples, fill in with the last level
         for (size_t i = fill_len; i < CHUNK_SIZE; i++)
             samples_chunk[i] = current_level;
 
-        // Convertir float 0.0-1.0 a int16_t para SDL
+        // Convert float 0.0-1.0 a int16_t for SDL
         for (size_t i = 0; i < CHUNK_SIZE; i++) {
             sdl_chunk[i] = static_cast<int16_t>(std::round(samples_chunk[i] * 32767.0f));
         }
 
-        // Enviar a SDL
+        // Send to SDL
         audio_render_play((uint8_t*)sdl_chunk, CHUNK_SIZE * sizeof(int16_t));
     }
 
-    audio_render_end();
     delete[] samples_chunk;
     delete[] sdl_chunk;
 }

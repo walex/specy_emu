@@ -1,4 +1,5 @@
 #include "tape_audio.h"
+#include "audio_render.h"
 #include "z80.h" // TODO: replace for cpu.h
 #include <vector>
 
@@ -75,51 +76,56 @@ void tape_audio_set_bytes(uint8_t* data, size_t size) {
 
 	uint8_t level = 0;
 
+	uint16_t data_len;
 	uint8_t* data_end = (uint8_t*)(data + size);
 	while (data < data_end) {
 
-		// pass 2 bytes block length
-		data += 2;
-		// header block
-		uint16_t data_len = data[12] | (data[13] << 8);
+		uint16_t block_size = data[0] | (data[1] << 8);
 
-		// Pilot
-		for (int i = 0; i < PILOT_HEADER; i++)
-			tape_add_pulse(cycles, PILOT_PULSE_T, level);
-
-		// Sync
-		tape_add_pulse(cycles, SYNC1_T, level);
-		tape_add_pulse(cycles, SYNC2_T, level);
-
-		for (int i = 0; i < TAP_HEADER_BLOCK_SIZE; i++) {
-			uint8_t byte = data[i];
-			for (int b = 7; b >= 0; b--) {
-				uint32_t d = (byte & (1 << b)) ? BIT1_T : BIT0_T;
-				tape_add_pulse(cycles, d, level);
-				tape_add_pulse(cycles, d, level);
-			}
-		}
-		data += TAP_HEADER_BLOCK_SIZE;
 		// pass 2 bytes block length
 		data += 2;
 
-		// Pilot
-		for (int i = 0; i < PILOT_DATA; i++)
-			tape_add_pulse(cycles, PILOT_PULSE_T, level);
+		if (data[0] == 0) {
+			// header block
+			data_len = data[12] | (data[13] << 8);
 
-		// Sync
-		tape_add_pulse(cycles, SYNC1_T, level);
-		tape_add_pulse(cycles, SYNC2_T, level);
+			// Pilot
+			for (int i = 0; i < PILOT_HEADER; i++)
+				tape_add_pulse(cycles, PILOT_PULSE_T, level);
 
-		for (int i = 0; i < data_len + 2; i++) {
-			uint8_t byte = data[i];
-			for (int b = 7; b >= 0; b--) {
-				uint32_t d = (byte & (1 << b)) ? BIT1_T : BIT0_T;
-				tape_add_pulse(cycles, d, level);
-				tape_add_pulse(cycles, d, level);
+			// Sync
+			tape_add_pulse(cycles, SYNC1_T, level);
+			tape_add_pulse(cycles, SYNC2_T, level);
+
+			for (int i = 0; i < block_size; i++) {
+				uint8_t byte = data[i];
+				for (int b = 7; b >= 0; b--) {
+					uint32_t d = (byte & (1 << b)) ? BIT1_T : BIT0_T;
+					tape_add_pulse(cycles, d, level);
+					tape_add_pulse(cycles, d, level);
+				}
 			}
 		}
-		data += data_len + 2;
+		else {
+			data_len = block_size - 2;
+			// Pilot
+			for (int i = 0; i < PILOT_DATA; i++)
+				tape_add_pulse(cycles, PILOT_PULSE_T, level);
+
+			// Sync
+			tape_add_pulse(cycles, SYNC1_T, level);
+			tape_add_pulse(cycles, SYNC2_T, level);
+
+			for (int i = 0; i < data_len + 2; i++) {
+				uint8_t byte = data[i];
+				for (int b = 7; b >= 0; b--) {
+					uint32_t d = (byte & (1 << b)) ? BIT1_T : BIT0_T;
+					tape_add_pulse(cycles, d, level);
+					tape_add_pulse(cycles, d, level);
+				}
+			}			
+		}
+		data += block_size;
 	}
 
 	tape_add_pause((uint32_t&)cycles);
@@ -132,4 +138,38 @@ void tape_audio_set_bytes(uint8_t* data, size_t size) {
 void tape_audio_sync(uint64_t cycles) {
 
 	sync_cycles = cycles;
+}
+
+void tape_audio_load_wav(const char* filename, uint8_t** out_buffer, size_t* out_size) {
+
+	uint8_t* wav_buffer;
+	size_t wav_size;
+	audio_render_load_wav(filename, &wav_buffer, &wav_size);
+	if (wav_size > 0) {
+		// convert wav to tape pulses
+		uint8_t level = 0;
+		uint64_t cycles = 0;
+		tape_audio_reset();
+		// WAV format: 16bit signed PCM, mono, 44100Hz
+		const uint32_t SAMPLE_RATE = 44100;
+		const uint32_t CYCLES_PER_SAMPLE = Z80_CPU_FREQ_HZ / SAMPLE_RATE;
+		int16_t* samples = (int16_t*)wav_buffer;
+		size_t sample_count = wav_size / sizeof(int16_t);
+		for (size_t i = 0; i < sample_count; i++) {
+			int16_t sample = samples[i];
+			uint8_t sample_level = (sample >= 0) ? 1 : 0;
+			if (sample_level != level) {
+				// level change, add pulse
+				tape_add_pulse(cycles, CYCLES_PER_SAMPLE, level);
+			}
+			else {
+				// same level, just advance cycles
+				cycles += CYCLES_PER_SAMPLE;
+			}
+		}
+		current_ear = 0;
+		tape_active = true;
+		audio_render_free_wav(wav_buffer);
+	}
+	
 }

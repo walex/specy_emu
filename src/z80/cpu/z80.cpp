@@ -65,3 +65,10 @@ void cpu_call_opcode_notify(uint16_t addr) {
     }
 }
 
+uint16_t cpu_get_pc(uint64_t base_addr)
+{
+
+    uint16_t pc;
+    GetRegPC(base_addr, &pc);
+    return pc;
+}

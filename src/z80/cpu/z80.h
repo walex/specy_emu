@@ -14,6 +14,7 @@ extern "C" {
 #endif
 	int __stdcall Z80CPU(uint8_t*, uint8_t* pc);
 	void __stdcall trigger_MI(uint8_t bus_data);
+	void __stdcall GetRegPC(uint64_t memPtr, uint16_t* value);
 	void __stdcall cpu_lock();
 	void __stdcall cpu_unlock();
 	void __stdcall cpu_wait();
@@ -21,6 +22,7 @@ extern "C" {
 	uint64_t __stdcall cpu_get_cycles();
 	void __stdcall cpu_call_opcode_interceptor(uint16_t addr, clock_call_interceptor_handler handler);
 	void __stdcall cpu_call_opcode_notify(uint16_t addr);
+	uint16_t __stdcall cpu_get_pc(uint64_t base_addr);
 #ifdef __cplusplus
 	}
 #else

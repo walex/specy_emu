@@ -197,39 +197,39 @@ InitRegisters PROC
 ; params
 ; regs values:PTR WORD -> rcx
 
-SetTestRegValue16 reg_pc_tmp
-SetTestRegValue16 RegSP
-SetTestRegValue8 RegA
-SetTestRegValue8 RegB
-SetTestRegValue8 RegC
-SetTestRegValue8 RegD
-SetTestRegValue8 RegE
-SetTestRegValue8 RegF
-SetTestRegValue8 RegH
-SetTestRegValue8 RegL
-SetTestRegValue8 RegI
-SetTestRegValue8 RegR
+SetRegValue16 reg_pc_tmp
+SetRegValue16 RegSP
+SetRegValue8 RegA
+SetRegValue8 RegB
+SetRegValue8 RegC
+SetRegValue8 RegD
+SetRegValue8 RegE
+SetRegValue8 RegF
+SetRegValue8 RegH
+SetRegValue8 RegL
+SetRegValue8 RegI
+SetRegValue8 RegR
 
 ; not used ei,wz
-SetTestRegValue16 ax
-SetTestRegValue16 ax
+SetRegValue16 ax
+SetRegValue16 ax
 
-SetTestRegValue16 RegIX
-SetTestRegValue16 RegIY
+SetRegValue16 RegIX
+SetRegValue16 RegIY
 
-SetTestRegValue16 RegAF_ESP
-SetTestRegValue16 RegBC_ESP
-SetTestRegValue16 RegDE_ESP
-SetTestRegValue16 RegHL_ESP
+SetRegValue16 RegAF_ESP
+SetRegValue16 RegBC_ESP
+SetRegValue16 RegDE_ESP
+SetRegValue16 RegHL_ESP
 
-SetTestRegValue8 IMF
+SetRegValue8 IMF
 
 ; not used p,q
-SetTestRegValue8 al
-SetTestRegValue8 al
+SetRegValue8 al
+SetRegValue8 al
 
-SetTestRegValue8 IFF1
-SetTestRegValue8 IFF2
+SetRegValue8 IFF1
+SetRegValue8 IFF2
 
 ret
 
@@ -240,43 +240,53 @@ GetRegisters PROC
 ; params
 ; regs values:PTR WORD -> rcx
 
-GetTestRegValue16 reg_pc_tmp
-GetTestRegValue16 RegSP
-GetTestRegValue8 RegA
-GetTestRegValue8 RegB
-GetTestRegValue8 RegC
-GetTestRegValue8 RegD
-GetTestRegValue8 RegE
-GetTestRegValue8 RegF
-GetTestRegValue8 RegH
-GetTestRegValue8 RegL
-GetTestRegValue8 RegI
-GetTestRegValue8 RegR
+GetRegValue16 reg_pc_tmp
+GetRegValue16 RegSP
+GetRegValue8 RegA
+GetRegValue8 RegB
+GetRegValue8 RegC
+GetRegValue8 RegD
+GetRegValue8 RegE
+GetRegValue8 RegF
+GetRegValue8 RegH
+GetRegValue8 RegL
+GetRegValue8 RegI
+GetRegValue8 RegR
 
 ; not used ei,wz
-GetTestRegValue16 ax
-GetTestRegValue16 ax
+GetRegValue16 ax
+GetRegValue16 ax
 
-GetTestRegValue16 RegIX
-GetTestRegValue16 RegIY
+GetRegValue16 RegIX
+GetRegValue16 RegIY
 
-GetTestRegValue16 RegAF_ESP
-GetTestRegValue16 RegBC_ESP
-GetTestRegValue16 RegDE_ESP
-GetTestRegValue16 RegHL_ESP
+GetRegValue16 RegAF_ESP
+GetRegValue16 RegBC_ESP
+GetRegValue16 RegDE_ESP
+GetRegValue16 RegHL_ESP
 
-GetTestRegValue8 IMF
+GetRegValue8 IMF
 
 ; not used p,q
-GetTestRegValue8 al
-GetTestRegValue8 al
+GetRegValue8 al
+GetRegValue8 al
 
-GetTestRegValue8 IFF1
-GetTestRegValue8 IFF2
+GetRegValue8 IFF1
+GetRegValue8 IFF2
 
 ret
 
 GetRegisters ENDP
+
+GetRegPC PROC
+	; params
+	; regs memPtr:PTR WORD -> rcx
+	; regs value:PTR WORD -> rdx
+	mov rax, reg_pc
+	sub rax, rcx
+	mov WORD PTR [rdx], ax
+	ret
+GetRegPC ENDP
 
 SetRegPC PROC
 	mov r10, rcx

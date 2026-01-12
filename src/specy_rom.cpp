@@ -65,3 +65,9 @@ uint16_t specy_rom_get_system_var_value(uint16_t system_var_id) {
 
 	return *(uint16_t*)(system_rom_pointer + system_var_id);
 }
+
+bool specy_rom_pc_is_in_rom() {
+
+	uint16_t pc = cpu_get_pc((uint64_t)specy_rom_get_pointer());
+	return (pc < 0x4000);
+}

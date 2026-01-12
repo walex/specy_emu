@@ -285,7 +285,7 @@ pop x_cx
 
 ENDM
 
-SetTestRegValue64 MACRO reg
+SetRegValue64 MACRO reg
 
 xor rax, rax
 mov ax, WORD PTR [rcx]
@@ -294,7 +294,7 @@ add rcx, 2
 
 ENDM
 
-SetTestRegValue16 MACRO reg
+SetRegValue16 MACRO reg
 
 mov ax, WORD PTR [rcx]
 mov reg, ax
@@ -302,7 +302,7 @@ add rcx, 2
 
 ENDM
 
-SetTestRegValue8 MACRO reg
+SetRegValue8 MACRO reg
 
 mov ax, WORD PTR [rcx]
 mov reg, al
@@ -310,7 +310,7 @@ add rcx, 2
 
 ENDM
 
-GetTestRegValue64 MACRO reg
+GetRegValue64 MACRO reg
 
 mov rax, reg
 mov WORD PTR [rcx], ax
@@ -318,7 +318,7 @@ add rcx, 2
 
 ENDM
 
-GetTestRegValue16 MACRO reg
+GetRegValue16 MACRO reg
 
 xor rax, rax
 mov ax, reg
@@ -327,7 +327,7 @@ add rcx, 2
 
 ENDM
 
-GetTestRegValue8 MACRO reg
+GetRegValue8 MACRO reg
 
 xor rax, rax
 mov al, reg

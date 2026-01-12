@@ -18,6 +18,7 @@
 // http://www.zxdesign.info/vidparam.shtml 
 // https://www.planetemu.net/roms/sinclair-zx-spectrum-tap?page=B
 // https://chatgpt.com/g/g-68fd3184e0ac81918bec585b374946d1-retroai-spectrumai?fbclid=IwY2xjawPOQTNleHRuA2FlbQIxMABicmlkETBPWVU0amtXZ1VlZkhJSzc4c3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHvmfNtvzlYimOBDev4Xrk0aQrCywA8mFsuPi3LXKhf2U6oYO3-dstjOyZL6V_aem_TexHC46MCxw5cmVlXU3yHw
+// https://www.esp32rainbow.com/tools/tap-to-wav
 
 #include "z80.h"
 #include "ula.h"
@@ -79,7 +80,7 @@ int main(int argc, char* argv[]) {
 
 	auto exe_dir = get_executable_directory();
 	exe_dir.append("roms");
-	auto rom_path = exe_dir.append(TK90X_48K_ROM_V3_FILE);
+	auto rom_path = exe_dir.append(SPECY_48K_ROM_FILE);
 	if (!specy_rom_init(rom_path.string().c_str(), SPECY_48K_ROM_SIZE + RAM_48K_SIZE)) {
 		perror("specy rom init failed");
 		return -1;
@@ -90,8 +91,9 @@ int main(int argc, char* argv[]) {
 	uint8_t* tape_data;
 	size_t tape_data_size;
 	// https://worldofspectrum.net/archive/games/
-	tap_file_to_bytes("..\\..\\..\\media\\RexA.tap", &tape_data, &tape_data_size);
+	tap_file_to_bytes("..\\..\\..\\media\\West Bank (Spanish).tap", &tape_data, &tape_data_size);
 	tape_audio_set_bytes(tape_data, tape_data_size);
+	//tape_audio_load_wav("..\\..\\..\\media\\West Bank (Spanish).wav", &tape_data, &tape_data_size);
 #endif
 
 	Z80CPU(specy_rom_get_pointer(), 0);

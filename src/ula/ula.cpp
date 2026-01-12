@@ -1,6 +1,7 @@
 #include "ula.h"
 #include "tape_audio.h"
 #include "z80.h"
+#include "specy_rom.h"
 #include "keyboard.h"
 #include "display.h"
 #include "audio.h"
@@ -42,6 +43,12 @@ void ula_read_port(uint16_t addr, uint8_t* value) {
 			uint8_t next_pulse = (tape_audio_next_pulse(clock_cycle) ? 0x40 : 0x00);
 			audio_play(clock_cycle, (next_pulse >> 2));
 			*value |= next_pulse;
+		}
+
+		// hack: disable audio listen if pc points outside rom
+		if (specy_rom_pc_is_in_rom() == false) {
+
+			audio_listen_enabled.store(false);
 		}
 		return;
 	}
