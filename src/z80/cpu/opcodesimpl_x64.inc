@@ -10,17 +10,8 @@ EXTERNDEF cpu_call_opcode_notify:PROC
 
 acumulate_opcode_cycles PROC
 
-push reg_pc
-push reg_si
-push x_bp
-push x_cx
-push x_dx
-invoke acumulate_opcode_cycles_c, cl, dl
-pop x_dx
-pop x_cx
-pop x_bp
-pop reg_si
-pop reg_pc
+CALL_C_FUNC acumulate_opcode_cycles_c
+
 ret
 
 acumulate_opcode_cycles ENDP
@@ -418,17 +409,10 @@ inst_DEC8 ENDP
 
 inst_DAA PROC
 
-push reg_pc
-push reg_si
-push x_bp
-push x_cx
-push x_dx
-invoke inst_DAA_C, OFFSET RegA, OFFSET RegF
-pop x_dx
-pop x_cx
-pop x_bp
-pop reg_si
-pop reg_pc
+mov rcx, OFFSET RegA
+mov rdx, OFFSET RegF
+CALL_C_FUNC inst_DAA_C
+
 ret
 
 inst_DAA ENDP
@@ -452,21 +436,30 @@ inst_NEG ENDP
 
 inst_CCF PROC
 
-ResetFlagBits NF, HF
-GetBitMask x_cx, CF
-mov ah, RegF
-and ah, cl
-shl ah, HF
+mov dl, RegF
+and dl, 1
+shl dl, HF
+ResetFlagBits HF, NF, XF, YF
 xor RegF, 1
-or RegF, ah
+
+; undoc flags
+mov al, RegA
+and al, 028h
+or al, dl
+or RegF, al
 ret
 
 inst_CCF ENDP
 
 inst_SCF PROC
 
-ResetFlagBits HF, NF
+ResetFlagBits HF, NF, XF, YF
 SetFlagBits CF
+
+; undoc flags
+mov al, RegA
+and al, 028h
+or RegF, al
 ret
 
 inst_SCF ENDP
@@ -898,13 +891,8 @@ mov bx,dx
 add x_ax,x_bx
 mov reg_pc,x_ax
 
-push reg_pc
-push reg_si
-push reg_di
-invoke cpu_call_opcode_notify, bx
-pop reg_di
-pop reg_si
-pop reg_pc
+mov cx, bx
+CALL_C_FUNC cpu_call_opcode_notify
 
 ret
 
@@ -965,17 +953,8 @@ inst_IN PROC
 ; port:WORD -> cx
 ; dest:PTR BYTE -> x_dx
 
-push reg_pc
-push reg_si
-push x_bp
-push x_cx
-push x_dx
-invoke inst_IN_Impl, cx, x_dx
-pop x_dx
-pop x_cx
-pop x_bp
-pop reg_si
-pop reg_pc
+
+CALL_C_FUNC inst_IN_Impl
 
 ret
 
@@ -1053,17 +1032,8 @@ inst_OUT PROC
 ; port:WORD -> cx
 ; value:BYTE -> dl
 
-push reg_pc
-push reg_si
-push x_bp
-push x_cx
-push x_dx
-invoke inst_OUT_Impl, cx, dl
-pop x_dx
-pop x_cx
-pop x_bp
-pop reg_si
-pop reg_pc
+CALL_C_FUNC inst_OUT_Impl, cx, dl
+
 ret
 
 inst_OUT ENDP

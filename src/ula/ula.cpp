@@ -44,12 +44,6 @@ void ula_read_port(uint16_t addr, uint8_t* value) {
 			audio_play(clock_cycle, (next_pulse >> 2));
 			*value |= next_pulse;
 		}
-
-		// hack: disable audio listen if pc points outside rom
-		if (specy_rom_pc_is_in_rom() == false) {
-
-			audio_listen_enabled.store(false);
-		}
 		return;
 	}
 

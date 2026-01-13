@@ -23,8 +23,6 @@
 #include "z80.h"
 #include "ula.h"
 #include "specy_rom.h"
-#include "tap_loader.h"
-#include "tape_audio.h"
 #include "tape_audio.h"
 #include <filesystem>
 
@@ -33,12 +31,11 @@ const char* SPECY_128K_ROM_FILE = "spec_128.rom";
 const char* TK95_48K_ROM_FILE = "TK95.Spanish.rom";
 const char* TK90X_48K_ROM_FILE = "TK90X.v1.Spanish.rom";
 const char* TK90X_48K_ROM_V3_FILE = "TK90X_v3EN.rom";
-const size_t SPECY_48K_ROM_SIZE = 16 * 1024;
+const size_t ROM_48K_SIZE = 16 * 1024;
 const size_t ROM_16K_SIZE = 16 * 1024;
 const size_t RAM_48K_SIZE = 48 * 1024;
 const size_t ROM_128K_SIZE = 128 * 1024;
 
-#define INJECT_TAP_FILE
 #ifdef _WIN32
 #include <Windows.h>
 
@@ -75,29 +72,31 @@ std::filesystem::path get_executable_directory() {
 
 #endif
 
-
+#define Z80_TEST
 int main(int argc, char* argv[]) {
 
 	auto exe_dir = get_executable_directory();
 	exe_dir.append("roms");
-	auto rom_path = exe_dir.append(SPECY_48K_ROM_FILE);
-	if (!specy_rom_init(rom_path.string().c_str(), SPECY_48K_ROM_SIZE + RAM_48K_SIZE)) {
-		perror("specy rom init failed");
+	auto rom_path = exe_dir.append(TK90X_48K_ROM_V3_FILE);
+	if (!specy_rom_init(rom_path.string().c_str(), ROM_48K_SIZE + RAM_48K_SIZE)) {
+		perror("rom init failed");
 		return -1;
 	}
 	ula_init(specy_rom_get_pointer());
 
-#ifdef INJECT_TAP_FILE
-	uint8_t* tape_data;
-	size_t tape_data_size;
-	// https://worldofspectrum.net/archive/games/
-	tap_file_to_bytes("..\\..\\..\\media\\West Bank (Spanish).tap", &tape_data, &tape_data_size);
-	tape_audio_set_bytes(tape_data, tape_data_size);
-	//tape_audio_load_wav("..\\..\\..\\media\\West Bank (Spanish).wav", &tape_data, &tape_data_size);
+#ifndef Z80_TEST
+	if (argc > 1) {
+		// load audio file from command line
+		tape_audio_from_file(argv[1]);
+		printf("Starting Z80 CPU emulation... file %s\n", argv[1]);
+	}
+	else {
+		printf("Starting Z80 CPU emulation...\n");
+	}
+#else
+	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\specy_emu\\media\\SABOTEU1.tap");
 #endif
-
-	Z80CPU(specy_rom_get_pointer(), 0);
-	
+	Z80CPU(specy_rom_get_pointer(), 0);	
 	specy_rom_end();
 
 	return 0;

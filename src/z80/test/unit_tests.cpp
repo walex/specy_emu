@@ -12,8 +12,8 @@
 extern "C" {
 #endif
 
-	void __stdcall InitRegisters(uint16_t*);
-	void __stdcall GetRegisters(uint16_t*);
+	void InitRegisters(uint16_t*);
+	void GetRegisters(uint16_t*);
 
 #ifdef __cplusplus
 }

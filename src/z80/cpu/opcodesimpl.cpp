@@ -7,12 +7,12 @@
 extern "C" void ula_read_port(uint16_t addr, uint8_t* value);
 extern "C" void ula_write_port(uint16_t addr, uint8_t value);
 
-extern "C" void __stdcall inst_IN_Impl(uint16_t addr, uint8_t* value) {
+extern "C" void  inst_IN_Impl(uint16_t addr, uint8_t* value) {
 	
-	ula_read_port(addr, value);
+    ula_read_port(addr, value);
 }
 
-extern "C" void __stdcall inst_OUT_Impl(uint16_t addr, uint8_t value) {
+extern "C" void inst_OUT_Impl(uint16_t addr, uint8_t value) {
 
 
 	addr = addr & 0x00FF;
@@ -26,7 +26,7 @@ extern "C" void __stdcall inst_OUT_Impl(uint16_t addr, uint8_t value) {
 
 }
 
-extern "C" uint8_t __stdcall parity(uint8_t c) {
+extern "C" uint8_t parity(uint8_t c) {
     int count = 0;
 
     // Count the number of set bits (1s)
@@ -39,7 +39,7 @@ extern "C" uint8_t __stdcall parity(uint8_t c) {
     return (uint8_t)!(count % 2);
 }
 
-extern "C" void __stdcall inst_DAA_C(uint8_t* reg_a, uint8_t* reg_f)
+extern "C" void inst_DAA_C(uint8_t* reg_a, uint8_t* reg_f)
 {
     int t;
 
@@ -94,7 +94,7 @@ extern "C" void __stdcall inst_DAA_C(uint8_t* reg_a, uint8_t* reg_f)
 
 }
 
-extern "C" void __stdcall acumulate_opcode_cycles_c(uint8_t cycles, uint8_t m_cycles) {
+extern "C" void acumulate_opcode_cycles_c(uint8_t cycles, uint8_t m_cycles) {
     
     cpu_sync(cycles);
 }

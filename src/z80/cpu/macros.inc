@@ -488,3 +488,14 @@ pop x_bx
 pop x_ax
 
 ENDM
+
+
+CALL_C_FUNC MACRO func_name
+
+push reg_pc
+sub rsp, 40
+call func_name
+add rsp, 40
+pop reg_pc
+
+ENDM

@@ -113,9 +113,9 @@
 
 	SF EQU 7	;Bit 7 - Sign flag
 	ZF EQU 6	;Bit 6 - Zero flag
-	NOUSO5 EQU 5	;Bit 5 - documented as unused (see note)
+	YF EQU 5	;Bit 5 - documented as unused (see note)
 	HF EQU 4	;Bit 4 - Half-carry flag
-	NOUSO3 EQU 3    ;Bit 3 - documented as unused (see note)
+	XF EQU 3    ;Bit 3 - documented as unused (see note)
 	PVF EQU 2       ;Bit 2 - Parity/Overflow flag
 	NF EQU 1	;Bit 1 - Subtract flag
 	CF EQU 0	;Bit 0 - Carry flag
@@ -180,9 +180,6 @@ D_LINE EQU [Z80_CPU.D_LINE]
 A_LINE EQU [Z80_CPU.A_LINE]
 HALT EQU [Z80_CPU.HALT]
 
-;Reg_Tmp EQU [Z80_CPU.Reg_Tmp]
-;Reg_Tmp16 EQU [Z80_CPU.Reg_Tmp16]
-;Reg_Tmp8 EQU [Z80_CPU.Reg_Tmp8]
 Reg_Tmp PTR_DATA_TYPE 0
 Reg_Tmp16 dw 0
 Reg_Tmp8 db	0
@@ -283,7 +280,7 @@ GetRegPC PROC
 	; regs memPtr:PTR WORD -> rcx
 	; regs value:PTR WORD -> rdx
 	mov rax, reg_pc
-	sub rax, rcx
+	sub ax, cx
 	mov WORD PTR [rdx], ax
 	ret
 GetRegPC ENDP

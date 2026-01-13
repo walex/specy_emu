@@ -1,7 +1,9 @@
 #include "tape_audio.h"
 #include "audio_render.h"
 #include "z80.h" // TODO: replace for cpu.h
+#include "tap_loader.h"
 #include <vector>
+#include <string>
 
 static constexpr uint32_t PILOT_PULSE_T = 2168;
 static constexpr uint32_t SYNC1_T = 667;
@@ -140,7 +142,7 @@ void tape_audio_sync(uint64_t cycles) {
 	sync_cycles = cycles;
 }
 
-void tape_audio_load_wav(const char* filename, uint8_t** out_buffer, size_t* out_size) {
+void tape_audio_load_wav(const char* filename) {
 
 	uint8_t* wav_buffer;
 	size_t wav_size;
@@ -172,4 +174,26 @@ void tape_audio_load_wav(const char* filename, uint8_t** out_buffer, size_t* out
 		audio_render_free_wav(wav_buffer);
 	}
 	
+}
+
+void tape_audio_load_tap(const char* filename) {
+
+	uint8_t* tap_buffer;
+	size_t tap_size;
+	tap_file_to_bytes(filename, &tap_buffer, &tap_size);
+	tape_audio_set_bytes(tap_buffer, tap_size);
+}
+
+void tape_audio_from_file(const char* filename) {
+	std::string file_str(filename);
+	std::string ext = file_str.substr(file_str.find_last_of(".") + 1);
+	if (ext == "tap" || ext == "TAP") {
+		tape_audio_load_tap(filename);
+	}
+	else if (ext == "wav" || ext == "WAV") {
+		tape_audio_load_wav(filename);
+	}
+	else {
+		printf("Unsupported tape file format: %s\n", filename);
+	}
 }

@@ -8,5 +8,5 @@ int specy_rom_init(const char* rom_path, size_t memory_size);
 void specy_rom_end();
 uint8_t* specy_rom_get_pointer();
 uint16_t specy_rom_get_system_var_value(uint16_t system_var_id);
-bool specy_rom_pc_is_in_rom();
+
 #endif
