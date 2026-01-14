@@ -105,10 +105,10 @@ void render_thread_proc() {
                 break;
             }
             else if (event.type == SDL_EVENT_KEY_DOWN) {
-                keyboard_set_input(event.key.key);
+                keyboard_set_input(event.key.key, event.key.mod);
             }
             else if (event.type == SDL_EVENT_KEY_UP) {
-                keyboard_unset_input(event.key.key);
+                keyboard_unset_input(event.key.key, event.key.mod);
             }
 
         }
