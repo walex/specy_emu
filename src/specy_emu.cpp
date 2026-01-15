@@ -72,12 +72,12 @@ std::filesystem::path get_executable_directory() {
 
 #endif
 
-#define Z80_TEST
+#define xZ80_TEST
 int main(int argc, char* argv[]) {
 
 	auto exe_dir = get_executable_directory();
 	exe_dir.append("roms");
-	auto rom_path = exe_dir.append(TK90X_48K_ROM_V3_FILE);
+	auto rom_path = exe_dir.append(SPECY_48K_ROM_FILE);
 	if (!specy_rom_init(rom_path.string().c_str(), ROM_48K_SIZE + RAM_48K_SIZE)) {
 		perror("rom init failed");
 		return -1;
@@ -94,7 +94,7 @@ int main(int argc, char* argv[]) {
 		printf("Starting Z80 CPU emulation...\n");
 	}
 #else
-	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\specy_emu\\media\\SABOTEU1.tap");
+	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\SABOTEU1.tap");
 #endif
 	Z80CPU(specy_rom_get_pointer(), 0);	
 	specy_rom_end();
