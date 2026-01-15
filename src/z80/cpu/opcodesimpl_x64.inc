@@ -129,6 +129,7 @@ inc RegHL
 dec RegBC
 SetPVFromBC
 ResetFlagBits HF, NF
+SetXFYFForLDIx al
 ret
 
 inst_LDI ENDP
@@ -169,6 +170,7 @@ dec RegHL
 dec RegBC
 SetPVFromBC
 ResetFlagBits HF, NF
+SetXFYFForLDIx al
 ret
 
 inst_LDD ENDP
@@ -191,6 +193,7 @@ jmp LDDR_exit
 LDDR_end:
 invoke acumulate_opcode_cycles, 16,4
 LDDR_exit:
+
 ret
 
 inst_LDDR ENDP
@@ -208,6 +211,8 @@ inc RegHL
 dec RegBC
 SetPVFromBC
 SetFlagBits NF
+SetXFYFForCPIx bl
+
 ret
 
 inst_CPI ENDP
@@ -249,6 +254,7 @@ cmp RegA,bl
 X86FlagsToZ80Flags SF, ZF, HF
 SetPVFromBC
 SetFlagBits NF
+SetXFYFForCPIx bl
 ret
 
 inst_CPD ENDP
@@ -287,6 +293,7 @@ mov al,[x_cx]
 add RegA, al
 X86FlagsToZ80Flags SF, ZF, HF, OF, CF
 ResetFlagBits NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_ADD8 ENDP
@@ -301,6 +308,7 @@ LoadZ80CarryFlag
 adc RegA, al
 X86FlagsToZ80Flags SF, ZF, HF, OF, CF
 ResetFlagBits NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_ADC8 ENDP
@@ -314,6 +322,7 @@ mov al,[x_cx]
 sub RegA,al
 X86FlagsToZ80Flags SF, ZF, HF, OF, CF
 SetFlagBits NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_SUB ENDP
@@ -328,6 +337,7 @@ mov al,[x_cx]
 sbb RegA, al
 X86FlagsToZ80Flags SF, ZF, HF, OF, CF
 SetFlagBits NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_SBC8 ENDP
@@ -341,7 +351,7 @@ ResetFlagBits SF, ZF, NF, PVF, CF
 and RegA,cl
 X86FlagsToZ80Flags SF, ZF, PVF
 SetFlagBits HF
-mov al, RegF
+SetXFYFFromReg8 RegA
 ret
 
 inst_AND ENDP
@@ -354,6 +364,7 @@ inst_OR PROC
 ResetFlagBits SF, ZF, HF, NF, PVF, CF
 or RegA,cl
 X86FlagsToZ80Flags SF, ZF, PVF
+SetXFYFFromReg8 RegA
 ret
 
 inst_OR ENDP
@@ -366,6 +377,7 @@ inst_XOR PROC
 xor RegA,cl		
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF, CF
+SetXFYFFromReg8 RegA
 ret
 
 inst_XOR ENDP
@@ -379,6 +391,7 @@ mov al,[x_cx]
 cmp RegA,al
 X86FlagsToZ80Flags SF, ZF, HF, OF, CF
 SetFlagBits NF
+SetXFYFFromReg8 al
 ret
 
 inst_CP ENDP
@@ -388,9 +401,12 @@ inst_INC8 PROC
 ; parameters
 ; Reg_Dest:PTR BYTE -> x_cx
 
-inc BYTE PTR [x_cx]
+mov al, BYTE PTR [x_cx]
+inc al
+mov BYTE PTR [x_cx], al
 X86FlagsToZ80Flags SF, ZF, HF, OF
 ResetFlagBits NF
+SetXFYFFromReg8 al
 ret
 
 inst_INC8 ENDP
@@ -400,9 +416,12 @@ inst_DEC8 PROC
 ; parameters
 ; Reg_Dest:PTR BYTE -> x_cx
 
-dec BYTE PTR [x_cx]
+mov al, BYTE PTR [x_cx]
+dec al
+mov BYTE PTR [x_cx], al
 X86FlagsToZ80Flags SF, ZF, HF, OF
 SetFlagBits NF
+SetXFYFFromReg8 al
 ret
 
 inst_DEC8 ENDP
@@ -419,8 +438,10 @@ inst_DAA ENDP
 
 inst_CPL PROC
 
+mov al, RegA
 not RegA
 SetFlagBits HF, NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_CPL ENDP
@@ -430,36 +451,35 @@ inst_NEG PROC
 neg RegA
 X86FlagsToZ80Flags SF, ZF, HF, OF, CF
 SetFlagBits NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_NEG ENDP
 
 inst_CCF PROC
 
-mov dl, RegF
-and dl, 1
-shl dl, HF
-ResetFlagBits HF, NF, XF, YF
+mov al, RegF
+and al, 1
+shl al, HF
+ResetFlagBits YF, HF, XF, NF
 xor RegF, 1
+or RegF, al
 
 ; undoc flags
-mov al, RegA
-and al, 028h
-or al, dl
-or RegF, al
+SetYFXFByRegAQ
+
 ret
 
 inst_CCF ENDP
 
 inst_SCF PROC
 
-ResetFlagBits HF, NF, XF, YF
+ResetFlagBits YF, HF, XF, NF, CF
 SetFlagBits CF
 
 ; undoc flags
-mov al, RegA
-and al, 028h
-or RegF, al
+SetYFXFByRegAQ
+
 ret
 
 inst_SCF ENDP
@@ -471,10 +491,22 @@ inst_ADD16 PROC
 ; Reg_Dest:PTR WORD -> x_dx
 
 Z80HFCarryFromBit11 x_cx, x_dx, 0
+
 mov bx, WORD PTR [x_cx]
+
+mov x_ax, OFFSET RegHL
+cmp x_dx, x_ax
+jnz inst_ADD16_proc
+mov RegW, bh
+
+inst_ADD16_proc:
+
 add WORD PTR [x_dx],bx
 X86FlagsToZ80Flags CF
 ResetFlagBits NF
+mov bx, WORD PTR [x_dx]
+SetXFYFFromReg8 bh
+
 ret
 
 inst_ADD16 ENDP
@@ -491,6 +523,7 @@ mov ax, WORD PTR [x_cx]
 adc RegHL,ax
 X86FlagsToZ80Flags SF, ZF, OF, CF
 ResetFlagBits NF
+SetXFYFFromReg8 RegH
 ret
 
 inst_ADC16 ENDP
@@ -507,6 +540,7 @@ mov ax,WORD PTR [x_cx]
 sbb RegHL,ax
 X86FlagsToZ80Flags SF, ZF, OF, CF
 SetFlagBits NF
+SetXFYFFromReg8 RegH
 ret
 
 inst_SBC16 ENDP
@@ -536,6 +570,7 @@ inst_RLCA PROC
 rol RegA,1
 X86FlagsToZ80Flags CF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_RLCA ENDP
@@ -546,6 +581,7 @@ LoadZ80CarryFlag
 rcl RegA,1
 X86FlagsToZ80Flags CF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_RLA ENDP
@@ -555,6 +591,7 @@ inst_RRCA PROC
 ror RegA,1
 X86FlagsToZ80Flags CF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_RRCA ENDP
@@ -565,6 +602,7 @@ LoadZ80CarryFlag
 rcr RegA,1
 X86FlagsToZ80Flags CF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_RRA ENDP
@@ -581,6 +619,7 @@ X86FlagsToZ80Flags CF
 test bl, bl
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 bl
 ret
 
 inst_RLC ENDP
@@ -598,6 +637,7 @@ X86FlagsToZ80Flags CF
 test bl, bl
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 bl
 ret
 
 inst_RL ENDP
@@ -614,6 +654,7 @@ X86FlagsToZ80Flags CF
 test bl, bl
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 bl
 ret
 
 inst_RRC ENDP
@@ -631,6 +672,7 @@ X86FlagsToZ80Flags CF
 test bl, bl
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 bl
 ret
 
 inst_RR ENDP
@@ -647,6 +689,7 @@ X86FlagsToZ80Flags CF
 test bl, bl
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 bl
 ret
 
 inst_SLA ENDP
@@ -672,6 +715,7 @@ mov [x_cx],bl
 test bl, bl
 X86FlagsToZ80Flags SF, ZF, PVF
 or RegF, dl
+SetXFYFFromReg8 bl
 
 ret
 
@@ -689,6 +733,7 @@ X86FlagsToZ80Flags CF
 test bl, bl
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 bl
 ret
 
 inst_SRA ENDP
@@ -705,6 +750,7 @@ X86FlagsToZ80Flags CF
 test bl, bl
 X86FlagsToZ80Flags ZF, PVF
 ResetFlagBits SF, HF, NF
+SetXFYFFromReg8 bl
 ret
 
 inst_SRL ENDP
@@ -738,6 +784,7 @@ mov RegA, ch
 test ch, ch
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_RLD ENDP
@@ -774,9 +821,115 @@ mov [reg_di], al
 test cl, cl
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
+SetXFYFFromReg8 RegA
 ret
 
 inst_RRD ENDP
+
+inst_BIT_HL PROC
+
+; parameters
+; Reg:PTR BYTE -> x_cx
+; Idx:BYTE -> dl
+
+;HF flag Always set.
+;NF flag Always reset.
+;CF flag Unchanged.
+ResetFlagBits SF, ZF, NF, PVF, XF, YF
+SetFlagBits HF
+
+xor  ax, ax
+mov al, [x_cx]
+mov cl, dl
+mov bl, 1
+shl bl, cl
+test al, bl
+
+;ZF flag Set if the tested bit is reset.
+X86FlagsToZ80Flags ZF
+
+;PVF flag Set just like ZF flag.
+test RegF, 040h
+jz skip_pvf_bit
+SetFlagBits PVF
+jmp skip_sf_bit
+
+skip_pvf_bit:
+
+;SF flag Set if n = 7 and tested bit is set.
+cmp cl, 7
+jnz skip_sf_bit
+SetFlagBits SF
+
+; P/V, Z, S set as the other BIT instructions, but the 5 and 3 flags are
+; different. Okay, brace yourself. They are a copy of an internal register of
+; the Z80, which is set as follows:
+; 
+; ADD HL,xx      (use high byte of HL, i.e. H, before the addition)
+; LD r,(IX/IY+d) (use high byte of the resulting address IX/IY+d)
+; JR d           (use high byte target address of the jump)
+; LD r,r'	       (not affected)
+; others         not tested -- any additions welcome!
+
+skip_sf_bit:
+
+mov ch, RegW
+and ch, 028h
+or RegF, ch 
+
+bit_exit:
+ret
+
+inst_BIT_HL ENDP
+
+inst_BIT_IXIY PROC
+
+; parameters
+; Reg:PTR BYTE -> x_cx
+; Idx:BYTE -> dl
+
+;HF flag Always set.
+;NF flag Always reset.
+;CF flag Unchanged.
+ResetFlagBits SF, ZF, NF, PVF, XF, YF
+SetFlagBits HF
+
+xor  ax, ax
+mov al, [x_cx]
+mov cl, dl
+mov bl, 1
+shl bl, cl
+test al, bl
+
+;ZF flag Set if the tested bit is reset.
+X86FlagsToZ80Flags ZF
+
+;PVF flag Set just like ZF flag.
+test RegF, 040h
+jz skip_pvf_bit
+SetFlagBits PVF
+jmp skip_sf_bit
+
+skip_pvf_bit:
+
+;SF flag Set if n = 7 and tested bit is set.
+cmp cl, 7
+jnz skip_sf_bit
+SetFlagBits SF
+
+; flags 5 and 3 flags are a copy of bit 5 and 3 of the high
+; byte of IX/IY+d (the value after the addition of d to IX or IY).
+
+skip_sf_bit:
+
+mov cx, reg_tmp16
+and ch, 028h
+or RegF, ch 
+
+bit_exit:
+ret
+
+inst_BIT_IXIY ENDP
 
 inst_BIT PROC
 
@@ -784,36 +937,48 @@ inst_BIT PROC
 ; Reg:PTR BYTE -> x_cx
 ; Idx:BYTE -> dl
 
-
-ResetFlagBits SF, ZF, NF, PVF
+;HF flag Always set.
+;NF flag Always reset.
+;CF flag Unchanged.
+ResetFlagBits SF, ZF, NF, PVF, XF, YF
 SetFlagBits HF
 
 xor  ax, ax
 mov al, [x_cx]
-mov bl, al
 mov cl, dl
-GetBitMask x_cx, cl
-and al, cl
-xor al, cl
-mov cl, dl
-shr al, cl
-shl al, ZF
-or RegF, al
-; undoc PVF behaviour
-shr al, ZF-PVF
-or RegF, al
-; undoc SF behaviour
-mov cl, dl
-sub dl, 7
-GetBitMask x_cx, cl
-and bl, cl
-xor bl, cl
-add dl, bl
-lahf
-GetBitMask x_cx, ZF
-and ah, cl
-shl ah, SF-ZF
-or RegF, ah
+mov bl, 1
+shl bl, cl
+test al, bl
+
+;ZF flag Set if the tested bit is reset.
+X86FlagsToZ80Flags ZF
+
+;PVF flag Set just like ZF flag.
+test RegF, 040h
+jz skip_pvf_bit
+SetFlagBits PVF
+jmp bit_exit
+
+skip_pvf_bit:
+
+;SF flag Set if n = 7 and tested bit is set.
+cmp cl, 7
+jnz skip_sf_bit
+SetFlagBits SF
+
+skip_sf_bit:
+;YF flag Set if n = 5 and tested bit is set.
+cmp cl, 5
+jnz skip_yf_bit
+SetFlagBits YF
+
+skip_yf_bit:
+;XF flag Set if n = 3 and tested bit is set.
+cmp cl, 3
+jnz bit_exit
+SetFlagBits XF
+
+bit_exit:
 ret
 
 inst_BIT ENDP
@@ -1047,8 +1212,8 @@ invoke register_indirect_addressing_mode, x_cx, RegHL
 dec RegB
 invoke INST_OUT, RegBC, dl	 
 inc RegHL
-mov Reg_Tmp8, dl
-mov x_cx, OFFSET Reg_Tmp8
+mov reg_tmp8, dl
+mov x_cx, OFFSET reg_tmp8
 SetIOBlockFlagsOUT x_cx
 ret
 
@@ -1083,8 +1248,8 @@ dec RegB
 mov dl, [reg_di]
 invoke INST_OUT, RegBC, dl
 dec RegHL
-mov Reg_Tmp8, dl
-mov x_cx, OFFSET Reg_Tmp8
+mov reg_tmp8, dl
+mov x_cx, OFFSET reg_tmp8
 SetIOBlockFlagsOUT x_cx
 ret
 

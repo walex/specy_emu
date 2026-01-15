@@ -20,6 +20,9 @@
 // https://chatgpt.com/g/g-68fd3184e0ac81918bec585b374946d1-retroai-spectrumai?fbclid=IwY2xjawPOQTNleHRuA2FlbQIxMABicmlkETBPWVU0amtXZ1VlZkhJSzc4c3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHvmfNtvzlYimOBDev4Xrk0aQrCywA8mFsuPi3LXKhf2U6oYO3-dstjOyZL6V_aem_TexHC46MCxw5cmVlXU3yHw
 // https://www.esp32rainbow.com/tools/tap-to-wav
 // https://rk.nvg.ntnu.no/sinclair/faq/tech_z80.html?fbclid=IwY2xjawPSyrdleHRuA2FlbQIxMABicmlkETF0NkZDU21SdjZ3WEMyY1Mxc3J0YwZhcHBfaWQQMjIyMDM5MTc4ODIwMDg5MgABHg4WryNU6kFtRhWzZ2LMb4YgcGenosP5lR1txJ8TLC0ddnmS4cRdGQVoASYU_aem_Vc6X0kmWhhcAeV5_hedCOw#RREG
+// https://clrhome.org/table/
+// https://worldofspectrum.org/z88forever/dn327/z80undoc.htm
+// http://z80.info/z80undoc3.txt
 
 #include "z80.h"
 #include "ula.h"
@@ -95,7 +98,7 @@ int main(int argc, char* argv[]) {
 		printf("Starting Z80 CPU emulation...\n");
 	}
 #else
-	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\REXA.tap");
+	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\1.2a\\z80full.tap");
 #endif
 	Z80CPU(specy_rom_get_pointer(), 0);	
 	specy_rom_end();

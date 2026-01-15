@@ -7,8 +7,8 @@ immediate_addressing_mode PROC
 
 xor x_ax,x_ax
 mov al,[reg_pc]                
-mov Reg_Tmp,x_ax
-mov reg_di, OFFSET Reg_Tmp
+mov reg_tmp,x_ax
+mov reg_di, OFFSET reg_tmp
 inc reg_pc
 ret
     
@@ -27,8 +27,8 @@ mov bl, [reg_pc]
 inc reg_pc
 shl bx, 8
 or ax, bx
-mov Reg_Tmp, x_ax
-mov reg_di, OFFSET Reg_Tmp
+mov reg_tmp, x_ax
+mov reg_di, OFFSET reg_tmp
 ret
 
 immediate_addressing_mode_ext ENDP
@@ -74,6 +74,7 @@ xor reg_si,reg_si
 mov si,dx
 movsx x_ax,BYTE PTR [reg_pc]
 add si,ax
+mov reg_tmp16, si
 mov reg_di,x_cx
 add reg_di,reg_si
 inc reg_pc

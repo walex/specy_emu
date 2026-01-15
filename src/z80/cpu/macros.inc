@@ -137,28 +137,39 @@ ProcessNextOpcode MACRO JumpTable, addr
 	mov x_bx, [x_bp + x_ax*PTR_SIZE]    ; Load the function address from the table
 	add addr, 1
 	pop x_bp
+	IncRegR
 	jmp x_bx
 
 ENDM
 
 IncRegR MACRO 
 
-mov al,RegR
-mov ah,al
-and al,80h
-inc ah
-and ah,7fh
-or al,ah
-mov RegR,al
+xor ax, ax
+mov al, RegR
+shl ax, 1
+add ax, 2
+shr ax, 1
+mov RegR, al
+
+ENDM
+
+DecRegR MACRO 
+
+xor ax, ax
+mov al, RegR
+shl ax, 1
+sub ax, 2
+shr ax, 1
+mov RegR, al
 	
 ENDM
 
 GetBitMask MACRO dest, args:VARARG
 
 	LOCAL a
-	push Reg_Tmp
+	push reg_tmp
 	push x_ax
-	mov Reg_Tmp, 0
+	mov reg_tmp, 0
     FOR a, <args>
 		
 		mov x_ax, 1		
@@ -168,11 +179,11 @@ GetBitMask MACRO dest, args:VARARG
 		shr ah, 1
 		or al, ah
 		xor ah, ah
-		or Reg_Tmp, x_ax
+		or reg_tmp, x_ax
 	ENDM
 	pop x_ax
-	mov dest, Reg_Tmp
-	pop Reg_Tmp
+	mov dest, reg_tmp
+	pop reg_tmp
 ENDM
 
 GetBitMaskNeg MACRO dest, args:VARARG
@@ -235,6 +246,7 @@ ENDM
 
 SetPVFromBC MACRO
 
+push x_ax
 ResetFlagBits PVF
 mov ax, RegBC
 test ax, ax
@@ -243,6 +255,7 @@ and ah, 040h
 xor ah, 040h
 shr ah, ZF-PVF
 or RegF, ah
+pop x_ax
 
 ENDM
 
@@ -497,5 +510,71 @@ sub rsp, 40
 call func_name
 add rsp, 40
 pop reg_pc
+
+ENDM
+
+SetYFXFByRegAQ MACRO
+
+; YF . XF = (Q ^ F) | A
+GetBitMask x_cx, YF, XF
+mov al, RegQ
+xor al, RegF
+or al, RegA
+and al, cl
+or RegF, al
+
+ENDM
+
+SetXFYFFromReg8 MACRO reg8
+	
+    ResetFlagBits XF, YF
+	mov al, reg8
+	and al, 28h
+	or RegF, al
+
+ENDM
+
+
+SetXFYFForLDIx MACRO reg8
+
+push x_ax
+mov al, reg8
+add al, RegA
+ResetFlagBits YF, XF
+push ax
+GetBitMask x_cx, 01h
+and al, cl
+shl al, YF - 01h
+or RegF, al
+pop ax
+GetBitMask x_cx, 03h
+and al, cl
+or RegF, al
+pop x_ax
+
+ENDM
+
+SetXFYFForCPIx MACRO reg8
+
+push x_ax
+mov al, RegA ; Take the value of register A
+sub al, reg8  ;  subtract the value of (HL)
+; subtract the value of HF flag
+GetBitMask x_cx, HF ; get flag index
+mov ah, RegF ; copy flags register to ah
+and ah, cl   ; extract H flag
+shr ah, HF ; mov flag to bit 0
+sub al, ah ; substract H flag from value
+ResetFlagBits YF, XF ; reset undoc flags
+GetBitMask x_cx, 01h
+push ax
+and al, cl ; get bit 1 from value
+shl al, YF - 01h ; move to YF position
+or RegF, al ; copy to flags register
+pop ax
+GetBitMask x_cx, 03h 
+and al, cl ; get bit 3 value
+or RegF, al ;copy to flags register
+pop x_ax
 
 ENDM

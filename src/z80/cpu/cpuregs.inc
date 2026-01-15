@@ -90,8 +90,17 @@
 		ENDS
      ENDS 
 
+	 UNION
+	  	Reg_WZ dw 0
+		STRUCT
+			Reg_W db 0		       	               
+			Reg_Z db 0 
+		ENDS
+     ENDS
+
 	 Reg_SP dw	0 
-	
+	 Reg_Q   db 0
+
 	 IMF		db	0 
 	 IFF1		db  0
 	 IFF2		db  0	
@@ -101,13 +110,10 @@
 	 A_LINE		dw  0
 	 HALT		db  0
 
-	 ;Reg_Tmp PTR_DATA_TYPE 0
-	 ;Reg_Tmp16	dw	0
-	 ;Reg_Tmp8	db	0
-
    _CPU ENDS		
 
-   reg_pc_tmp dw 0
+    reg_pc_tmp dw 0
+    reg_f_tmp  db 0
 
     OF EQU 11	; x86 oferflow flag
 
@@ -119,7 +125,6 @@
 	PVF EQU 2       ;Bit 2 - Parity/Overflow flag
 	NF EQU 1	;Bit 1 - Subtract flag
 	CF EQU 0	;Bit 0 - Carry flag
-
 
    Z80_CPU _CPU <>
 	
@@ -156,6 +161,7 @@ RegH_ESP EQU [Z80_CPU.Reg_H_ESP]
 RegL_ESP EQU [Z80_CPU.Reg_L_ESP]
 
 RegSP EQU [Z80_CPU.Reg_SP]
+RegQ  EQU [Z80_CPU.Reg_Q]
 
 RegIY EQU [Z80_CPU.Reg_IY]
 RegIX EQU [Z80_CPU.Reg_IX]
@@ -164,12 +170,13 @@ RegIXL EQU [Z80_CPU.Reg_IXL]
 RegIYH EQU [Z80_CPU.Reg_IYH]
 RegIYL EQU [Z80_CPU.Reg_IYL]
 
-;RegIY EQU [Z80_CPU.Reg_IY]
-;RegIX EQU [Z80_CPU.Reg_IX]
-
 RegIR EQU [Z80_CPU.Reg_IR]
 RegI EQU [Z80_CPU.Reg_I]
 RegR EQU [Z80_CPU.Reg_R]
+
+RegWZ EQU [Z80_CPU.Reg_WZ]
+RegW EQU [Z80_CPU.Reg_W]
+RegZ EQU [Z80_CPU.Reg_Z]
 
 IMF EQU [Z80_CPU.IMF]
 IFF1 EQU [Z80_CPU.IFF1]
@@ -180,10 +187,11 @@ D_LINE EQU [Z80_CPU.D_LINE]
 A_LINE EQU [Z80_CPU.A_LINE]
 HALT EQU [Z80_CPU.HALT]
 
-Reg_Tmp PTR_DATA_TYPE 0
-Reg_Tmp16 dw 0
-Reg_Tmp8 db	0
-Reg_DataBus8 db 0
+reg_tmp PTR_DATA_TYPE 0
+reg_tmp16 dw 0
+reg_tmp8 db	0
+data_bus_8 db 0
+
 .code
 
 InitRegisters PROC

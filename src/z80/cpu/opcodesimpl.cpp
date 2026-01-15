@@ -90,6 +90,9 @@ extern "C" void inst_DAA_C(uint8_t* reg_a, uint8_t* reg_f)
     *reg_a = A;
     F = (F & 0x2);
     F |= ((A & 0x80) | ((A == 0) ? (1 << 6) : 0 ) | (H << 4) | (parity(A) << 2) | C);
+    // undoc YF, XF
+	F |= (A & 0x28);
+
     *reg_f = F;
 
 }

@@ -22,8 +22,9 @@ Z80_CPU_MAIN_LOOP MACRO
 			mov reg_pc,rcx
 			mov memPtr,reg_pc
 			add reg_pc,rdx
+			mov RegQ, 0
+			mov reg_f_tmp, 0
 Z80Halt:
-			IncRegR
 			jmp Op00			
 Z80IsNop:
 			cmp Rec_Opcode,0
@@ -31,33 +32,22 @@ Z80IsNop:
 			PRINT_HEXA_64 Rec_Opcode
 Z80IsNopNoLog:
 Z80Loop:
+			mov al, reg_f_tmp
+			mov ah, RegF
+			mov reg_f_tmp, ah
+			test al, ah
+			jz ResetRegQ
+			mov RegQ, ah
+			jmp AfterRegQ
+ResetRegQ:
+			mov RegQ, 0	
+AfterRegQ:
 			mov Rec_Opcode,0
 			ExecuteInterrupts memPtr
 			cmp HALT,1
 			jz Z80Halt
 			ProcessNextOpcode _TOp1B, reg_pc
 
-ENDM
-
-Z80_CPU_MAIN_LOOP_TEST MACRO
-			
-			mov IMF,0
-			mov reg_pc,rcx
-			mov memPtr,reg_pc
-			xor x_bx,x_bx
-			mov bx,reg_pc_tmp
-			add reg_pc,x_bx
-			IncRegR
-			ProcessNextOpcode _TOp1B, reg_pc
-Z80IsNop:
-			xor x_ax,x_ax
-			not x_ax
-Z80Loop:			
-			xor rcx,rcx
-			mov rcx,reg_pc
-			sub rcx,memPtr
-			mov reg_pc_tmp,cx
-			ret
 ENDM
 
 Z80CPU PROC
@@ -75,8 +65,8 @@ Rec_Opcode PTR_DATA_TYPE 0
 include opcodesdef.inc  
 
 .code
-		Z80_CPU_MAIN_LOOP
-		;Z80_CPU_MAIN_LOOP_TEST		            
+
+	   Z80_CPU_MAIN_LOOP	            
        Op00:			
 			;00		NOP			4	1	1
             nop  		
@@ -209,7 +199,10 @@ include opcodesdef.inc
 			jmp Z80Loop		
        Op18:
 			;18 e		JR (PC+e)		12	3	1			 
-			invoke relative_addressing_mode				
+			invoke relative_addressing_mode
+			mov x_ax, reg_pc
+			sub x_ax, memPtr
+			mov RegWZ, ax
 			invoke acumulate_opcode_cycles,12,3		
 			jmp Z80Loop
        Op19:
@@ -1185,7 +1178,6 @@ include opcodesdef.inc
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpCB:									
-			IncRegR	
 			ProcessNextOpcode _TOpCB, reg_pc
        OpCC:
 			;CC n n		CALL Z,(nn)		17/10	5/3	1/1	(met/not met)
@@ -1298,7 +1290,6 @@ include opcodesdef.inc
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpDD:
-			IncRegR 
 			ProcessNextOpcode _TOpDD, reg_pc
        OpDE:
 			;DE n		SBC A,n 7 2
@@ -1398,7 +1389,6 @@ include opcodesdef.inc
 			invoke acumulate_opcode_cycles,17,5
 			jmp Z80Loop
        OpED:			
-			IncRegR	
 			ProcessNextOpcode _TOpED, reg_pc
 	   OpED00:
 	        ;ED00  IN  B,(n)	12	3
@@ -1717,8 +1707,8 @@ include opcodesdef.inc
 				jmp Z80Loop
        OpED70:
 			  ;ED70  IN  F,(C)	12	3			  
-			  invoke INST_IN,RegBC,OFFSET Reg_Tmp8
-			  SetIOFlags Reg_Tmp8
+			  invoke INST_IN,RegBC,OFFSET reg_tmp8
+			  SetIOFlags reg_tmp8
 			  invoke acumulate_opcode_cycles,12,3
 			  jmp Z80Loop
        OpED71:
@@ -1966,7 +1956,6 @@ include opcodesdef.inc
 			invoke acumulate_opcode_cycles,17,5
 			jmp Z80Loop
        OpFD:
-			IncRegR 
 			ProcessNextOpcode _TOpFD, reg_pc
        OpFE:
 			;FE n		CP n 7 2
@@ -2351,7 +2340,7 @@ include opcodesdef.inc
        OpCB46:
 			  ;CB46	 	BIT 0,(HL)		12	3	2
 			   invoke register_indirect_addressing_mode,memPtr,RegHL
-			   invoke inst_BIT,reg_di,0
+			   invoke inst_BIT_HL,reg_di,0
 			   invoke acumulate_opcode_cycles,12,3
 			   jmp Z80Loop	
        OpCB47:
@@ -2392,7 +2381,7 @@ include opcodesdef.inc
        OpCB4E:
 			  ;CB4E	 	BIT 1,(HL)		12	3	2
 			   invoke register_indirect_addressing_mode,memPtr,RegHL
-			   invoke inst_BIT,reg_di,1
+			   invoke inst_BIT_HL,reg_di,1
 			   invoke acumulate_opcode_cycles,12,3
 			   jmp Z80Loop	
        OpCB4F:
@@ -2433,7 +2422,7 @@ include opcodesdef.inc
        OpCB56:
 			  ;CB56	 	BIT 2,(HL)		12	3	2
 			   invoke register_indirect_addressing_mode,memPtr,RegHL
-			   invoke inst_BIT,reg_di,2
+			   invoke inst_BIT_HL,reg_di,2
 			   invoke acumulate_opcode_cycles,12,3
 			   jmp Z80Loop	
        OpCB57:
@@ -2476,7 +2465,7 @@ include opcodesdef.inc
        OpCB5E:
 			  ;CB5E	 	BIT 3,(HL)		12	3	2
 			  invoke register_indirect_addressing_mode,memPtr,RegHL
-			  invoke inst_BIT,reg_di,3
+			  invoke inst_BIT_HL,reg_di,3
 			  invoke acumulate_opcode_cycles,12,3
 			  jmp Z80Loop
 
@@ -2520,7 +2509,7 @@ include opcodesdef.inc
        OpCB66:
 			  ;CB66	 	BIT 4,(HL)		12	3	2
 			  invoke register_indirect_addressing_mode,memPtr,RegHL
-			  invoke inst_BIT,reg_di,4
+			  invoke inst_BIT_HL,reg_di,4
 			  invoke acumulate_opcode_cycles,12,3
 			  jmp Z80Loop	
 
@@ -2568,7 +2557,7 @@ include opcodesdef.inc
        OpCB6E:
 			  ;CB6E	 	BIT 5,(HL)		12	3	2
 			  invoke register_indirect_addressing_mode,memPtr,RegHL
-			  invoke inst_BIT,reg_di,5
+			  invoke inst_BIT_HL,reg_di,5
 			  invoke acumulate_opcode_cycles,12,3
 			  jmp Z80Loop
 
@@ -2616,7 +2605,7 @@ include opcodesdef.inc
        OpCB76:
 			  ;CB76	 	BIT 6,(HL)		12	3	2
 			  invoke register_indirect_addressing_mode,memPtr,RegHL
-			  invoke inst_BIT,reg_di,6
+			  invoke inst_BIT_HL,reg_di,6
 			  invoke acumulate_opcode_cycles,12,3
 			  jmp Z80Loop
        OpCB77:
@@ -2662,7 +2651,7 @@ include opcodesdef.inc
        OpCB7E:
 			 ;CB7E	 	BIT 7,(HL)		12	3	2
 			 invoke register_indirect_addressing_mode,memPtr,RegHL
-			 invoke inst_BIT,reg_di,7
+			 invoke inst_BIT_HL,reg_di,7
 			 invoke acumulate_opcode_cycles,12,3
 			 jmp Z80Loop
 
@@ -3376,16 +3365,40 @@ include opcodesdef.inc
 			 invoke inst_Set,OFFSET RegA,7
 			 invoke acumulate_opcode_cycles,8,2
 			 jmp Z80Loop
+	   OpDD04:
+			 jmp Op04
+	   OpDD05:
+			 jmp Op05
+	   OpDD06:
+			 jmp Op06			 
        OpDD09:
 			  ;DD09		ADD IX,BC	15 4
 			  invoke inst_ADD16,OFFSET RegBC,OFFSET RegIX
 			  invoke acumulate_opcode_cycles,15,4
 			  jmp Z80Loop	
+	   OpDD0C:
+			 jmp Op0C
+	   OpDD0D:
+			 jmp Op0D
+	   OpDD0E:
+			 jmp Op0E
+	   OpDD14:
+			 jmp Op14
+	   OpDD15:
+			 jmp Op15
+	   OpDD16:
+			 jmp Op16
        OpDD19:
 			  ;DD19		ADD IX,DE	15 4	  
 			  invoke inst_ADD16,OFFSET RegDE,OFFSET RegIX
 			  invoke acumulate_opcode_cycles,15,4
 			  jmp Z80Loop
+	   OpDD1C:
+			 jmp Op1C
+	   OpDD1D:
+			 jmp Op1D
+	   OpDD1E:
+			 jmp Op1E
        OpDD21:
 			  ;DD21 n n	LD IX,nn 14 4 
 			  invoke immediate_addressing_mode_ext,memPtr
@@ -3478,6 +3491,12 @@ include opcodesdef.inc
 			  invoke inst_ADD16,OFFSET RegSP,OFFSET RegIX
 			  invoke acumulate_opcode_cycles,15,4
 			  jmp Z80Loop
+	   OpDD3C:
+			  jmp Op3C
+	   OpDD3D:
+			  jmp Op3D
+	   OpDD3E:
+			  jmp Op3E
 	   OpDD40:
 			  jmp Op40
        OpDD41:
@@ -3499,6 +3518,8 @@ include opcodesdef.inc
        OpDD46:
 			  ;DD46 d		LD B,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegB
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
@@ -3525,6 +3546,8 @@ include opcodesdef.inc
        OpDD4E:
 			  ;DD4E d		LD C,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegC
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop		
@@ -3551,6 +3574,8 @@ include opcodesdef.inc
        OpDD56:
 			  ;DD56 d		LD D,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegD
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
@@ -3577,6 +3602,8 @@ include opcodesdef.inc
        OpDD5E:
 			  ;DD5E d		LD E,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegE
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
@@ -3615,6 +3642,8 @@ include opcodesdef.inc
        OpDD66:
 			  ;DD66 d		LD H,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegH
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
@@ -3656,6 +3685,8 @@ include opcodesdef.inc
        OpDD6E:
 			  ;DD6E d		LD L,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegL
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
@@ -3699,8 +3730,6 @@ include opcodesdef.inc
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_LD8,OFFSET RegL,reg_di
 			  invoke acumulate_opcode_cycles,19,5
-			  jmp Z80Loop	
-	   OpDD76:
 			  jmp Z80Loop
        OpDD77:
 			  ;DD77 d		LD (IX+d),A 19 5 
@@ -3729,17 +3758,26 @@ include opcodesdef.inc
        OpDD7E:
 			  ;DD7E d		LD A,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegA
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpDD7F:
 			  jmp Op7F	
+	   OpDD80:
+			  jmp Op80
+	   OpDD81:
+			  jmp Op81
+	   OpDD82:
+			  jmp Op82
+	   OpDD83:
+			  jmp Op83
        OpDD84:
 			;DD84		ADD A,IXH			8	2
 			invoke inst_ADD8,OFFSET RegIXH
 			invoke acumulate_opcode_cycles,8,2
 			jmp Z80Loop
-
        OpDD85:
 			;DD85		ADD A,IXL			8	2
 			 invoke inst_ADD8,OFFSET RegIXL
@@ -3751,6 +3789,16 @@ include opcodesdef.inc
 			   invoke inst_ADD8,reg_di
 			   invoke acumulate_opcode_cycles,19,5
 			   jmp Z80Loop
+	   OpDD87:
+			jmp Op87
+       OpDD88:
+	        jmp Op88
+	   OpDD89:
+			jmp Op89
+	   OpDD8A:
+			jmp Op8A
+	   OpDD8B:
+			jmp Op8B
        OpDD8C:
 			;DD8C		ADC A,IXH			8	2
 			invoke inst_ADC8,OFFSET RegIXH
@@ -3767,6 +3815,16 @@ include opcodesdef.inc
 			  invoke inst_ADC8,reg_di
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
+	   OpDD8F:
+			jmp Op8F
+	   OpDD90:
+			jmp Op90
+       OpDD91:
+			jmp Op91
+	   OpDD92:
+			jmp Op92
+       OpDD93:
+			jmp Op93
        OpDD94:
 			;DD94		SUB IXH			8	2
 			invoke inst_SUB,OFFSET RegIXH
@@ -3783,6 +3841,16 @@ include opcodesdef.inc
 			  invoke inst_SUB,reg_di
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
+	   OpDD97:
+			  jmp Op97
+	   OpDD98:
+			  jmp Op98
+	   OpDD99:
+			  jmp Op99
+	   OpDD9A:
+			  jmp Op9A
+	   OpDD9B:
+			  jmp Op9B
        OpDD9C:
 			;DD9C		SBC A,IXH			8	2
 			invoke inst_SBC8,OFFSET RegIXH
@@ -3799,6 +3867,16 @@ include opcodesdef.inc
 			  invoke inst_SBC8,reg_di
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
+	   OpDD9F:
+			jmp Op9F
+	   OpDDA0:
+			jmp OpA0
+       OpDDA1:
+			jmp OpA1
+       OpDDA2:
+			jmp OpA2
+	   OpDDA3:
+			jmp OpA3
        OpDDA4:
 			;DDA4		AND IXH			8	2
 			invoke inst_AND,RegIXH
@@ -3815,6 +3893,16 @@ include opcodesdef.inc
 			  invoke inst_AND,BYTE PTR [reg_di]
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
+	   OpDDA7:
+			jmp OpA7
+	   OpDDA8:
+			jmp OpA8
+	   OpDDA9:
+			jmp OpA9
+	   OpDDAA:
+			jmp OpAA
+	   OpDDAB:
+			jmp OpAB
        OpDDAC:
 			;DDAC		XOR IXH			8	2
 			invoke inst_XOR,RegIXH
@@ -3831,12 +3919,21 @@ include opcodesdef.inc
 			  invoke inst_XOR,BYTE PTR [reg_di]
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
+	   OpDDAF:
+	  		jmp OpAF
+	   OpDDB0:
+			jmp OpB0
+	   OpDDB1:
+			jmp OpB1
+	   OpDDB2:
+			jmp OpB2
+	   OpDDB3:
+			jmp OpB3
        OpDDB4:
 			;DDB4		OR IXH			8	2
 			invoke inst_OR,RegIXH
 			invoke acumulate_opcode_cycles,8,2
-			jmp Z80Loop	
-
+			jmp Z80Loop
        OpDDB5:
 			;DDB5		OR IXL			8	2
 			invoke inst_OR,RegIXL
@@ -3848,6 +3945,16 @@ include opcodesdef.inc
 			  invoke inst_OR,BYTE PTR [reg_di]
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
+	  OpDDB7:
+			jmp OpB7
+	  OpDDB8:
+			jmp OpB8
+	  OpDDB9:
+			jmp OpB9
+	  OpDDBA:
+			jmp OpBA
+	  OpDDBB:
+			jmp OpBB
       OpDDBC:
 			;DDBC		CP IXH			8	2
 			invoke inst_CP,OFFSET RegIXH
@@ -3864,7 +3971,10 @@ include opcodesdef.inc
 			  invoke inst_CP,reg_di
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
+	   OpDDBF:
+			jmp OpBF
        OpDDCB:
+			   DecRegR
 			   invoke indexed_addressing_mode,memPtr,RegIX
 			   ProcessNextOpcode _TOpDDCB, reg_pc
 	   OpDDCB00:
@@ -4257,7 +4367,7 @@ include opcodesdef.inc
 				jmp OpDDCB46
        OpDDCB46:
 				;DDCB d 46	BIT 0,(IX+d) 20 5
-				invoke inst_BIT,reg_di,0
+				invoke inst_BIT_IXIY,reg_di,0
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
 	   OpDDCB47:
@@ -4276,7 +4386,7 @@ include opcodesdef.inc
 				jmp OpDDCB4E
        OpDDCB4E:
 				;DDCB d 4E	BIT 1,(IX+d) 20 5				
-				invoke inst_BIT,reg_di,1
+				invoke inst_BIT_IXIY,reg_di,1
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
 	   OpDDCB4F:
@@ -4295,7 +4405,7 @@ include opcodesdef.inc
 				jmp OpDDCB56
        OpDDCB56:
 				;DDCB d 56	BIT 2,(IX+d) 20 5				
-				invoke inst_BIT,reg_di,2
+				invoke inst_BIT_IXIY,reg_di,2
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
 	   OpDDCB57:
@@ -4314,7 +4424,7 @@ include opcodesdef.inc
 				jmp OpDDCB5E
        OpDDCB5E:
 				;DDCB d 5E	BIT 3,(IX+d) 20 5				
-				invoke inst_BIT,reg_di,3
+				invoke inst_BIT_IXIY,reg_di,3
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
 	   OpDDCB5F:
@@ -4333,7 +4443,7 @@ include opcodesdef.inc
 				jmp OpDDCB66
 	   OpDDCB66:
 				;DDCB d 66	BIT 4,(IX+d) 20 5				
-				invoke inst_BIT,reg_di,4
+				invoke inst_BIT_IXIY,reg_di,4
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
 	   OpDDCB67:
@@ -4352,7 +4462,7 @@ include opcodesdef.inc
 				jmp OpDDCB6E
        OpDDCB6E:
 				;DDCB d 6E	BIT 5,(IX+d) 20 5				
-				invoke inst_BIT,reg_di,5
+				invoke inst_BIT_IXIY,reg_di,5
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
        OpDDCB6F:
@@ -4371,7 +4481,7 @@ include opcodesdef.inc
 				jmp OpDDCB76
        OpDDCB76:
 				;DDCB d 76	BIT 6,(IX+d) 20 5				
-				invoke inst_BIT,reg_di,6
+				invoke inst_BIT_IXIY,reg_di,6
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
        OpDDCB77:
@@ -4390,7 +4500,7 @@ include opcodesdef.inc
 				jmp OpDDCB7E
        OpDDCB7E:
 				;DDCB d 7E	BIT 7,(IX+d) 20 5				
-				invoke inst_BIT,reg_di,7
+				invoke inst_BIT_IXIY,reg_di,7
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
 	   OpDDCB7F:
@@ -5178,14 +5288,36 @@ include opcodesdef.inc
 			  ;DDF9		LD SP,IX 10 2 
 			  invoke inst_LD16,OFFSET RegIX,OFFSET RegSP
 			  invoke acumulate_opcode_cycles,10,2
-			  jmp Z80Loop
-       
+			  jmp Z80Loop       
+	   OpFD04:
+			 jmp Op04
+	   OpFD05:
+			 jmp Op05
+	   OpFD06:
+			 jmp Op06
        OpFD09:
 			  ;FD09		ADD IY,BC	15 4		  
 			  invoke inst_ADD16,OFFSET RegBC,OFFSET RegIY
 			  invoke acumulate_opcode_cycles,15,4
 			  jmp Z80Loop
-		
+	   OpFD0C:
+			 jmp Op0C
+	   OpFD0D:
+			 jmp Op0D
+	   OpFD0E:
+			 jmp Op0E	
+	   OpFD14:
+			 jmp Op14
+	   OpFD15:
+			 jmp Op15
+	   OpFD16:
+			 jmp Op16
+	   OpFD1C:
+			 jmp Op1C
+	   OpFD1D:
+			 jmp Op1D
+	   OpFD1E:
+			 jmp Op1E
        OpFD19:
 			   ;FD19		ADD IY,DE 15 4			  
 			  invoke inst_ADD16,OFFSET RegDE,OFFSET RegIY
@@ -5283,6 +5415,12 @@ include opcodesdef.inc
 			  invoke inst_ADD16,OFFSET RegSP,OFFSET RegIY
 			  invoke acumulate_opcode_cycles,15,4
 			  jmp Z80Loop		
+	   OpFD3C:
+			  jmp Op3C
+	   OpFD3D:
+			 jmp Op3D
+	   OpFD3E:
+			 jmp Op3E
        OpFD40:
 			  jmp Op40
        OpFD41:
@@ -5304,6 +5442,8 @@ include opcodesdef.inc
        OpFD46:
 			 ;FD46 d		LD B,(IY+d) 19 5 
 			 invoke indexed_addressing_mode,memPtr,RegIY
+			 mov ax, reg_tmp16
+			 mov RegWZ, ax
 			 invoke inst_LD8,reg_di,OFFSET RegB
 			 invoke acumulate_opcode_cycles,19,5
 			 jmp Z80Loop	
@@ -5330,6 +5470,8 @@ include opcodesdef.inc
        OpFD4E:
 			  ;FD4E d		LD C,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegC
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
@@ -5356,6 +5498,8 @@ include opcodesdef.inc
        OpFD56:
 			  ;FD56 d		LD D,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegD
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
@@ -5382,6 +5526,8 @@ include opcodesdef.inc
        OpFD5E:
 			  ;FD5E d		LD E,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegE
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
@@ -5420,6 +5566,8 @@ include opcodesdef.inc
        OpFD66:
 			  ;FD66 d		LD H,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegH
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
@@ -5461,6 +5609,8 @@ include opcodesdef.inc
        OpFD6E:
 			  ;FD6E d		LD L,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegL
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
@@ -5534,11 +5684,21 @@ include opcodesdef.inc
        OpFD7E:
 			  ;FD7E d		LD A,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
+			  mov ax, reg_tmp16
+			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegA
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
 	   OpFD7F:
 			  jmp Op7F
+	   OpFD80:
+			jmp Op80
+       OpFD81:
+			jmp Op81
+	   OpFD82:
+			jmp	Op82
+	   OpFD83:
+			jmp	Op83
        OpFD84:
 			;FD84		ADD A,IYH			8	2
 			invoke inst_ADD8,OFFSET RegIYH
@@ -5554,7 +5714,17 @@ include opcodesdef.inc
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_ADD8,reg_di
 			  invoke acumulate_opcode_cycles,19,5
-			  jmp Z80Loop			  
+			  jmp Z80Loop		
+	  OpFD87:
+			jmp Op87
+	  OpFD88:
+			jmp Op88
+	  OpFD89:
+			jmp Op89
+	  OpFD8A:
+			jmp	Op8A
+	  OpFD8B:
+			jmp	Op8B
       OpFD8C:
 			;DD8C		ADC A,IYH			8	2
 			invoke inst_ADC8,OFFSET RegIYH
@@ -5570,7 +5740,17 @@ include opcodesdef.inc
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_ADC8,reg_di
 			  invoke acumulate_opcode_cycles,19,5
-			  jmp Z80Loop	
+			  jmp Z80Loop
+	  OpFD8F:
+			jmp Op8F
+	  OpFD90:
+			jmp	Op90
+	  OpFD91:
+			jmp	Op91
+	  OpFD92:
+			jmp	Op92
+	  OpFD93:
+			jmp	Op93
       OpFD94:
 			;FD94		SUB IYH			8	2
 			invoke inst_SUB,OFFSET RegIYH
@@ -5587,6 +5767,16 @@ include opcodesdef.inc
 			  invoke inst_SUB,reg_di
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
+	   OpFD97:
+			 jmp Op97
+	   OpFD98:
+			 jmp Op98
+	   OpFD99:
+			 jmp Op99
+	   OpFD9A:
+			 jmp Op9A
+	   OpFD9B:
+			 jmp Op9B
        OpFD9C:
 			;FD9C		SBC A,IYH			8	2
 			invoke inst_SBC8,OFFSET RegIYH
@@ -5603,6 +5793,16 @@ include opcodesdef.inc
 			  invoke inst_SBC8,reg_di
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
+	   OpFD9F:
+			 jmp Op9F
+	   OpFDA0:
+			jmp OpA0
+	   OpFDA1:
+			jmp OpA1
+	   OpFDA2:
+			jmp OpA2
+	   OpFDA3:
+			jmp	OpA3
        OpFDA4:
 			;FDA4		AND IYH			8	2
 			invoke inst_AND,RegIYH
@@ -5618,7 +5818,17 @@ include opcodesdef.inc
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_AND,BYTE PTR [reg_di]
 			  invoke acumulate_opcode_cycles,19,5
-			  jmp Z80Loop	
+			  jmp Z80Loop
+	   OpFDA7:
+			 jmp OpA7
+	   OpFDA8:
+			 jmp OpA8
+	   OpFDA9:
+			jmp OpA9
+	   OpFDAA:
+			jmp	OpAA
+	   OpFDAB:
+			jmp	OpAB
        OpFDAC:
 			;FDAC		XOR IYH			8	2
 			invoke inst_XOR,RegIYH
@@ -5635,12 +5845,21 @@ include opcodesdef.inc
 			  invoke inst_XOR,BYTE PTR [reg_di]
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
-       OpFDB4:
+	   OpFDAF:
+			jmp OpAF
+       OpFDB0:
+			jmp OpB0
+	   OpFDB1:
+			jmp OpB1
+	  OpFDB2:
+			jmp OpB2
+	  OpFDB3:
+			jmp	OpB3
+	   OpFDB4:
 			;FDB4		OR IYH			8	2
 			invoke inst_OR,RegIYH
 			invoke acumulate_opcode_cycles,8,2
 			jmp Z80Loop	
-
        OpFDB5:
 			;FDB5		OR IYL			8	2
 			invoke inst_OR,RegIYL
@@ -5652,6 +5871,16 @@ include opcodesdef.inc
 			  invoke inst_OR,BYTE PTR [reg_di]
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
+	   OpFDB7:
+			jmp OpB7
+	   OpFDB8:
+			jmp	OpB8
+	   OpFDB9:
+			jmp	OpB9
+	   OpFDBA:
+			jmp OpBA
+	   OpFDBB:
+			jmp OpBB
        OpFDBC:
 			;FDBC		CP IYH			8	2
 			invoke inst_CP,OFFSET RegIYH
@@ -5667,8 +5896,11 @@ include opcodesdef.inc
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_CP,reg_di
 			  invoke acumulate_opcode_cycles,19,5
-			  jmp Z80Loop	
+			  jmp Z80Loop
+	   OpFDBF:
+			jmp OpBF
        OpFDCB:
+			   DecRegR	
 			   invoke indexed_addressing_mode,memPtr,RegIY
 			   ProcessNextOpcode _TOpFDCB, reg_pc
 	   OpFDCB00:
@@ -6061,7 +6293,7 @@ include opcodesdef.inc
 				jmp OpFDCB46
        OpFDCB46:
 				;FDCB d 46	BIT 0,(IY+d) 20 5
-				invoke inst_BIT,reg_di,0
+				invoke inst_BIT_IXIY,reg_di,0
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
        OpFDCB47:
@@ -6080,7 +6312,7 @@ include opcodesdef.inc
 				jmp OpFDCB4E
        OpFDCB4E:
 				;FDCB d 4E	BIT 1,(IY+d) 20 5			
-				invoke inst_BIT,reg_di,1
+				invoke inst_BIT_IXIY,reg_di,1
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
        OpFDCB4F:
@@ -6099,7 +6331,7 @@ include opcodesdef.inc
 				jmp OpFDCB56
        OpFDCB56:
 				;FDCB d 56	BIT 2,(IY+d) 20 5
-				invoke inst_BIT,reg_di,2
+				invoke inst_BIT_IXIY,reg_di,2
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
 	   OpFDCB57:
@@ -6118,7 +6350,7 @@ include opcodesdef.inc
 				jmp OpFDCB5E
        OpFDCB5E:
 				;FDCB d 5E	BIT 3,(IY+d) 20 5
-				invoke inst_BIT,reg_di,3
+				invoke inst_BIT_IXIY,reg_di,3
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
        OpFDCB5F:
@@ -6137,7 +6369,7 @@ include opcodesdef.inc
 				jmp OpFDCB66     
 	   OpFDCB66:
 				;FDCB d 66	BIT 4,(IY+d) 20 5
-				invoke inst_BIT,reg_di,4
+				invoke inst_BIT_IXIY,reg_di,4
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
 	   OpFDCB67:
@@ -6156,7 +6388,7 @@ include opcodesdef.inc
 				jmp OpFDCB6E
        OpFDCB6E:
 				;FDCB d 6E	BIT 5,(IY+d) 20 5
-				invoke inst_BIT,reg_di,5
+				invoke inst_BIT_IXIY,reg_di,5
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
        OpFDCB6F:
@@ -6175,7 +6407,7 @@ include opcodesdef.inc
 				jmp OpFDCB76
        OpFDCB76:
 				;FDCB d 76	BIT 6,(IY+d) 20 5
-				invoke inst_BIT,reg_di,6
+				invoke inst_BIT_IXIY,reg_di,6
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
        OpFDCB77:
@@ -6194,7 +6426,7 @@ include opcodesdef.inc
 				jmp OpFDCB7E
        OpFDCB7E:
 				;FDCB d 7E	BIT 7,(IY+d) 20 5
-				invoke inst_BIT,reg_di,7
+				invoke inst_BIT_IXIY,reg_di,7
 				invoke acumulate_opcode_cycles,20,5
 				jmp Z80Loop
 	   OpFDCB7F:

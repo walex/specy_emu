@@ -17,7 +17,7 @@ jz trigger_MI_exit
 cmp INT_LINE, 1
 jz trigger_MI_exit
 mov INT_LINE, 1
-mov Reg_DataBus8, cl
+mov data_bus_8, cl
 trigger_MI_exit:
 ret
 
@@ -67,7 +67,7 @@ mov HALT, 0
 xor al,al
 mov IFF1,al
 mov IFF2,al
-lea rax, [Reg_DataBus8] ; what happens with a multibly instruction
+lea rax, [data_bus_8] ; what happens with a multibly instruction
 ProcessNextOpcode _TOp1B, rax
 jmp execute_MI_interrupt_exit
 
@@ -88,7 +88,7 @@ xor al,al
 mov IFF1,al
 mov IFF2,al
 mov ah, RegI
-mov al, Reg_DataBus8
+mov al, data_bus_8
 add memPtr, x_ax
 mov ax, WORD PTR [memPtr]
 pop memPtr
