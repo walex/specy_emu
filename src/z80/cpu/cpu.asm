@@ -81,7 +81,8 @@ include opcodesdef.inc
        Op02:
 			;02		LD (BC),A		7	2				
 			invoke register_indirect_addressing_mode,memPtr,RegBC									
-            invoke inst_LD8,OFFSET RegA,reg_di						
+            invoke inst_LD8,OFFSET RegA,reg_di
+			SET_WZ_FROM_A_AND_VALUE16 RegBC
 			invoke acumulate_opcode_cycles,7,2
             jmp Z80Loop
        Op03:
@@ -123,7 +124,8 @@ include opcodesdef.inc
        Op0A:
 			;0A		LD A,(BC)		7	2	
 			invoke register_indirect_addressing_mode,memPtr,RegBC
-            invoke inst_LD8,reg_di,OFFSET RegA			 			
+            invoke inst_LD8,reg_di,OFFSET RegA		
+			SET_WZ_FROM_VALUE_16_AND_INC RegBC
 			invoke acumulate_opcode_cycles,7,2
 			jmp Z80Loop
        Op0B:
@@ -168,7 +170,8 @@ include opcodesdef.inc
        Op12:
 			;12		LD (DE),A		7	2	
 			invoke register_indirect_addressing_mode,memPtr,RegDE						
-            invoke inst_LD8,OFFSET RegA,reg_di            
+            invoke inst_LD8,OFFSET RegA,reg_di     
+			SET_WZ_FROM_A_AND_VALUE16 RegDE
 			invoke acumulate_opcode_cycles,7,2
             jmp Z80Loop
        Op13:
@@ -200,9 +203,7 @@ include opcodesdef.inc
        Op18:
 			;18 e		JR (PC+e)		12	3	1			 
 			invoke relative_addressing_mode
-			mov x_ax, reg_pc
-			sub x_ax, memPtr
-			mov RegWZ, ax
+			SET_WZ_FROM_REG_PC memPtr
 			invoke acumulate_opcode_cycles,12,3		
 			jmp Z80Loop
        Op19:
@@ -214,6 +215,7 @@ include opcodesdef.inc
 			;1A		LD A,(DE)		7	2	
 			invoke register_indirect_addressing_mode,memPtr,RegDE
             invoke inst_LD8,reg_di,OFFSET RegA			 
+			SET_WZ_FROM_VALUE_16_AND_INC RegDE
 			invoke acumulate_opcode_cycles,7,2
 			jmp Z80Loop
        Op1B:
@@ -257,9 +259,12 @@ include opcodesdef.inc
             jmp Z80Loop
        Op22:
 			;22 n n		LD (nn),HL		16	5	
-			invoke extended_indirect_addressing_mode,memPtr	   	 	   	  	  	  
+			invoke extended_indirect_addressing_mode,memPtr	   	 	 
+			push di
 			invoke register_indirect_addressing_mode,memPtr,di
 			invoke inst_LD16,OFFSET RegHL,reg_di	
+			pop di
+			SET_WZ_FROM_VALUE_16_AND_INC di
 			invoke acumulate_opcode_cycles,16,5
 			jmp Z80Loop
        Op23:
@@ -303,8 +308,11 @@ include opcodesdef.inc
        Op2A:
 			;2A n n		LD HL,(nn)		16	5	
 			invoke extended_indirect_addressing_mode,memPtr
+			push di
 			add reg_di,memPtr	 						
 			invoke inst_LD16,reg_di,OFFSET RegHL	
+			pop di
+			SET_WZ_FROM_VALUE_16_AND_INC di
 			invoke acumulate_opcode_cycles,16,5
 			jmp Z80Loop
        Op2B:
@@ -340,7 +348,6 @@ include opcodesdef.inc
 			inc reg_pc
 			invoke acumulate_opcode_cycles,7,2
 			jmp Z80Loop
-
        Op31:
 			;31 n n		LD SP,nn		10	2	
 			invoke immediate_addressing_mode_ext,memPtr			
@@ -349,9 +356,12 @@ include opcodesdef.inc
             jmp Z80Loop	
        Op32:
 			;32 n n		LD (nn),A		13	4				
-			invoke extended_indirect_addressing_mode,memPtr	   	 	   	  	  	  
+			invoke extended_indirect_addressing_mode,memPtr	   	 	
+			push di
 			invoke register_indirect_addressing_mode,memPtr,di
 			invoke inst_LD8,OFFSET RegA,reg_di	
+			pop di
+			SET_WZ_FROM_A_AND_VALUE16 di
 			invoke acumulate_opcode_cycles,13,4
 			jmp Z80Loop
        Op33:	
@@ -399,6 +409,7 @@ include opcodesdef.inc
        Op3A:
 			;3A n n		LD A,(nn)		13	4	
 			invoke extended_indirect_addressing_mode,memPtr
+			SET_WZ_FROM_VALUE_16_AND_INC di
 			add reg_di,memPtr  	  	  	  
 			invoke inst_LD8,reg_di,OFFSET RegA	
 			invoke acumulate_opcode_cycles,13,4
@@ -1126,12 +1137,12 @@ include opcodesdef.inc
 			;C2 n n		JP NZ,(nn)		10	3	1	(met or not)
 			test RegF,40h			
 			jz OpC3
-			add reg_pc,2			
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpC3:
 			;C3 n n		JP (nn)			10	3	1
-			invoke immediate_addressing_mode_ext,memPtr			
+			invoke immediate_addressing_mode_ext,memPtr
 			invoke inst_JP,memPtr,WORD PTR[reg_di]
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
@@ -1139,7 +1150,7 @@ include opcodesdef.inc
 			;C4 n n		CALL NZ,(nn)		17/10	5/3	1/1	(met/not met)
 			test RegF,40h
 			jz OpCD
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpC5:
@@ -1167,14 +1178,14 @@ include opcodesdef.inc
 			jmp Z80Loop	
        OpC9:
 			;C9		RET			10	3	1
-			invoke inst_RET,memPtr			
+			invoke inst_RET,memPtr
 			invoke acumulate_opcode_cycles,10,3			
 			jmp Z80Loop
        OpCA:
 			;CA n n		JP Z,(nn)		10	3	1	(always same)
 			test RegF,40h
 			jnz OpC3
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpCB:									
@@ -1183,12 +1194,12 @@ include opcodesdef.inc
 			;CC n n		CALL Z,(nn)		17/10	5/3	1/1	(met/not met)
 			test RegF,40h
 			jnz OpCD
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpCD:
 			;CD n n		CALL (nn)		17	5	1
-			invoke immediate_addressing_mode_ext,memPtr			
+			invoke immediate_addressing_mode_ext,memPtr		
 			invoke inst_CALL,memPtr,WORD PTR[reg_di]			
 			invoke acumulate_opcode_cycles,17,5
 			jmp Z80Loop	
@@ -1219,7 +1230,7 @@ include opcodesdef.inc
 			;D2 n n		JP NC,(nn)		10	3	1	(met or not)
 			test RegF,1h
 			jz OpC3
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
 
@@ -1229,14 +1240,18 @@ include opcodesdef.inc
 			xor x_bx,x_bx
 			mov bl,[reg_di]
 			mov bh,RegA
+			push bx
 			invoke INST_OUT,bx,RegA
+			pop bx
+			; wz = (port + 1) | (z->a << 8);		
+			SET_WZ_FROM_PORT_AND_VALUE8 bl, RegA
 			invoke acumulate_opcode_cycles,11,3
 			jmp Z80Loop
        OpD4:
 			;D4 n n		CALL NC,(nn)		17/10	5/3	1/1	(met/not met)
 			test RegF,1h
 			jz OpCD
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpD5:
@@ -1270,7 +1285,7 @@ include opcodesdef.inc
 			;DA n n		JP C,(nn)		10	3	1	(met or not)
 			test RegF,1h
 			jnz OpC3
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpDB:
@@ -1279,14 +1294,18 @@ include opcodesdef.inc
 			xor x_ax,x_ax
 			mov al,[reg_di]
 			mov ah,RegA
+			push ax
 			invoke INST_IN,ax,OFFSET RegA
+			pop ax
+			; wz = (a << 8) | (z->a + 1);
+			SET_WZ_FROM_REG8_AND_VALUE8 al, RegA
 			invoke acumulate_opcode_cycles,11,3
 			jmp Z80Loop
        OpDC:
 			;DC n n		CALL C,(nn)		17/10	5/3	1			
 			test RegF,1h
 			jnz OpCD
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpDD:
@@ -1317,27 +1336,22 @@ include opcodesdef.inc
 			;E2 n n		JP PO,(nn) 10 3
 			test RegF,4h
 			jz OpC3
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
 
        OpE3:
 			;E3		EX (SP),HL 19 5	
 			invoke register_indirect_addressing_mode,memPtr,RegSP
-			invoke inst_EX8,OFFSET RegL,reg_di,
-			mov x_cx,reg_di
-			sub x_cx,memPtr
-			inc cx
-			mov reg_di,memPtr
-			add reg_di,x_cx
-            invoke inst_EX8,OFFSET RegH,reg_di
+			invoke inst_EX16,OFFSET RegHL,reg_di
+			SET_WZ_FROM_VALUE_16 di
 			invoke acumulate_opcode_cycles,19,5
 			jmp Z80Loop
        OpE4:
 			;E4 n n		CALL PO,(nn) 10 3			
 			test RegF,4h
 			jz OpCD
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpE5:
@@ -1368,12 +1382,11 @@ include opcodesdef.inc
 			 invoke inst_JP,memPtr,RegHL
 			 invoke acumulate_opcode_cycles,4,1
 			 jmp Z80Loop
-
        OpEA:
 			;EA n n		JP PE,(nn) 10 3
 			test RegF,4h
 			jnz OpC3
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpEB:
@@ -1385,7 +1398,7 @@ include opcodesdef.inc
 			;EC n n		CALL PE,(nn) 17 5
 			test RegF,4h
 			jnz OpCD
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,17,5
 			jmp Z80Loop
        OpED:			
@@ -1451,9 +1464,12 @@ include opcodesdef.inc
 			  jmp Z80Loop	
        OpED43:
 			  ;ED43 n n	LD (nn),BC	10 6 
-			  invoke extended_indirect_addressing_mode,memPtr	   	 			    	  	  	  
+			  invoke extended_indirect_addressing_mode,memPtr	   	 	
+			  push di
 			  invoke register_indirect_addressing_mode,memPtr,di
-			  invoke inst_LD16,OFFSET RegBC,reg_di				  
+			  invoke inst_LD16,OFFSET RegBC,reg_di			
+			  pop di
+			  SET_WZ_FROM_VALUE_16_AND_INC di
 			  invoke acumulate_opcode_cycles,20,6
 			  jmp Z80Loop
        OpED44:
@@ -1497,8 +1513,11 @@ include opcodesdef.inc
        OpED4B:
 			  ;ED4B n n	LD BC,(nn) 20 6 
 			  invoke extended_indirect_addressing_mode,memPtr
+			  push di
 			  add reg_di,memPtr	 	   	  	  	  
 			  invoke inst_LD16,reg_di,OFFSET RegBC
+			  pop di
+			  SET_WZ_FROM_VALUE_16_AND_INC di
 			  invoke acumulate_opcode_cycles,20,6
 			  jmp Z80Loop
        OpED4C:
@@ -1541,9 +1560,12 @@ include opcodesdef.inc
 			  jmp Z80Loop
        OpED53:
 			  ;ED53 n n	LD (nn),DE 20 6 
-			  invoke extended_indirect_addressing_mode,memPtr	   	 	   	  	  	  
+			  invoke extended_indirect_addressing_mode,memPtr	  
+			  push di
 			  invoke register_indirect_addressing_mode,memPtr,di
 		      invoke inst_LD16,OFFSET RegDE,reg_di	
+			  pop di
+			  SET_WZ_FROM_VALUE_16_AND_INC di
 			  invoke acumulate_opcode_cycles,20,6
 			  jmp Z80Loop
        OpED54:
@@ -1588,8 +1610,11 @@ include opcodesdef.inc
        OpED5B:
 		      ;ED5B n n	LD DE,(nn)	20 6 
 			  invoke extended_indirect_addressing_mode,memPtr
+			  push di
 			  add reg_di,memPtr	 	   	  	  	  
 			  invoke inst_LD16,reg_di,OFFSET RegDE
+			  pop di
+			  SET_WZ_FROM_VALUE_16_AND_INC di
 			  invoke acumulate_opcode_cycles,20,6
 			  jmp Z80Loop
        OpED5C:
@@ -1634,8 +1659,11 @@ include opcodesdef.inc
        OpED63:
 			;ED63 n n	LD (nn),HL		16	5
 			invoke extended_indirect_addressing_mode,memPtr	   	 	   	  	  	  
+			push di
 			invoke register_indirect_addressing_mode,memPtr,di
 			invoke inst_LD16,OFFSET RegHL,reg_di	
+			pop di
+			SET_WZ_FROM_VALUE_16_AND_INC di
 			invoke acumulate_opcode_cycles,16,5
 			jmp Z80Loop
 	   OpED64:
@@ -1679,8 +1707,11 @@ include opcodesdef.inc
        OpED6B:
 			  ;ED6B n n	LD HL,(nn) 16 5 
 			  invoke extended_indirect_addressing_mode,memPtr
+			  push di
 			  add reg_di,memPtr	 	   	  	  	  
 			  invoke inst_LD16,reg_di,OFFSET RegHL	
+			  pop di
+			  SET_WZ_FROM_VALUE_16_AND_INC di
 			  invoke acumulate_opcode_cycles,16,5
 			  jmp Z80Loop
        OpED6C:
@@ -1723,9 +1754,12 @@ include opcodesdef.inc
 			  jmp Z80Loop	
        OpED73:
 			  ;ED73 n n	LD (nn),SP	20 6 
-			  invoke extended_indirect_addressing_mode,memPtr	   	 	   	  	  	  
+			  invoke extended_indirect_addressing_mode,memPtr	  
+			  push di
 			  invoke register_indirect_addressing_mode,memPtr,di
 			  invoke inst_LD16,OFFSET RegSP,reg_di	
+			  pop di
+			  SET_WZ_FROM_VALUE_16_AND_INC di
 			  invoke acumulate_opcode_cycles,20,6
 			  jmp Z80Loop
        OpED74:
@@ -1749,11 +1783,13 @@ include opcodesdef.inc
 			  ;ED78  IN  A,(C)	12	3
 			  invoke INST_IN,RegBC,OFFSET RegA
 			  SetIOFlags RegA
+			  SET_WZ_FROM_VALUE_16_AND_INC RegBC
 			  invoke acumulate_opcode_cycles,12,3
 			  jmp Z80Loop	
        OpED79:
 			  ;ED79  OUT (C),A	12	3
 			  invoke INST_OUT,RegBC,RegA
+			  SET_WZ_FROM_VALUE_16_AND_INC RegBC
 			  invoke acumulate_opcode_cycles,12,3
 			  jmp Z80Loop
        OpED7A:
@@ -1764,8 +1800,11 @@ include opcodesdef.inc
        OpED7B:
 			   ;ED7B n n	LD SP,(nn) 20 6 
 			   invoke extended_indirect_addressing_mode,memPtr
+			   push di
 			   add reg_di,memPtr	 	   	  	  	  
 			   invoke inst_LD16,reg_di,OFFSET RegSP
+			   pop di
+			   SET_WZ_FROM_VALUE_16_AND_INC di
 			   invoke acumulate_opcode_cycles,20,6
 			   jmp Z80Loop
        OpED7C:
@@ -1828,7 +1867,7 @@ include opcodesdef.inc
        OpEDB0:
 			  ;EDB0		LDIR		  
 			  invoke inst_LDIR,memPtr
-			  ; invoke acumulate_opcode_cycles,is in inst_LDIR -> BC != 0 ? 21 5 : 16 4	
+			  ; invoke acumulate_opcode_cycles,is in inst_LDIR -> BC != 0 ? 21 5 : 16 4			  
 			  jmp Z80Loop
        OpEDB1:
 			  ;EDB1		CPIR
@@ -1891,7 +1930,7 @@ include opcodesdef.inc
 			;F2 n n		JP P,(nn) 10 3 
 			test RegF,80h
 			jz OpC3
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpF3:	   
@@ -1905,7 +1944,7 @@ include opcodesdef.inc
 			;F4 n n		CALL P,(nn) 17 5
 			test RegF,80h
 			jz OpCD
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,17,5
 			jmp Z80Loop
        OpF5:
@@ -1939,7 +1978,7 @@ include opcodesdef.inc
 			;FA n n		JP M,(nn) 10 3
 			test RegF,80h
 			jnz OpC3
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpFB:
@@ -1952,7 +1991,7 @@ include opcodesdef.inc
 			;FC n n		CALL M,(nn) 17 5
 			test RegF,80h
 			jnz OpCD
-			add reg_pc,2
+			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,17,5
 			jmp Z80Loop
        OpFD:
@@ -3470,12 +3509,14 @@ include opcodesdef.inc
 			  ;DD34 d		INC (IX+d) 23 6
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_INC8,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,23,6
 			  jmp Z80Loop
        OpDD35:
 			  ;DD35 d		DEC (IX+d) 23 6
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_DEC8,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,23,6
 			  jmp Z80Loop
        OpDD36:
@@ -3484,6 +3525,7 @@ include opcodesdef.inc
 			   mov reg_si,reg_di
 			   invoke immediate_addressing_mode,memPtr
 			   invoke inst_LD8,reg_di,reg_si
+			   SET_WZ_FROM_VALUE_16 reg_tmp16
 			   invoke acumulate_opcode_cycles,19,5
 			   jmp Z80Loop
        OpDD39:
@@ -3518,9 +3560,8 @@ include opcodesdef.inc
        OpDD46:
 			  ;DD46 d		LD B,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegB
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpDD47:
@@ -3546,9 +3587,8 @@ include opcodesdef.inc
        OpDD4E:
 			  ;DD4E d		LD C,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegC
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop		
 	   OpDD4F:
@@ -3574,9 +3614,8 @@ include opcodesdef.inc
        OpDD56:
 			  ;DD56 d		LD D,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegD
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
        OpDD57:
@@ -3602,9 +3641,8 @@ include opcodesdef.inc
        OpDD5E:
 			  ;DD5E d		LD E,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegE
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	    OpDD5F:
@@ -3642,9 +3680,8 @@ include opcodesdef.inc
        OpDD66:
 			  ;DD66 d		LD H,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegH
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpDD67:
@@ -3685,9 +3722,8 @@ include opcodesdef.inc
        OpDD6E:
 			  ;DD6E d		LD L,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegL
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpDD6F:
@@ -3699,42 +3735,49 @@ include opcodesdef.inc
 			  ;DD70 d		LD (IX+d),B 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_LD8,OFFSET RegB,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpDD71:
 			  ;DD71 d		LD (IX+d),C 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_LD8,OFFSET RegC,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpDD72:
 			  ;DD72 d		LD (IX+d),D 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_LD8,OFFSET RegD,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpDD73:
 			  ;DD73 d		LD (IX+d),E 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_LD8,OFFSET RegE,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	 
        OpDD74:
 			  ;DD74 d		LD (IX+d),H 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_LD8,OFFSET RegH,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpDD75:	
 			  ;DD75 d		LD (IX+d),L 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_LD8,OFFSET RegL,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpDD77:
 			  ;DD77 d		LD (IX+d),A 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_LD8,OFFSET RegA,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 		OpDD78:
@@ -3758,9 +3801,8 @@ include opcodesdef.inc
        OpDD7E:
 			  ;DD7E d		LD A,(IX+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIX
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegA
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpDD7F:
@@ -3787,6 +3829,7 @@ include opcodesdef.inc
 			   ;DD86 d		ADD A,(IX+d) 19 5
 			   invoke indexed_addressing_mode,memPtr,RegIX
 			   invoke inst_ADD8,reg_di
+			   SET_WZ_FROM_VALUE_16 reg_tmp16
 			   invoke acumulate_opcode_cycles,19,5
 			   jmp Z80Loop
 	   OpDD87:
@@ -3813,6 +3856,7 @@ include opcodesdef.inc
 			  ;DD8E d		ADC A,(IX+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_ADC8,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpDD8F:
@@ -3839,6 +3883,7 @@ include opcodesdef.inc
 			  ;DD96 d		SUB (IX+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_SUB,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
 	   OpDD97:
@@ -3865,6 +3910,7 @@ include opcodesdef.inc
 			  ;DD9E d		SBC A,(IX+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_SBC8,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpDD9F:
@@ -3891,6 +3937,7 @@ include opcodesdef.inc
 			  ;DDA6 d		AND (IX+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_AND,BYTE PTR [reg_di]
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
 	   OpDDA7:
@@ -3917,6 +3964,7 @@ include opcodesdef.inc
 			  ;DDAE d		XOR (IX+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_XOR,BYTE PTR [reg_di]
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpDDAF:
@@ -3943,6 +3991,7 @@ include opcodesdef.inc
 			  ;DDB6 d		OR (IX+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_OR,BYTE PTR [reg_di]
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
 	  OpDDB7:
@@ -3969,6 +4018,7 @@ include opcodesdef.inc
 			  ;DDBE d		CP (IX+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIX
 			  invoke inst_CP,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpDDBF:
@@ -3976,6 +4026,7 @@ include opcodesdef.inc
        OpDDCB:
 			   DecRegR
 			   invoke indexed_addressing_mode,memPtr,RegIX
+			   SET_WZ_FROM_VALUE_16 reg_tmp16
 			   ProcessNextOpcode _TOpDDCB, reg_pc
 	   OpDDCB00:
 				;DDCB d 00	RLC (IX+d),B  23 6
@@ -5280,7 +5331,7 @@ include opcodesdef.inc
 			  invoke acumulate_opcode_cycles,15,4
 			  jmp Z80Loop
        OpDDE9:
-			  ;DDE9		JP (IX) 8 2
+			   ;DDE9		JP (IX) 8 2
 			   invoke inst_JP,memPtr,RegIX
 			   invoke acumulate_opcode_cycles,8,2
 			   jmp Z80Loop
@@ -5394,12 +5445,14 @@ include opcodesdef.inc
 			  ;FD34 d		INC (IY+d) 23 6
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_INC8,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,23,6
 			  jmp Z80Loop
        OpFD35:
 			  ;FD35 d		DEC (IY+d) 23 6	
 			  invoke indexed_addressing_mode,memPtr,RegIY				  		  
-			  invoke inst_DEC8,reg_di			  
+			  invoke inst_DEC8,reg_di		
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,23,6	
 			  jmp Z80Loop	
        OpFD36:
@@ -5408,6 +5461,7 @@ include opcodesdef.inc
 			 mov reg_si,reg_di
 			 invoke immediate_addressing_mode,memPtr
 			 invoke inst_LD8,reg_di,reg_si
+			 SET_WZ_FROM_VALUE_16 reg_tmp16
 			 invoke acumulate_opcode_cycles,19,50
 			 jmp Z80Loop
        OpFD39:
@@ -5442,9 +5496,8 @@ include opcodesdef.inc
        OpFD46:
 			 ;FD46 d		LD B,(IY+d) 19 5 
 			 invoke indexed_addressing_mode,memPtr,RegIY
-			 mov ax, reg_tmp16
-			 mov RegWZ, ax
 			 invoke inst_LD8,reg_di,OFFSET RegB
+			 SET_WZ_FROM_VALUE_16 reg_tmp16
 			 invoke acumulate_opcode_cycles,19,5
 			 jmp Z80Loop	
        OpFD47:
@@ -5470,9 +5523,8 @@ include opcodesdef.inc
        OpFD4E:
 			  ;FD4E d		LD C,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegC
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpFD4F:
@@ -5498,9 +5550,8 @@ include opcodesdef.inc
        OpFD56:
 			  ;FD56 d		LD D,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegD
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpFD57:
@@ -5526,9 +5577,8 @@ include opcodesdef.inc
        OpFD5E:
 			  ;FD5E d		LD E,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegE
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
 		OpFD5F:
@@ -5566,9 +5616,8 @@ include opcodesdef.inc
        OpFD66:
 			  ;FD66 d		LD H,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegH
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpFD67:
@@ -5609,9 +5658,8 @@ include opcodesdef.inc
        OpFD6E:
 			  ;FD6E d		LD L,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegL
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
        OpFD6F:
@@ -5623,36 +5671,42 @@ include opcodesdef.inc
 			  ;FD70 d		LD (IY+d),B 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_LD8,OFFSET RegB,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpFD71:
 			  ;FD71 d		LD (IY+d),C 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_LD8,OFFSET RegC,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop		
        OpFD72:
 			  ;FD72 d		LD (IY+d),D 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_LD8,OFFSET RegD,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop 					
        OpFD73:
 			  ;FD73 d		LD (IY+d),E 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_LD8,OFFSET RegE,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
        OpFD74:
 			  ;FD74 d		LD (IY+d),H 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_LD8,OFFSET RegH,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
        OpFD75:
 			 ;FD75 d		LD (IY+d),L 19 5 
 			 invoke indexed_addressing_mode,memPtr,RegIY
 			 invoke inst_LD8,OFFSET RegL,reg_di
+			 SET_WZ_FROM_VALUE_16 reg_tmp16
 			 invoke acumulate_opcode_cycles,19,5
 			 jmp Z80Loop
 	   OpFD76:
@@ -5661,6 +5715,7 @@ include opcodesdef.inc
 			  ;FD77 d		LD (IY+d),A 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_LD8,OFFSET RegA,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5,
 			  jmp Z80Loop		
 		OpFD78:
@@ -5684,9 +5739,8 @@ include opcodesdef.inc
        OpFD7E:
 			  ;FD7E d		LD A,(IY+d) 19 5 
 			  invoke indexed_addressing_mode,memPtr,RegIY
-			  mov ax, reg_tmp16
-			  mov RegWZ, ax
 			  invoke inst_LD8,reg_di,OFFSET RegA
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop	
 	   OpFD7F:
@@ -5713,6 +5767,7 @@ include opcodesdef.inc
 			  ;FD86 d		ADD A,(IY+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_ADD8,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop		
 	  OpFD87:
@@ -5739,6 +5794,7 @@ include opcodesdef.inc
 			  ;FD8E d		ADC A,(IY+d)  19 5
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_ADC8,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	  OpFD8F:
@@ -5765,6 +5821,7 @@ include opcodesdef.inc
 			  ;FD96 d		SUB (IY+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_SUB,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpFD97:
@@ -5791,6 +5848,7 @@ include opcodesdef.inc
 			  ;FD9E d		SBC A,(IY+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_SBC8,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpFD9F:
@@ -5817,6 +5875,7 @@ include opcodesdef.inc
 			  ;FDA6 d		AND (IY+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_AND,BYTE PTR [reg_di]
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpFDA7:
@@ -5843,6 +5902,7 @@ include opcodesdef.inc
 			  ;FDAE d		XOR (IY+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_XOR,BYTE PTR [reg_di]
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpFDAF:
@@ -5869,6 +5929,7 @@ include opcodesdef.inc
 			  ;FDB6 d		OR (IY+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_OR,BYTE PTR [reg_di]
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpFDB7:
@@ -5895,6 +5956,7 @@ include opcodesdef.inc
 			  ;FDBE d		CP (IY+d) 19 5
 			  invoke indexed_addressing_mode,memPtr,RegIY
 			  invoke inst_CP,reg_di
+			  SET_WZ_FROM_VALUE_16 reg_tmp16
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpFDBF:
@@ -5902,6 +5964,7 @@ include opcodesdef.inc
        OpFDCB:
 			   DecRegR	
 			   invoke indexed_addressing_mode,memPtr,RegIY
+			   SET_WZ_FROM_VALUE_16 reg_tmp16
 			   ProcessNextOpcode _TOpFDCB, reg_pc
 	   OpFDCB00:
 			    ;FDCB d 06	RLC (IY+d),B 23 6

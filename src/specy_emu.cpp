@@ -23,6 +23,9 @@
 // https://clrhome.org/table/
 // https://worldofspectrum.org/z88forever/dn327/z80undoc.htm
 // http://z80.info/z80undoc3.txt
+// https://gist.github.com/drhelius/8497817
+// https://github.com/redcode/Z80/blob/master/sources/Z80.c#L992
+// https://github.com/superzazu/z80/blob/master/z80.c#L256
 
 #include "z80.h"
 #include "ula.h"
@@ -98,7 +101,7 @@ int main(int argc, char* argv[]) {
 		printf("Starting Z80 CPU emulation...\n");
 	}
 #else
-	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\1.2a\\z80full.tap");
+	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\1.2a\\z80flags.tap");
 #endif
 	Z80CPU(specy_rom_get_pointer(), 0);	
 	specy_rom_end();

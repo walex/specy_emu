@@ -106,6 +106,20 @@ ret
 
 inst_EX8 ENDP
 
+inst_EX16 PROC
+
+; parameters
+; Reg_Ori:PTR BYTE -> x_cx
+; Reg_Dest:PTR BYTE -> x_dx
+
+mov ax, WORD PTR[x_cx]
+mov bx, WORD PTR [x_dx]
+mov [x_cx], bx
+mov [x_dx], ax
+ret
+
+inst_EX16 ENDP
+
 inst_EXX PROC
 
 	invoke inst_EX,OFFSET RegBC_ESP,OFFSET RegBC
@@ -146,7 +160,9 @@ LDIR_start:
 invoke inst_LDI, x_cx
 cmp RegBC, 0
 jz LDIR_end
-sub reg_pc, 2
+dec reg_pc
+SET_WZ_FROM_REG_PC memPtr
+dec reg_pc
 invoke acumulate_opcode_cycles, 21,5
 jmp LDIR_exit
 LDIR_end:
@@ -187,7 +203,9 @@ LDDR_start:
 invoke inst_LDD, x_cx
 cmp RegBC, 0
 jz LDDR_end
-sub reg_pc, 2
+dec reg_pc
+SET_WZ_FROM_REG_PC memPtr
+dec reg_pc
 invoke acumulate_opcode_cycles, 21,5
 jmp LDDR_exit
 LDDR_end:
@@ -212,6 +230,7 @@ dec RegBC
 SetPVFromBC
 SetFlagBits NF
 SetXFYFForCPIx bl
+INC_WZ
 
 ret
 
@@ -232,11 +251,15 @@ jnz CPIR_end
 cmp RegBC, 0
 jz CPIR_end
 sub reg_pc, 2
+SET_WZ_FROM_REG_PC memPtr
+INC_WZ
 invoke acumulate_opcode_cycles, 21,5
 jmp CPIR_exit
 CPIR_end:
+INC_WZ
 invoke acumulate_opcode_cycles, 16,4
 CPIR_exit:
+
 ret
 
 inst_CPIR ENDP
@@ -255,6 +278,9 @@ X86FlagsToZ80Flags SF, ZF, HF
 SetPVFromBC
 SetFlagBits NF
 SetXFYFForCPIx bl
+DEC_WZ
+DEC_WZ
+
 ret
 
 inst_CPD ENDP
@@ -278,6 +304,7 @@ sub reg_pc, 2
 invoke acumulate_opcode_cycles, 21,5
 jmp CPDR_exit
 CPDR_end:
+INC_WZ
 invoke acumulate_opcode_cycles, 16,4
 CPDR_exit:
 ret
@@ -490,22 +517,19 @@ inst_ADD16 PROC
 ; Reg_Ori:PTR WORD -> x_cx
 ; Reg_Dest:PTR WORD -> x_dx
 
+
 Z80HFCarryFromBit11 x_cx, x_dx, 0
 
 mov bx, WORD PTR [x_cx]
+mov cx, WORD PTR [x_dx]
 
-mov x_ax, OFFSET RegHL
-cmp x_dx, x_ax
-jnz inst_ADD16_proc
-mov RegW, bh
-
-inst_ADD16_proc:
-
-add WORD PTR [x_dx],bx
+add cx,bx
 X86FlagsToZ80Flags CF
 ResetFlagBits NF
-mov bx, WORD PTR [x_dx]
-SetXFYFFromReg8 bh
+SetXFYFFromReg8 ch
+mov WORD PTR [x_dx], cx
+
+SET_WZ_FROM_VALUE_16_AND_INC cx
 
 ret
 
@@ -533,6 +557,8 @@ inst_SBC16 PROC
 ; parameters
 ; Reg_Ori:PTR WORD -> x_cx
 
+push RegHL
+
 mov x_dx, OFFSET RegHL
 Z80HFBorrowFromBit12 x_cx, x_dx, 1
 LoadZ80CarryFlag
@@ -541,6 +567,10 @@ sbb RegHL,ax
 X86FlagsToZ80Flags SF, ZF, OF, CF
 SetFlagBits NF
 SetXFYFFromReg8 RegH
+
+pop ax
+SET_WZ_FROM_VALUE_16_AND_INC ax
+
 ret
 
 inst_SBC16 ENDP
@@ -785,6 +815,7 @@ test ch, ch
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
 SetXFYFFromReg8 RegA
+SET_WZ_FROM_VALUE_16_AND_INC RegHL
 ret
 
 inst_RLD ENDP
@@ -822,6 +853,8 @@ test cl, cl
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
 SetXFYFFromReg8 RegA
+SET_WZ_FROM_VALUE_16_AND_INC RegHL
+
 ret
 
 inst_RRD ENDP
@@ -882,6 +915,71 @@ ret
 
 inst_BIT_HL ENDP
 
+inst_BIT_HLa PROC
+
+; parameters
+; Reg:PTR BYTE -> x_cx
+; Idx:BYTE -> dl
+
+;HF flag Always set.
+;NF flag Always reset.
+;CF flag Unchanged.
+ResetFlagBits SF, ZF, NF, PVF, XF, YF
+SetFlagBits HF
+
+xor  ax, ax
+mov al, [x_cx]
+mov cl, dl
+mov bl, 1
+shl bl, cl
+and al, bl
+
+;ZF flag Set if the tested bit is reset.
+X86FlagsToZ80Flags ZF
+
+;PVF flag Set just like ZF flag.
+test RegF, 040h
+jz skip_pvf_bit
+SetFlagBits PVF
+
+skip_pvf_bit:
+
+; SF flag copy from result
+and al, 080h
+or RegF, al
+
+; YF, XF flag copy from wz high byte
+mov al, RegW
+and al, 028h
+or RegF, al
+
+ret
+
+;;ZF flag Set if the tested bit is reset.
+;X86FlagsToZ80Flags ZF
+;
+;;PVF flag Set just like ZF flag.
+;test RegF, 040h
+;jz skip_pvf_bit
+;SetFlagBits PVF
+;
+;skip_pvf_bit:
+;
+;; SF flag copy from result
+;and al, 080h
+;or RegF, al
+;
+;; YF, XF flag copy from wz
+;
+;mov ch, RegW
+;and ch, 028h
+;or RegF, ch 
+;
+;bit_exit:
+ret
+
+inst_BIT_HLa ENDP
+
 inst_BIT_IXIY PROC
 
 ; parameters
@@ -922,7 +1020,7 @@ SetFlagBits SF
 
 skip_sf_bit:
 
-mov cx, reg_tmp16
+mov cx, RegWZ
 and ch, 028h
 or RegF, ch 
 
@@ -945,10 +1043,11 @@ SetFlagBits HF
 
 xor  ax, ax
 mov al, [x_cx]
+push ax
 mov cl, dl
 mov bl, 1
 shl bl, cl
-test al, bl
+and al, bl
 
 ;ZF flag Set if the tested bit is reset.
 X86FlagsToZ80Flags ZF
@@ -957,28 +1056,18 @@ X86FlagsToZ80Flags ZF
 test RegF, 040h
 jz skip_pvf_bit
 SetFlagBits PVF
-jmp bit_exit
 
 skip_pvf_bit:
 
-;SF flag Set if n = 7 and tested bit is set.
-cmp cl, 7
-jnz skip_sf_bit
-SetFlagBits SF
+; SF flag copy from result
+and al, 080h
+or RegF, al
 
-skip_sf_bit:
-;YF flag Set if n = 5 and tested bit is set.
-cmp cl, 5
-jnz skip_yf_bit
-SetFlagBits YF
+; YF, XF flag copy from source
+pop ax
+and al, 028h
+or RegF, al
 
-skip_yf_bit:
-;XF flag Set if n = 3 and tested bit is set.
-cmp cl, 3
-jnz bit_exit
-SetFlagBits XF
-
-bit_exit:
 ret
 
 inst_BIT ENDP
@@ -1026,6 +1115,9 @@ mov x_ax,x_cx
 mov bx,dx
 add x_ax,x_bx
 mov reg_pc,x_ax
+
+SET_WZ_FROM_VALUE_16 dx
+
 ret
 
 inst_JP ENDP
@@ -1059,6 +1151,8 @@ mov reg_pc,x_ax
 mov cx, bx
 CALL_C_FUNC cpu_call_opcode_notify
 
+SET_WZ_FROM_VALUE_16 dx
+
 ret
 
 inst_CALL ENDP
@@ -1078,6 +1172,9 @@ inc x_cx
 mov ah,[x_cx]
 add reg_pc,x_ax
 add RegSP,2
+
+SET_WZ_FROM_REG_PC memPtr
+
 ret
 
 inst_RET ENDP
@@ -1135,6 +1232,8 @@ invoke INST_IN, RegBC, reg_di
 inc RegHL
 dec RegB
 SetIOBlockFlagsIN reg_di, 1
+SET_WZ_FROM_VALUE_16_AND_INC RegBC
+
 ret
 
 INST_INI ENDP
@@ -1168,6 +1267,9 @@ invoke INST_IN, RegBC, reg_di
 dec RegHL
 dec RegB
 SetIOBlockFlagsIN reg_di, 0ffh
+SET_WZ_FROM_VALUE_16 RegBC
+DEC_WZ
+DEC_WZ
 ret
 
 INST_IND ENDP
@@ -1215,6 +1317,7 @@ inc RegHL
 mov reg_tmp8, dl
 mov x_cx, OFFSET reg_tmp8
 SetIOBlockFlagsOUT x_cx
+SET_WZ_FROM_VALUE_16_AND_INC RegBC
 ret
 
 INST_OUTI ENDP
@@ -1251,6 +1354,10 @@ dec RegHL
 mov reg_tmp8, dl
 mov x_cx, OFFSET reg_tmp8
 SetIOBlockFlagsOUT x_cx
+SET_WZ_FROM_VALUE_16 RegBC
+DEC_WZ
+DEC_WZ
+
 ret
 
 INST_OUTD ENDP

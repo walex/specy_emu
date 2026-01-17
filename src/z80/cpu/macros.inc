@@ -517,20 +517,24 @@ SetYFXFByRegAQ MACRO
 
 ; YF . XF = (Q ^ F) | A
 GetBitMask x_cx, YF, XF
+push ax
 mov al, RegQ
 xor al, RegF
 or al, RegA
 and al, cl
 or RegF, al
+pop ax
 
 ENDM
 
 SetXFYFFromReg8 MACRO reg8
 	
     ResetFlagBits XF, YF
+	push ax
 	mov al, reg8
 	and al, 28h
 	or RegF, al
+	pop ax
 
 ENDM
 
@@ -575,6 +579,112 @@ pop ax
 GetBitMask x_cx, 03h 
 and al, cl ; get bit 3 value
 or RegF, al ;copy to flags register
+pop x_ax
+
+ENDM
+
+SET_WZ_FROM_VALUE_16 MACRO v16
+
+push di
+mov di, v16
+mov RegWZ, di
+pop di
+
+ENDM
+
+SET_WZ_FROM_NN_ADDRESS MACRO memPtr
+
+invoke immediate_addressing_mode_ext,memPtr
+SET_WZ_FROM_VALUE_16 WORD PTR[reg_di]
+
+ENDM
+
+SET_WZ_FROM_VALUE_16_AND_INC MACRO v16
+
+	SET_WZ_FROM_VALUE_16 v16
+	inc RegWZ
+
+ENDM
+
+SET_WZ_FROM_REG_PC MACRO memPtr
+
+push x_ax
+mov x_ax, reg_pc
+sub x_ax, memPtr
+mov RegWZ, ax
+pop x_ax
+
+ENDM
+
+INC_WZ MACRO
+
+inc RegWZ
+
+ENDM
+
+DEC_WZ MACRO
+
+dec RegWZ
+
+ENDM
+
+SET_WZ_FROM_REG8_AND_VALUE16 MACRO reg8, v16
+
+; wz = (reg8 << 8) | ((v16 + 1) & 0xFF);
+push x_ax
+xor ax, ax
+mov ah, reg8
+mov bx, v16
+inc bx
+and bx, 0FFh
+or ax, bx
+SET_WZ_FROM_VALUE_16 ax
+pop x_ax
+
+ENDM
+
+SET_WZ_FROM_REG8_AND_VALUE8 MACRO reg8, v8
+
+; wz = (reg8 << 8) | ((v8 + 1) & 0xFF);
+push x_ax
+xor ax, ax
+xor bx, bx
+mov ah, reg8
+mov bl, v8
+inc bx
+and bx, 0FFh
+or ax, bx
+SET_WZ_FROM_VALUE_16 ax
+pop x_ax
+
+ENDM
+
+SET_WZ_FROM_A_AND_VALUE16 MACRO v16
+
+; wz = (z->a << 8) | ((v16 + 1) & 0xFF);
+
+SET_WZ_FROM_REG8_AND_VALUE16 RegA, v16
+
+
+ENDM
+
+SET_WZ_FROM_A_AND_VALUE8 MACRO v8
+
+; wz = (z->a << 8) | ((v16 + 1) & 0xFF);
+
+SET_WZ_FROM_REG8_AND_VALUE8 RegA, v16
+
+ENDM
+
+SET_WZ_FROM_PORT_AND_VALUE8 MACRO port, v8
+
+; wz = (port + 1) | (z->a << 8);
+
+push x_ax
+mov al, port
+inc al
+mov ah, v8
+SET_WZ_FROM_VALUE_16 ax
 pop x_ax
 
 ENDM
