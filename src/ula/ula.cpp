@@ -62,5 +62,5 @@ void ula_write_port(uint16_t addr, uint8_t value) {
 
 void ula_assert_INT_line() {
 
-	trigger_MI(0);
+	interrupts_request_mi();
 }

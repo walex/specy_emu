@@ -4,14 +4,21 @@ EXTERNDEF inst_OUT_Impl:PROC
 EXTERNDEF inst_IN_Impl:PROC
 EXTERNDEF inst_DAA_C:PROC
 EXTERNDEF acumulate_opcode_cycles_c:PROC
+EXTERNDEF acumulate_opcode_cycles_zero_c:PROC
 EXTERNDEF cpu_call_opcode_notify:PROC
 
 .code
 
+acumulate_opcode_cycles_zero PROC
+
+CALL_C_FUNC acumulate_opcode_cycles_zero_c
+ret
+
+acumulate_opcode_cycles_zero ENDP
+
 acumulate_opcode_cycles PROC
 
 CALL_C_FUNC acumulate_opcode_cycles_c
-
 ret
 
 acumulate_opcode_cycles ENDP
@@ -51,9 +58,9 @@ mov bx,RegSP
 add x_cx,x_bx
 mov ax,dx			;ah Reg HIGH , al Reg LOW
 dec x_cx			; (SP-1)
-mov [x_cx],ah
+mov BYTE PTR [x_cx],ah
 dec x_cx			; (SP-2)
-mov [x_cx],al
+mov BYTE PTR [x_cx],al
 sub RegSP,2
 ret
 
@@ -135,15 +142,16 @@ inst_LDI PROC
 ; memPtr:PTR BYTE -> x_cx
 
 invoke register_indirect_addressing_mode,x_cx,RegHL
-mov al,[reg_di]
+push reg_di
 invoke register_indirect_addressing_mode,x_cx,RegDE
-mov [reg_di],al
-inc RegDE
-inc RegHL
-dec RegBC
+pop reg_si
+invoke inst_LD8,reg_si,reg_di
+inc WORD PTR RegDE
+inc WORD PTR RegHL
+dec WORD PTR RegBC
 SetPVFromBC
 ResetFlagBits HF, NF
-SetXFYFForLDIx al
+SetXFYFForLDxR [reg_di]
 ret
 
 inst_LDI ENDP
@@ -153,21 +161,16 @@ inst_LDIR PROC
 ; parameters
 ; memPtr:PTR BYTE -> x_cx
 
-cmp RegBC, 0
-jnz LDIR_start
-mov RegBC, 0FFFFh
 LDIR_start:
+push x_cx
 invoke inst_LDI, x_cx
+pop x_cx
 cmp RegBC, 0
 jz LDIR_end
-dec reg_pc
-SET_WZ_FROM_REG_PC memPtr
-dec reg_pc
-invoke acumulate_opcode_cycles, 21,5
-jmp LDIR_exit
+sub reg_pc, 2
+invoke SetLDxRInterblockYFXF
+SET_WZ_FROM_REG_PC_WITH_INC x_cx
 LDIR_end:
-invoke acumulate_opcode_cycles, 16,4
-LDIR_exit:
 ret
 
 inst_LDIR ENDP
@@ -178,15 +181,16 @@ inst_LDD PROC
 ; memPtr:PTR BYTE -> x_cx
 
 invoke register_indirect_addressing_mode,x_cx,RegHL
-mov al,[reg_di]
+push reg_di
 invoke register_indirect_addressing_mode,x_cx,RegDE
-mov [reg_di],al
-dec RegDE
-dec RegHL
-dec RegBC
+pop reg_si
+invoke inst_LD8,reg_si,reg_di
+dec WORD PTR RegDE
+dec WORD PTR RegHL
+dec WORD PTR RegBC
 SetPVFromBC
 ResetFlagBits HF, NF
-SetXFYFForLDIx al
+SetXFYFForLDxR al
 ret
 
 inst_LDD ENDP
@@ -196,22 +200,16 @@ inst_LDDR PROC
 ; parameters
 ; memPtr:PTR BYTE -> x_cx
 
-cmp RegBC, 0
-jnz LDDR_start
-mov RegBC, 0FFFFh
 LDDR_start:
+push x_cx
 invoke inst_LDD, x_cx
+pop x_cx
 cmp RegBC, 0
 jz LDDR_end
-dec reg_pc
-SET_WZ_FROM_REG_PC memPtr
-dec reg_pc
-invoke acumulate_opcode_cycles, 21,5
-jmp LDDR_exit
+sub reg_pc, 2
+invoke SetLDxRInterblockYFXF
+SET_WZ_FROM_REG_PC_WITH_INC x_cx
 LDDR_end:
-invoke acumulate_opcode_cycles, 16,4
-LDDR_exit:
-
 ret
 
 inst_LDDR ENDP
@@ -225,13 +223,12 @@ invoke register_indirect_addressing_mode,x_cx,RegHL
 mov bl, BYTE PTR [reg_di]
 cmp RegA,bl
 X86FlagsToZ80Flags SF, ZF, HF
-inc RegHL
-dec RegBC
+inc WORD PTR RegHL
+dec WORD PTR RegBC
 SetPVFromBC
 SetFlagBits NF
 SetXFYFForCPIx bl
 INC_WZ
-
 ret
 
 inst_CPI ENDP
@@ -241,9 +238,6 @@ inst_CPIR PROC
 ; parameters
 ; memPtr:PTR BYTE -> x_cx
 
-cmp RegBC, 0
-jnz CPIR_start
-mov RegBC, 0FFFFh
 CPIR_start:
 invoke inst_CPI, x_cx
 TestZ80Flag ZF
@@ -253,13 +247,7 @@ jz CPIR_end
 sub reg_pc, 2
 SET_WZ_FROM_REG_PC memPtr
 INC_WZ
-invoke acumulate_opcode_cycles, 21,5
-jmp CPIR_exit
 CPIR_end:
-INC_WZ
-invoke acumulate_opcode_cycles, 16,4
-CPIR_exit:
-
 ret
 
 inst_CPIR ENDP
@@ -271,8 +259,8 @@ inst_CPD PROC
 
 invoke register_indirect_addressing_mode,x_cx,RegHL
 mov bl, BYTE PTR [reg_di]
-dec RegHL
-dec RegBC
+dec WORD PTR RegHL
+dec WORD PTR RegBC
 cmp RegA,bl
 X86FlagsToZ80Flags SF, ZF, HF
 SetPVFromBC
@@ -290,10 +278,6 @@ inst_CPDR PROC
 ; parameters
 ; memPtr:PTR BYTE -> x_cx
 
-
-cmp RegBC, 0
-jnz CPDR_start
-mov RegBC, 0FFFFh
 CPDR_start:
 invoke inst_CPD, x_cx
 TestZ80Flag ZF
@@ -301,12 +285,8 @@ jnz CPDR_end
 cmp RegBC, 0
 jz CPDR_end
 sub reg_pc, 2
-invoke acumulate_opcode_cycles, 21,5
-jmp CPDR_exit
 CPDR_end:
 INC_WZ
-invoke acumulate_opcode_cycles, 16,4
-CPDR_exit:
 ret
 
 inst_CPDR ENDP
@@ -488,7 +468,7 @@ inst_CCF PROC
 mov al, RegF
 and al, 1
 shl al, HF
-ResetFlagBits YF, HF, XF, NF
+ResetFlagBits HF, NF
 xor RegF, 1
 or RegF, al
 
@@ -1229,8 +1209,8 @@ INST_INI PROC
 
 invoke register_indirect_addressing_mode, x_cx, RegHL 
 invoke INST_IN, RegBC, reg_di
-inc RegHL
-dec RegB
+inc WORD PTR RegHL
+dec BYTE PTR RegB
 SetIOBlockFlagsIN reg_di, 1
 SET_WZ_FROM_VALUE_16_AND_INC RegBC
 
@@ -1248,11 +1228,7 @@ invoke INST_INI, x_cx
 cmp RegB, 0
 jz INIR_end
 sub reg_pc, 2
-invoke acumulate_opcode_cycles, 21,5
-jmp INIR_exit
 INIR_end:
-invoke acumulate_opcode_cycles, 16,4
-INIR_exit:
 ret
 
 INST_INIR ENDP
@@ -1264,8 +1240,8 @@ INST_IND PROC
 
 invoke register_indirect_addressing_mode, x_cx, RegHL 
 invoke INST_IN, RegBC, reg_di
-dec RegHL
-dec RegB
+dec WORD PTR RegHL
+dec BYTE PTR RegB
 SetIOBlockFlagsIN reg_di, 0ffh
 SET_WZ_FROM_VALUE_16 RegBC
 DEC_WZ
@@ -1284,11 +1260,7 @@ invoke INST_IND, x_cx
 cmp RegB, 0
 jz INDR_end
 sub reg_pc, 2
-invoke acumulate_opcode_cycles, 21,5
-jmp INDR_exit
 INDR_end:
-invoke acumulate_opcode_cycles, 16,4
-INDR_exit:
 ret
 
 INST_INDR ENDP
@@ -1311,9 +1283,9 @@ INST_OUTI PROC
 ; memPtr:PTR BYTE  -> x_cx
 
 invoke register_indirect_addressing_mode, x_cx, RegHL
-dec RegB
+dec BYTE PTR RegB
 invoke INST_OUT, RegBC, dl	 
-inc RegHL
+inc WORD PTR RegHL
 mov reg_tmp8, dl
 mov x_cx, OFFSET reg_tmp8
 SetIOBlockFlagsOUT x_cx
@@ -1332,11 +1304,7 @@ invoke INST_OUTI, x_cx
 cmp RegB, 0
 jz OTIR_end
 sub reg_pc, 2
-invoke acumulate_opcode_cycles, 21,5
-jmp OTIR_exit
 OTIR_end:
-invoke acumulate_opcode_cycles, 16,4
-OTIR_exit:
 ret
 
 INST_OTIR ENDP
@@ -1347,10 +1315,10 @@ INST_OUTD PROC
 ; memPtr:PTR BYTE -> x_cx
 
 invoke register_indirect_addressing_mode, x_cx, RegHL 
-dec RegB
+dec BYTE PTR RegB
 mov dl, [reg_di]
 invoke INST_OUT, RegBC, dl
-dec RegHL
+dec WORD PTR RegHL
 mov reg_tmp8, dl
 mov x_cx, OFFSET reg_tmp8
 SetIOBlockFlagsOUT x_cx
@@ -1372,11 +1340,7 @@ invoke INST_OUTD, x_cx
 cmp RegB, 0
 jz OTDR_end
 sub reg_pc, 2
-invoke acumulate_opcode_cycles, 21,5
-jmp OTDR_exit
 OTDR_end:
-invoke acumulate_opcode_cycles, 16,4
-OTDR_exit:
 ret
 
 INST_OTDR ENDP

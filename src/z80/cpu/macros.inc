@@ -123,45 +123,31 @@ CopyMemToMem16 MACRO org, dest
 	mov [dest], ax
 ENDM
 
-ProcessNextOpcode MACRO JumpTable, addr	
-		
-	push x_bp
-	xor x_bp, x_bp
-	xor x_ax, x_ax	
-	mov al, [addr]             ; Select index
-
-	shl Rec_Opcode, 8
-	or Rec_Opcode, x_ax
-
-	mov x_bp, OFFSET JumpTable ; Load the base address of the jump table into RBP
-	mov x_bx, [x_bp + x_ax*PTR_SIZE]    ; Load the function address from the table
-	add addr, 1
-	pop x_bp
-	IncRegR
-	jmp x_bx
-
-ENDM
 
 IncRegR MACRO 
 
-xor ax, ax
+;  z->r = (z->r & 0x80) | ((z->r + 1) & 0x7f);
 mov al, RegR
-shl ax, 1
-add ax, 2
-shr ax, 1
+mov ah, RegR
+and al, 080h
+inc ah
+and ah, 07Fh
+or al, ah
 mov RegR, al
 
 ENDM
 
 DecRegR MACRO 
 
-xor ax, ax
+;  z->r = (z->r & 0x80) | ((z->r + 1) & 0x7f);
 mov al, RegR
-shl ax, 1
-sub ax, 2
-shr ax, 1
+mov ah, RegR
+and al, 080h
+dec ah
+and ah, 07Fh
+or al, ah
 mov RegR, al
-	
+
 ENDM
 
 GetBitMask MACRO dest, args:VARARG
@@ -506,30 +492,32 @@ ENDM
 CALL_C_FUNC MACRO func_name
 
 push reg_pc
-sub rsp, 40
+sub rsp, 020h
 call func_name
-add rsp, 40
+add rsp, 020h
 pop reg_pc
 
 ENDM
 
 SetYFXFByRegAQ MACRO
 
-; YF . XF = (Q ^ F) | A
-GetBitMask x_cx, YF, XF
-push ax
-mov al, RegQ
-xor al, RegF
-or al, RegA
-and al, cl
+; YF = A.5 | (YFi ^ YQi)
+; XF = A.3 | (XFi ^ XQi)
+
+ResetFlagBits YF, XF
+mov al, RegA
+mov bl, RegF
+mov cl, RegQ
+xor bl, cl
+or al, bl
+and al, 028h
 or RegF, al
-pop ax
 
 ENDM
 
 SetXFYFFromReg8 MACRO reg8
 	
-    ResetFlagBits XF, YF
+   ResetFlagBits XF, YF
 	push ax
 	mov al, reg8
 	and al, 28h
@@ -539,22 +527,29 @@ SetXFYFFromReg8 MACRO reg8
 ENDM
 
 
-SetXFYFForLDIx MACRO reg8
+SetXFYFForLDxR MACRO val8
 
-push x_ax
-mov al, reg8
-add al, RegA
+
+; t = val8 + A
+;((t & 2) << 4) |
+; (t & XF))
+
 ResetFlagBits YF, XF
+push x_cx
+push x_ax
+mov al, val8
+add al, RegA
 push ax
 GetBitMask x_cx, 01h
 and al, cl
 shl al, YF - 01h
 or RegF, al
 pop ax
-GetBitMask x_cx, 03h
+GetBitMask x_cx, XF
 and al, cl
 or RegF, al
 pop x_ax
+pop x_cx
 
 ENDM
 
@@ -602,7 +597,7 @@ ENDM
 SET_WZ_FROM_VALUE_16_AND_INC MACRO v16
 
 	SET_WZ_FROM_VALUE_16 v16
-	inc RegWZ
+	inc WORD PTR RegWZ
 
 ENDM
 
@@ -616,15 +611,27 @@ pop x_ax
 
 ENDM
 
+SET_WZ_FROM_REG_PC_WITH_INC MACRO memPtr
+
+push x_ax
+mov x_ax, reg_pc
+sub x_ax, memPtr
+mov RegWZ, ax
+inc WORD PTR RegWZ
+pop x_ax
+
+ENDM
+
+
 INC_WZ MACRO
 
-inc RegWZ
+inc WORD PTR RegWZ
 
 ENDM
 
 DEC_WZ MACRO
 
-dec RegWZ
+dec WORD PTR RegWZ
 
 ENDM
 

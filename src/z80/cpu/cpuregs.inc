@@ -112,8 +112,7 @@
 
    _CPU ENDS		
 
-    reg_pc_tmp dw 0
-    reg_f_tmp  db 0
+    reg_f_ant  db 0
 
     OF EQU 11	; x86 oferflow flag
 
@@ -202,7 +201,6 @@ InitRegisters PROC
 ; params
 ; regs values:PTR WORD -> rcx
 
-SetRegValue16 reg_pc_tmp
 SetRegValue16 RegSP
 SetRegValue8 RegA
 SetRegValue8 RegB
@@ -245,7 +243,6 @@ GetRegisters PROC
 ; params
 ; regs values:PTR WORD -> rcx
 
-GetRegValue16 reg_pc_tmp
 GetRegValue16 RegSP
 GetRegValue8 RegA
 GetRegValue8 RegB

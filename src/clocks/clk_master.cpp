@@ -7,7 +7,7 @@
 
 struct clock_master {
 
-    std::chrono::steady_clock::time_point clock;
+    std::chrono::high_resolution_clock::time_point clock;
 	uint64_t duration_ms;
 	double frequency;
 	std::counting_semaphore<1> sem{ 1 };
@@ -20,7 +20,7 @@ clock_master_handle clk_master_create(const char* name, double frequency_hz) {
 		return clock_masters[name];
 	}
 	clock_master* cm = new clock_master();
-    cm->clock = std::chrono::steady_clock::now();
+    cm->clock = std::chrono::high_resolution_clock::now();
 	cm->duration_ms = (1 / frequency_hz) * 1000;
 	cm->frequency = frequency_hz;
 	clock_masters[name] = cm;

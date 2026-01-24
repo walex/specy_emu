@@ -13,7 +13,6 @@ typedef void(*clock_call_interceptor_handler)();
 extern "C" {
 #endif
 	int Z80CPU(uint8_t*, uint8_t* pc);
-	void trigger_MI(uint8_t bus_data);
 	void GetRegPC(uint64_t memPtr, uint16_t* value);
 	void cpu_lock();
 	void cpu_unlock();
@@ -28,7 +27,8 @@ extern "C" {
 #else
 #endif
 
-#define Z80_EMULATION_SYNC_CYCLES_DELAY 0 // seconds to wait before syncing CPU cycles to real time
+#define Z80_EMULATION_SYNC_CYCLES_DELAY 800 // seconds to wait before syncing CPU cycles to real time
 
+#include "interrupts.h"
 
 #endif

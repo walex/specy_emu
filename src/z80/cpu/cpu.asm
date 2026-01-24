@@ -1,6 +1,23 @@
 ; https://ps4star.github.io/z80studio/
 ;https://clrhome.org/table/
 
+.code
+
+ProcessNextOpcode MACRO JumpTable, addr	
+
+	push x_bp
+	xor x_bp, x_bp
+	xor x_ax, x_ax	
+	mov al, [addr]             ; Select index
+
+	mov x_bp, OFFSET JumpTable ; Load the base address of the jump table into RBP
+	mov x_bx, [x_bp + x_ax*PTR_SIZE]    ; Load the function address from the table
+	add addr, 1
+	pop x_bp
+
+	jmp x_bx
+
+ENDM
 
 .data
 
@@ -16,40 +33,6 @@ include opcodesimpl_x64.inc
 
 .code
 
-Z80_CPU_MAIN_LOOP MACRO
-			
-			mov IMF,0
-			mov reg_pc,rcx
-			mov memPtr,reg_pc
-			add reg_pc,rdx
-			mov RegQ, 0
-			mov reg_f_tmp, 0
-Z80Halt:
-			jmp Op00			
-Z80IsNop:
-			cmp Rec_Opcode,0
-			jz Z80IsNopNoLog
-			PRINT_HEXA_64 Rec_Opcode
-Z80IsNopNoLog:
-Z80Loop:
-			mov al, reg_f_tmp
-			mov ah, RegF
-			mov reg_f_tmp, ah
-			test al, ah
-			jz ResetRegQ
-			mov RegQ, ah
-			jmp AfterRegQ
-ResetRegQ:
-			mov RegQ, 0	
-AfterRegQ:
-			mov Rec_Opcode,0
-			ExecuteInterrupts memPtr
-			cmp HALT,1
-			jz Z80Halt
-			ProcessNextOpcode _TOp1B, reg_pc
-
-ENDM
-
 Z80CPU PROC
 
 ; params
@@ -60,28 +43,49 @@ Z80CPU PROC
 
 BYTE_PTR TYPEDEF PTR BYTE
 memPtr BYTE_PTR 0
-Rec_Opcode PTR_DATA_TYPE 0
 
 include opcodesdef.inc  
 
 .code
 
-	   Z80_CPU_MAIN_LOOP	            
+	   	mov reg_pc,rcx
+			mov memPtr,reg_pc
+			add reg_pc,rdx
+			invoke interrupts_set_im,0
+Z80Halt:
+			jmp Op00			
+Z80Loop:
+			mov al, reg_f_ant
+			mov ah, RegF
+			mov reg_f_ant, ah
+			test al, ah
+			jz ResetRegQ
+			mov RegQ, ah
+			jmp AfterRegQ
+ResetRegQ:
+			mov RegQ, 0	
+AfterRegQ:
+			mov x_cx, memPtr
+			invoke interrupts_accept
+			cmp HALT,1
+			jz Z80Halt
+			IncRegR
+			ProcessNextOpcode _TOp1B, reg_pc	            
        Op00:			
 			;00		NOP			4	1	1
-            nop  		
+         nop  		
 			invoke acumulate_opcode_cycles,4,1
-            jmp Z80IsNop
+         jmp Z80Loop
        Op01:
 			;01 n n		LD BC,nn		10	2	
 			invoke immediate_addressing_mode_ext,memPtr			
-            invoke inst_LD16,reg_di,OFFSET RegBC            			
+         invoke inst_LD16,reg_di,OFFSET RegBC            			
 			invoke acumulate_opcode_cycles,10,2
-            jmp Z80Loop
+         jmp Z80Loop
        Op02:
 			;02		LD (BC),A		7	2				
 			invoke register_indirect_addressing_mode,memPtr,RegBC									
-            invoke inst_LD8,OFFSET RegA,reg_di
+         invoke inst_LD8,OFFSET RegA,reg_di
 			SET_WZ_FROM_A_AND_VALUE16 RegBC
 			invoke acumulate_opcode_cycles,7,2
             jmp Z80Loop
@@ -156,7 +160,7 @@ include opcodesdef.inc
 			jmp Z80Loop			
        Op10:
 			;10 e		DJNZ (PC+e)		8/13	2/3	1/1	(met/not met)
-			dec RegB			
+			dec BYTE PTR RegB			
 			jnz Op18
 			inc reg_pc	
 			invoke acumulate_opcode_cycles,8,2					
@@ -1188,7 +1192,8 @@ include opcodesdef.inc
 			SET_WZ_FROM_NN_ADDRESS memPtr
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
-       OpCB:									
+       OpCB:	
+		   IncRegR
 			ProcessNextOpcode _TOpCB, reg_pc
        OpCC:
 			;CC n n		CALL Z,(nn)		17/10	5/3	1/1	(met/not met)
@@ -1309,6 +1314,7 @@ include opcodesdef.inc
 			invoke acumulate_opcode_cycles,10,3
 			jmp Z80Loop
        OpDD:
+		   IncRegR
 			ProcessNextOpcode _TOpDD, reg_pc
        OpDE:
 			;DE n		SBC A,n 7 2
@@ -1402,9 +1408,10 @@ include opcodesdef.inc
 			invoke acumulate_opcode_cycles,17,5
 			jmp Z80Loop
        OpED:			
+		   IncRegR
 			ProcessNextOpcode _TOpED, reg_pc
 	   OpED00:
-	        ;ED00  IN  B,(n)	12	3
+	      ;ED00  IN  B,(n)	12	3
 			invoke immediate_addressing_mode,memPtr
 			xor x_bx,x_bx
 			mov bl,[reg_di]
@@ -1480,13 +1487,12 @@ include opcodesdef.inc
        OpED45:
 			  ;ED45		RETN 14 4
 			  invoke inst_RET,memPtr						
-			  mov al,IFF2
-			  mov IFF1,al
+			  invoke interrupts_restore
 			  invoke acumulate_opcode_cycles,14,4
 			  jmp Z80Loop
        OpED46:
 			  ;ED46		IM 0 8 2
-			  mov IMF,0
+			  invoke interrupts_set_im,0
 			  invoke acumulate_opcode_cycles,8,2
 			 jmp Z80Loop	 
        OpED47:
@@ -1528,13 +1534,13 @@ include opcodesdef.inc
        OpED4D:
 			  ;ED4D		RETI 14 4
 			  invoke inst_RET,memPtr
-			  mov al,IFF2
-			  mov IFF1,al
+			  invoke interrupts_restore
+			  ; FixME: Signal an I/O device that the interrupt routine is completed
 			  invoke acumulate_opcode_cycles,14,4
 			  jmp Z80Loop
        OpED4E:
-			 ;ED46E		IM 0 8 2
-			  mov IMF,0
+			  ;ED46E		IM 0 8 2
+			  invoke interrupts_set_im,0
 			  invoke acumulate_opcode_cycles,8,2
 			  jmp Z80Loop
        OpED4F:
@@ -1576,13 +1582,12 @@ include opcodesdef.inc
        OpED55:
 			  ;ED55		RETN 14 4
 			  invoke inst_RET,memPtr						
-			  mov al,IFF2
-			  mov IFF1,al
+			  invoke interrupts_restore
 			  invoke acumulate_opcode_cycles,14,4
 			  jmp Z80Loop
        OpED56:
 			  ;ED56		IM 1 8 2
-			  mov IMF,1
+			  invoke interrupts_set_im,1
 			  invoke acumulate_opcode_cycles,8,2
 			 jmp Z80Loop	
        OpED57:
@@ -1625,13 +1630,12 @@ include opcodesdef.inc
        OpED5D:
 			  ;ED5D		RETN 14 4
 			  invoke inst_RET,memPtr						
-			  mov al,IFF2
-			  mov IFF1,al
+			  invoke interrupts_restore
 			  invoke acumulate_opcode_cycles,14,4
 			  jmp Z80Loop
        OpED5E:
 			 ;ED5E		IM 2 8 2
-			 mov IMF,2
+			 invoke interrupts_set_im,2
 			 invoke acumulate_opcode_cycles,8,2
 			 jmp Z80Loop	
        OpED5F:
@@ -1674,13 +1678,12 @@ include opcodesdef.inc
        OpED65:
 			  ;ED64		RETN 14 4
 			  invoke inst_RET,memPtr						
-			  mov al,IFF2
-			  mov IFF1,al
+			  invoke interrupts_restore
 			  invoke acumulate_opcode_cycles,14,4
 			  jmp Z80Loop       
        OpED66:
-			 ;ED66		IM 0 8 2
-			  mov IMF,0
+			  ;ED66		IM 0 8 2
+			  invoke interrupts_set_im,0
 			  invoke acumulate_opcode_cycles,8,2
 			 jmp Z80Loop	
        OpED67:
@@ -1722,13 +1725,12 @@ include opcodesdef.inc
        OpED6D:
 			  ;ED6D		RETN 14 4
 			  invoke inst_RET,memPtr						
-			  mov al,IFF2
-			  mov IFF1,al
+			  invoke interrupts_restore
 			  invoke acumulate_opcode_cycles,14,4
 			  jmp Z80Loop
        OpED6E:
 			  ;ED6E		IM 0 8 2
-			  mov IMF,0
+			  invoke interrupts_set_im,0
 			  invoke acumulate_opcode_cycles,8,2
 			  jmp Z80Loop
        OpED6F:
@@ -1770,13 +1772,12 @@ include opcodesdef.inc
        OpED75:
 			  ;ED75		RETN 14 4
 			  invoke inst_RET,memPtr						
-			  mov al,IFF2
-			  mov IFF1,al
+			  invoke interrupts_restore
 			  invoke acumulate_opcode_cycles,14,4
 			  jmp Z80Loop
        OpED76:
 			  ;ED76		IM 1 8 2
-			  mov IMF,1
+			  invoke interrupts_set_im,1
 			  invoke acumulate_opcode_cycles,8,2
 			 jmp Z80Loop
        OpED78:
@@ -1815,13 +1816,12 @@ include opcodesdef.inc
        OpED7D:
 			  ;ED7D		RETN 14 4
 			  invoke inst_RET,memPtr						
-			  mov al,IFF2
-			  mov IFF1,al
+			  invoke interrupts_restore
 			  invoke acumulate_opcode_cycles,14,4
 			  jmp Z80Loop
        OpED7E:
 			  ;ED7E		IM 2 8 2
-			  mov IMF,2
+			  invoke interrupts_set_im,2
 			  invoke acumulate_opcode_cycles,8,2
 			  jmp Z80Loop
        OpEDA0:
@@ -1867,42 +1867,42 @@ include opcodesdef.inc
        OpEDB0:
 			  ;EDB0		LDIR		  
 			  invoke inst_LDIR,memPtr
-			  ; invoke acumulate_opcode_cycles,is in inst_LDIR -> BC != 0 ? 21 5 : 16 4			  
+			  invoke acumulate_opcode_cycles_zero, 16, 4, 21, 5, RegBC
 			  jmp Z80Loop
        OpEDB1:
 			  ;EDB1		CPIR
 			  invoke inst_CPIR,memPtr
-			  ; invoke acumulate_opcode_cycles,is in inst_CPIR -> BC != 0 ? 21 5 : 16 4	
+			  invoke acumulate_opcode_cycles_zero, 16, 4, 21, 5, RegBC
 			  jmp Z80Loop
        OpEDB2:
 			  ;EDB2		INIR	21/16 	4/3
 			  invoke INST_INIR,memPtr		  
-			  ; invoke acumulate_opcode_cycles,is in inst_CPIR -> BC != 0 ? 21 5 : 16 4
+			  invoke acumulate_opcode_cycles_zero, 16, 4, 21, 5, RegBC
 			  jmp Z80Loop
        OpEDB3:
 			  ;EDB3		OTIR	21/16 	4/3
 			  invoke INST_OTIR,memPtr		  
-			 ; invoke acumulate_opcode_cycles,is in inst_CPIR -> BC != 0 ? 21 5 : 16 4
+			  invoke acumulate_opcode_cycles_zero, 16, 4, 21, 5, RegBC
 			  jmp Z80Loop
        OpEDB8:
 			  ;EDB8		LDDR
 			  invoke inst_LDDR,memPtr
-			  ; invoke acumulate_opcode_cycles,is in inst_LDDR -> BC != 0 ? 21 5 : 16 4
+			  invoke acumulate_opcode_cycles_zero, 16, 4, 21, 5, RegBC
 			  jmp Z80Loop
        OpEDB9:
 			  ;EDB9		CPDR
 			  invoke inst_CPDR,memPtr
-			 ; invoke acumulate_opcode_cycles,is in inst_CPIR -> BC != 0 ? 21 5 : 16 4
+			  invoke acumulate_opcode_cycles_zero, 16, 4, 21, 5, RegBC
 			  jmp Z80Loop
        OpEDBA:
 			  ;EDBA		INDR	21/16	4/3
 			  invoke INST_INDR,memPtr	  
-			  ; invoke acumulate_opcode_cycles,is in inst_CPIR -> BC != 0 ? 21 5 : 16 4
+			  invoke acumulate_opcode_cycles_zero, 16, 4, 21, 5, RegBC
 			  jmp Z80Loop
        OpEDBB:			 
 			  ;EDBB		OTDR	21/16	4/3
 			  invoke INST_OTDR,memPtr			  
-			  ; invoke acumulate_opcode_cycles,is in inst_CPIR -> BC != 0 ? 21 5 : 16 4
+			  invoke acumulate_opcode_cycles_zero, 16, 4, 21, 5, RegBC
 			  jmp Z80Loop
        OpEE:
 			;EE n		XOR n 7 2
@@ -1935,9 +1935,7 @@ include opcodesdef.inc
 			jmp Z80Loop
        OpF3:	   
 			;F3		DI 4 1
-			xor al,al
-	        mov IFF1,al
-			mov IFF2,al	
+			invoke interrupts_disable
 			invoke acumulate_opcode_cycles,4,1		
 			jmp Z80Loop
        OpF4:
@@ -1983,8 +1981,7 @@ include opcodesdef.inc
 			jmp Z80Loop
        OpFB:
 			;FB		EI 4 1
-	        mov IFF1,1
-			mov IFF2,1			
+			invoke interrupts_enable_request			
 			invoke acumulate_opcode_cycles,4,1
 			jmp Z80Loop
        OpFC:
@@ -1995,6 +1992,7 @@ include opcodesdef.inc
 			invoke acumulate_opcode_cycles,17,5
 			jmp Z80Loop
        OpFD:
+		   IncRegR
 			ProcessNextOpcode _TOpFD, reg_pc
        OpFE:
 			;FE n		CP n 7 2
@@ -4024,7 +4022,6 @@ include opcodesdef.inc
 	   OpDDBF:
 			jmp OpBF
        OpDDCB:
-			   DecRegR
 			   invoke indexed_addressing_mode,memPtr,RegIX
 			   SET_WZ_FROM_VALUE_16 reg_tmp16
 			   ProcessNextOpcode _TOpDDCB, reg_pc
@@ -4370,36 +4367,36 @@ include opcodesdef.inc
 				invoke acumulate_opcode_cycles,23,6
 			    jmp Z80Loop
 	   OpDDCB3A:
-				;FDCB d 3D	SRL (IX+d),D 23 6
+				;DDCB d 3D	SRL (IX+d),D 23 6
 				invoke inst_SRL,reg_di
 				CopyMemToMem8 reg_di,OFFSET RegD
 				invoke acumulate_opcode_cycles,23,6
 			    jmp Z80Loop
 	  OpDDCB3B:
-				;FDCB d 3B	SRL (IX+d),E 23 6
+				;DDCB d 3B	SRL (IX+d),E 23 6
 				invoke inst_SRL,reg_di
 				CopyMemToMem8 reg_di,OFFSET RegE
 				invoke acumulate_opcode_cycles,23,6
 			    jmp Z80Loop
 	   OpDDCB3C:
-				;FDCB d 3D	SRL (IX+d),H 23 6
+				;DDCB d 3D	SRL (IX+d),H 23 6
 				invoke inst_SRL,reg_di
 				CopyMemToMem8 reg_di,OFFSET RegH
 				invoke acumulate_opcode_cycles,23,6
-			    jmp Z80Loop
+			   jmp Z80Loop
 	   OpDDCB3D:
 				;DDCB d 3D	SRL (IX+d),L 23 6
 				invoke inst_SRL,reg_di
 				CopyMemToMem8 reg_di,OFFSET RegL
 				invoke acumulate_opcode_cycles,23,6
-			    jmp Z80Loop
+			   jmp Z80Loop
 	   OpDDCB3E:
-			    ;DDCB d 3E	SRL (IX+d) 23 6				
+			   ;DDCB d 3E	SRL (IX+d) 23 6				
 				invoke inst_SRL,reg_di
 				invoke acumulate_opcode_cycles,23,6
 			    jmp Z80Loop
 	   OpDDCB3F:
-			    ;FDCB d 3F	SRL (IX+d),A 23 6
+			   ;DDCB d 3F	SRL (IX+d),A 23 6
 				invoke inst_SRL,reg_di
 				CopyMemToMem8 reg_di,OFFSET RegA
 				invoke acumulate_opcode_cycles,23,6
@@ -5960,18 +5957,17 @@ include opcodesdef.inc
 			  invoke acumulate_opcode_cycles,19,5
 			  jmp Z80Loop
 	   OpFDBF:
-			jmp OpBF
+				jmp OpBF
        OpFDCB:
-			   DecRegR	
 			   invoke indexed_addressing_mode,memPtr,RegIY
 			   SET_WZ_FROM_VALUE_16 reg_tmp16
 			   ProcessNextOpcode _TOpFDCB, reg_pc
 	   OpFDCB00:
-			    ;FDCB d 06	RLC (IY+d),B 23 6
+			   ;FDCB d 06	RLC (IY+d),B 23 6
 				invoke inst_RLC,reg_di
 				CopyMemToMem8 reg_di,OFFSET RegB
 				invoke acumulate_opcode_cycles,23,6
-			    jmp Z80Loop
+			   jmp Z80Loop
 	   OpFDCB01:
 				;FDCB d 06	RLC (IY+d),C 23 6
 				invoke inst_RLC,reg_di
