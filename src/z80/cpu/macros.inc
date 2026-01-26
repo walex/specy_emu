@@ -1,117 +1,6 @@
 
 .code
 
-PUSH_GPRS MACRO
-    push rax
-    push rcx
-    push rdx
-    push rbx
-    push rbp
-    push rsi
-    push rdi
-    push r8
-    push r9
-    push r10
-    push r11
-    push r12
-    push r13
-    push r14
-    push r15
-ENDM
-
-POP_GPRS MACRO
-    pop r15
-    pop r14
-    pop r13
-    pop r12
-    pop r11
-    pop r10
-    pop r9
-    pop r8
-    pop rdi
-    pop rsi
-    pop rbp
-    pop rbx
-    pop rdx
-    pop rcx
-    pop rax
-ENDM
-
-PRINT_TEXT_MSG MACRO msg
-
-	LOCAL _str
-
-	.data
-	_str db msg, 0
-    .code
-
-	PUSH_GPRS
-
-    lea rcx, _str      ; RCX = const char*
-    call print_text
-	
-	POP_GPRS
-
-ENDM
-
-PRINT_HEXA_8 MACRO value
-	
-.data
-    print_hexa8 PROTO
-.code
-
-	PUSH_GPRS
-	xor rcx, rcx
-    mov cl, value      ; RCX = const char*
-    call print_hexa8
-	
-	POP_GPRS
-
-ENDM
-
-PRINT_HEXA_16 MACRO value
-
-.data
-    print_hexa16 PROTO
-.code
-
-	PUSH_GPRS
-	xor rcx, rcx
-    mov cx, value      ; RCX = const char*
-    call print_hexa16
-	
-	POP_GPRS
-
-ENDM
-
-PRINT_HEXA_32 MACRO value
-
-.data
-    print_hexa32 PROTO
-.code
-
-	PUSH_GPRS
-	xor rcx, rcx
-    mov ecx, value      ; RCX = const char*
-    call print_hexa32
-	
-	POP_GPRS
-
-ENDM
-
-PRINT_HEXA_64 MACRO value
-
-.data
-    print_hexa64 PROTO
-.code
-
-	PUSH_GPRS
-    mov rcx, value      ; RCX = const char*
-    call print_hexa64
-	
-	POP_GPRS
-
-ENDM
 
 CopyMemToMem8 MACRO org, dest
 	mov al, [org]
@@ -137,18 +26,6 @@ mov RegR, al
 
 ENDM
 
-DecRegR MACRO 
-
-;  z->r = (z->r & 0x80) | ((z->r + 1) & 0x7f);
-mov al, RegR
-mov ah, RegR
-and al, 080h
-dec ah
-and ah, 07Fh
-or al, ah
-mov RegR, al
-
-ENDM
 
 GetBitMask MACRO dest, args:VARARG
 
@@ -284,56 +161,6 @@ pop x_cx
 
 ENDM
 
-SetRegValue64 MACRO reg
-
-xor rax, rax
-mov ax, WORD PTR [rcx]
-mov reg, rax
-add rcx, 2
-
-ENDM
-
-SetRegValue16 MACRO reg
-
-mov ax, WORD PTR [rcx]
-mov reg, ax
-add rcx, 2
-
-ENDM
-
-SetRegValue8 MACRO reg
-
-mov ax, WORD PTR [rcx]
-mov reg, al
-add rcx, 2
-
-ENDM
-
-GetRegValue64 MACRO reg
-
-mov rax, reg
-mov WORD PTR [rcx], ax
-add rcx, 2
-
-ENDM
-
-GetRegValue16 MACRO reg
-
-xor rax, rax
-mov ax, reg
-mov WORD PTR [rcx], ax
-add rcx, 2
-
-ENDM
-
-GetRegValue8 MACRO reg
-
-xor rax, rax
-mov al, reg
-mov WORD PTR [rcx], ax
-add rcx, 2
-
-ENDM
 
 Z80HFCarryFromBit11 MACRO memptr16_a, memptr16_b, usecf
 
@@ -702,6 +529,13 @@ xor x_cx, x_cx
 mov cx, addr16
 add x_cx, memPtr
 mov BYTE PTR [x_cx], value8
+ENDM
+
+STORE16 MACRO addr16, value16
+xor x_cx, x_cx
+mov cx, addr16
+add x_cx, memPtr
+mov WORD PTR [x_cx], value16
 ENDM
 
 FETCH8 MACRO addr16

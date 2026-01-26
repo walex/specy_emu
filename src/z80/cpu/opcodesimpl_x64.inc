@@ -53,15 +53,8 @@ inst_PUSH PROC
 ; memPtr:PTR BYTE -> x_cx
 ; Reg:WORD -> dx
 
-xor x_bx,x_bx
-mov bx,RegSP
-add x_cx,x_bx
-mov ax,dx			;ah Reg HIGH , al Reg LOW
-dec x_cx			; (SP-1)
-mov BYTE PTR [x_cx],ah
-dec x_cx			; (SP-2)
-mov BYTE PTR [x_cx],al
 sub RegSP,2
+STORE16 RegSP, dx
 ret
 
 inst_PUSH ENDP
@@ -72,15 +65,9 @@ inst_POP PROC
 ; memPtr:PTR BYTE -> x_cx
 ; Reg: PTR WORD -> x_dx
 
-xor x_bx,x_bx
-mov bx,RegSP
-add x_cx,x_bx
-mov al,[x_cx]
-inc x_cx			; (SP+1)
-mov ah,[x_cx]
+FETCH16 RegSP
 add RegSP,2
-mov x_bx,x_dx
-mov [x_bx],ax
+mov WORD PTR [x_dx], ax
 ret
 
 inst_POP ENDP
@@ -894,71 +881,6 @@ bit_exit:
 ret
 
 inst_BIT_HL ENDP
-
-inst_BIT_HLa PROC
-
-; parameters
-; Reg:PTR BYTE -> x_cx
-; Idx:BYTE -> dl
-
-;HF flag Always set.
-;NF flag Always reset.
-;CF flag Unchanged.
-ResetFlagBits SF, ZF, NF, PVF, XF, YF
-SetFlagBits HF
-
-xor  ax, ax
-mov al, [x_cx]
-mov cl, dl
-mov bl, 1
-shl bl, cl
-and al, bl
-
-;ZF flag Set if the tested bit is reset.
-X86FlagsToZ80Flags ZF
-
-;PVF flag Set just like ZF flag.
-test RegF, 040h
-jz skip_pvf_bit
-SetFlagBits PVF
-
-skip_pvf_bit:
-
-; SF flag copy from result
-and al, 080h
-or RegF, al
-
-; YF, XF flag copy from wz high byte
-mov al, RegW
-and al, 028h
-or RegF, al
-
-ret
-
-;;ZF flag Set if the tested bit is reset.
-;X86FlagsToZ80Flags ZF
-;
-;;PVF flag Set just like ZF flag.
-;test RegF, 040h
-;jz skip_pvf_bit
-;SetFlagBits PVF
-;
-;skip_pvf_bit:
-;
-;; SF flag copy from result
-;and al, 080h
-;or RegF, al
-;
-;; YF, XF flag copy from wz
-;
-;mov ch, RegW
-;and ch, 028h
-;or RegF, ch 
-;
-;bit_exit:
-ret
-
-inst_BIT_HLa ENDP
 
 inst_BIT_IXIY PROC
 
