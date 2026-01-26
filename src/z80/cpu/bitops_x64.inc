@@ -26,8 +26,7 @@ SetLDxRInterblockYFXF PROC
 ;XF = PC.11
 
 ResetFlagBits YF, XF
-mov x_ax, reg_pc
-sub x_ax, memPtr
+GET_REG_PC
 shr x_ax, 8
 and al, 028h
 or RegF, al

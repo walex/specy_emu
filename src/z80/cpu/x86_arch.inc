@@ -1,6 +1,5 @@
 IFNDEF rax
 
-reg_pc TEXTEQU <edx>
 reg_si TEXTEQU <esi>
 reg_di TEXTEQU <edi>
 x_ax   TEXTEQU <eax>

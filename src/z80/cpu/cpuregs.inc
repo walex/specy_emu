@@ -98,6 +98,7 @@
 		ENDS
      ENDS
 
+	 REG_PC dw 0
 	 Reg_SP dw	0 
 	 Reg_Q   db 0
 
@@ -168,6 +169,8 @@ RegIXH EQU [Z80_CPU.Reg_IXH]
 RegIXL EQU [Z80_CPU.Reg_IXL]
 RegIYH EQU [Z80_CPU.Reg_IYH]
 RegIYL EQU [Z80_CPU.Reg_IYL]
+
+RegPC EQU [Z80_CPU.REG_PC]
 
 RegIR EQU [Z80_CPU.Reg_IR]
 RegI EQU [Z80_CPU.Reg_I]
@@ -284,7 +287,7 @@ GetRegPC PROC
 	; params
 	; regs memPtr:PTR WORD -> rcx
 	; regs value:PTR WORD -> rdx
-	mov rax, reg_pc
+	GET_REG_PC
 	sub ax, cx
 	mov WORD PTR [rdx], ax
 	ret

@@ -3,18 +3,12 @@
 
 .code
 
-ProcessNextOpcode MACRO JumpTable, addr	
-
-	push x_bp
-	xor x_bp, x_bp
-	xor x_ax, x_ax	
-	mov al, [addr]             ; Select index
-
-	mov x_bp, OFFSET JumpTable ; Load the base address of the jump table into RBP
-	mov x_bx, [x_bp + x_ax*PTR_SIZE]    ; Load the function address from the table
-	add addr, 1
-	pop x_bp
-
+ProcessNextOpcode MACRO JumpTable, addr16	
+	
+	FETCH8 addr16
+	mov x_cx, OFFSET JumpTable ; Load the base address of the jump table into RBP
+	mov x_bx, [x_cx + x_ax*PTR_SIZE]    ; Load the function address from the table
+	inc addr16
 	jmp x_bx
 
 ENDM
@@ -48,9 +42,8 @@ include opcodesdef.inc
 
 .code
 
-	   	mov reg_pc,rcx
-			mov memPtr,reg_pc
-			add reg_pc,rdx
+			mov memPtr,rcx
+			ADD_REG_PC dx
 			invoke interrupts_set_im,0
 Z80Halt:
 			jmp Op00			
@@ -70,7 +63,7 @@ AfterRegQ:
 			cmp HALT,1
 			jz Z80Halt
 			IncRegR
-			ProcessNextOpcode _TOp1B, reg_pc	            
+			ProcessNextOpcode _TOp1B, RegPC	            
        Op00:			
 			;00		NOP			4	1	1
          nop  		
@@ -162,7 +155,7 @@ AfterRegQ:
 			;10 e		DJNZ (PC+e)		8/13	2/3	1/1	(met/not met)
 			dec BYTE PTR RegB			
 			jnz Op18
-			inc reg_pc	
+			INC_REG_PC	
 			invoke acumulate_opcode_cycles,8,2					
 			jmp Z80Loop
        Op11:
@@ -252,7 +245,7 @@ AfterRegQ:
 			;20 e		JR NZ,(PC+e)		12/7	3/2	1/1	(met/not met)						
 			test RegF,40h
 			jz Op18
-			inc reg_pc			
+			INC_REG_PC		
 			invoke acumulate_opcode_cycles,7,2
 			jmp Z80Loop
        Op21:
@@ -301,7 +294,7 @@ AfterRegQ:
 			;28 e		JR Z,(PC+e)		12/7	3/2	1/1	(met/not met)
 			test RegF,40h
 			jnz Op18
-			inc reg_pc
+			INC_REG_PC
 			invoke acumulate_opcode_cycles,7,3
 			jmp Z80Loop
        Op29:
@@ -349,7 +342,7 @@ AfterRegQ:
 			;30 e		JR NC,(PC+e)		12/7	3/2	1/1	(met/not met)
 			test RegF,1
 			jz Op18
-			inc reg_pc
+			INC_REG_PC
 			invoke acumulate_opcode_cycles,7,2
 			jmp Z80Loop
        Op31:
@@ -402,7 +395,7 @@ AfterRegQ:
 			;38 e		JR C,(PC+e)		12/7	3/2	1/1	(met/not met)
 			test RegF,1
 			jnz Op18
-			inc reg_pc
+			INC_REG_PC
 			invoke acumulate_opcode_cycles,7,2
 			jmp Z80Loop
        Op39:
@@ -1194,7 +1187,7 @@ AfterRegQ:
 			jmp Z80Loop
        OpCB:	
 		   IncRegR
-			ProcessNextOpcode _TOpCB, reg_pc
+			ProcessNextOpcode _TOpCB, RegPC
        OpCC:
 			;CC n n		CALL Z,(nn)		17/10	5/3	1/1	(met/not met)
 			test RegF,40h
@@ -1315,7 +1308,7 @@ AfterRegQ:
 			jmp Z80Loop
        OpDD:
 		   IncRegR
-			ProcessNextOpcode _TOpDD, reg_pc
+			ProcessNextOpcode _TOpDD, RegPC
        OpDE:
 			;DE n		SBC A,n 7 2
 			invoke immediate_addressing_mode,memPtr
@@ -1409,7 +1402,7 @@ AfterRegQ:
 			jmp Z80Loop
        OpED:			
 		   IncRegR
-			ProcessNextOpcode _TOpED, reg_pc
+			ProcessNextOpcode _TOpED, RegPC
 	   OpED00:
 	      ;ED00  IN  B,(n)	12	3
 			invoke immediate_addressing_mode,memPtr
@@ -1993,7 +1986,7 @@ AfterRegQ:
 			jmp Z80Loop
        OpFD:
 		   IncRegR
-			ProcessNextOpcode _TOpFD, reg_pc
+			ProcessNextOpcode _TOpFD, RegPC
        OpFE:
 			;FE n		CP n 7 2
 			invoke immediate_addressing_mode,memPtr
@@ -4024,7 +4017,7 @@ AfterRegQ:
        OpDDCB:
 			   invoke indexed_addressing_mode,memPtr,RegIX
 			   SET_WZ_FROM_VALUE_16 reg_tmp16
-			   ProcessNextOpcode _TOpDDCB, reg_pc
+			   ProcessNextOpcode _TOpDDCB, RegPC
 	   OpDDCB00:
 				;DDCB d 00	RLC (IX+d),B  23 6
 				invoke inst_RLC,reg_di
@@ -5961,7 +5954,7 @@ AfterRegQ:
        OpFDCB:
 			   invoke indexed_addressing_mode,memPtr,RegIY
 			   SET_WZ_FROM_VALUE_16 reg_tmp16
-			   ProcessNextOpcode _TOpFDCB, reg_pc
+			   ProcessNextOpcode _TOpFDCB, RegPC
 	   OpFDCB00:
 			   ;FDCB d 06	RLC (IY+d),B 23 6
 				invoke inst_RLC,reg_di

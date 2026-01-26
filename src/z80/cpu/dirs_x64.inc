@@ -5,11 +5,9 @@ immediate_addressing_mode PROC
 ; parameters 
 ; memPtr -> x_cx
 
-xor x_ax,x_ax
-mov al,[reg_pc]                
-mov reg_tmp,x_ax
-mov reg_di, OFFSET reg_tmp
-inc reg_pc
+GET_REG_PC_MEM_PTR
+mov reg_di, x_ax
+INC_REG_PC
 ret
     
 immediate_addressing_mode ENDP
@@ -19,16 +17,9 @@ immediate_addressing_mode_ext PROC
 ; parameters 
 ; memPtr -> x_cx
 
-xor x_ax, x_ax
-xor x_bx, x_bx
-mov al, [reg_pc]
-inc reg_pc
-mov bl, [reg_pc]
-inc reg_pc
-shl bx, 8
-or ax, bx
-mov reg_tmp, x_ax
-mov reg_di, OFFSET reg_tmp
+GET_REG_PC_MEM_PTR
+mov reg_di, x_ax
+ADD_REG_PC 2
 ret
 
 immediate_addressing_mode_ext ENDP
@@ -38,10 +29,12 @@ relative_addressing_mode PROC
 ; parameters 
 ; memPtr -> x_cx
 
-xor x_bx,x_bx
-movsx x_bx, BYTE PTR [reg_pc] ;e
-inc reg_pc ; PC+1 
-add reg_pc, x_bx ;PC + e
+GET_REG_PC
+mov bx, ax
+FETCH8 bx
+movsx x_dx, al
+INC_REG_PC ; PC+1 
+ADD_REG_PC dx ;PC + e
 ret
 
 relative_addressing_mode ENDP
@@ -51,15 +44,11 @@ extended_indirect_addressing_mode PROC
 ; parameters 
 ; memPtr -> x_cx
 
-xor x_ax, x_ax
-mov ax, [reg_pc]
-inc reg_pc
-mov bx, [reg_pc]
-inc reg_pc
-shl bx, 8
-or ax, bx
+GET_REG_PC
+mov bx,ax
+FETCH16 bx
 mov reg_di, x_ax
-
+ADD_REG_PC 2
 ret
 
 extended_indirect_addressing_mode ENDP
@@ -70,14 +59,16 @@ indexed_addressing_mode PROC
 ; memPtr:PTR BYTE -> x_cx
 ; Reg:WORD -> dx
 
+mov reg_di,x_cx
 xor reg_si,reg_si
 mov si,dx
-movsx x_ax,BYTE PTR [reg_pc]
+GET_REG_PC
+mov bx, ax 
+FETCH8 bx
+movsx x_ax,al
 add si,ax
-mov reg_tmp16, si
-mov reg_di,x_cx
 add reg_di,reg_si
-inc reg_pc
+INC_REG_PC
 ret
 
 indexed_addressing_mode ENDP
@@ -88,10 +79,10 @@ register_indirect_addressing_mode PROC
 ; memPtr:PTR BYTE -> x_cx
 ; Reg:WORD -> dx
 
-xor reg_si,reg_si
-mov si,dx
-mov reg_di,x_cx
-add reg_di,reg_si 
+
+xor reg_di,reg_di
+mov di,dx
+add reg_di,x_cx
 ret 
 
 register_indirect_addressing_mode ENDP

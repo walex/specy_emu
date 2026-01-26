@@ -45,8 +45,8 @@ interrupts_restore ENDP
 
 interrupts_execute_mi_0 PROC
 
-lea rcx, data_bus_8 ; what happens with a multibly instruction ?
-ProcessNextOpcode _TOp1B, rcx
+;lea rcx, data_bus_8 ; what happens with a multibly instruction ?
+;ProcessNextOpcode _TOp1B, rcx
 ret
 
 interrupts_execute_mi_0 ENDP
@@ -66,24 +66,20 @@ interrupts_execute_mi_2 PROC
 ; parameters
 ; memPtr:PTR BYTE -> x_cx
 
+; push pc
+invoke inst_PUSH,x_cx,RegPC
+
 ; addr = (I << 8) | vector & 0xFE
 xor x_ax, x_ax
 mov ah, RegI
 mov al, data_bus_8
 and al, 0FEh
-add x_ax, x_cx
 
 ;[memptr] = LOW
 ;[memptr+1] = HIGH
-xor x_bx, x_bx
-mov bx, WORD PTR [x_ax]
-mov reg_pc, x_cx
-add reg_pc, x_bx
-
-; push pc
-mov x_bx, reg_pc
-sub x_bx, x_cx
-invoke inst_PUSH,x_cx,bx
+mov bx, ax
+FETCH8 bx
+SET_REG_PC ax
 
 ret
 
@@ -102,9 +98,7 @@ mov NMI_LINE, 0
 mov IFF1, 0
 
 ; push pc
-mov x_bx, reg_pc
-sub x_bx, x_cx
-invoke inst_PUSH,x_cx,bx
+invoke inst_PUSH,x_cx,RegPC
 
 invoke inst_RST, x_cx, 066h
 

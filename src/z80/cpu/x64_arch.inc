@@ -1,4 +1,3 @@
-reg_pc TEXTEQU <r10>
 reg_si TEXTEQU <rsi>
 reg_di TEXTEQU <rdi>
 x_ax   TEXTEQU <rax>

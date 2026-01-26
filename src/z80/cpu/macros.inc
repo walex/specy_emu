@@ -491,11 +491,9 @@ ENDM
 
 CALL_C_FUNC MACRO func_name
 
-push reg_pc
 sub rsp, 020h
 call func_name
 add rsp, 020h
-pop reg_pc
 
 ENDM
 
@@ -603,22 +601,15 @@ ENDM
 
 SET_WZ_FROM_REG_PC MACRO memPtr
 
-push x_ax
-mov x_ax, reg_pc
-sub x_ax, memPtr
-mov RegWZ, ax
-pop x_ax
+push RegPC
+pop RegWZ
 
 ENDM
 
 SET_WZ_FROM_REG_PC_WITH_INC MACRO memPtr
 
-push x_ax
-mov x_ax, reg_pc
-sub x_ax, memPtr
-mov RegWZ, ax
+SET_WZ_FROM_REG_PC
 inc WORD PTR RegWZ
-pop x_ax
 
 ENDM
 
@@ -694,4 +685,58 @@ mov ah, v8
 SET_WZ_FROM_VALUE_16 ax
 pop x_ax
 
+ENDM
+
+SET_REG_PC MACRO value16
+push value16
+pop RegPC
+ENDM
+
+GET_REG_PC MACRO
+xor x_ax, x_ax
+mov ax, RegPC
+ENDM
+
+STORE8 MACRO addr16, value8
+xor x_cx, x_cx
+mov cx, addr16
+add x_cx, memPtr
+mov BYTE PTR [x_cx], value8
+ENDM
+
+FETCH8 MACRO addr16
+xor x_ax, x_ax
+xor x_cx, x_cx
+mov cx, addr16
+add x_cx, memPtr
+mov al, BYTE PTR[x_cx]
+ENDM
+
+FETCH16 MACRO addr16
+xor x_ax, x_ax
+xor x_cx, x_cx
+mov cx, addr16
+add x_cx, memPtr
+mov ax, WORD PTR [x_cx]
+ENDM
+
+GET_REG_PC_MEM_PTR MACRO
+GET_REG_PC
+add x_ax, memPtr
+ENDM
+
+INC_REG_PC MACRO
+inc RegPC
+ENDM
+
+ADD_REG_PC MACRO value16
+add RegPC, value16
+ENDM
+
+SUB_REG_PC MACRO value16
+sub RegPC, value16
+ENDM
+
+SET_REG_PC MACRO value16
+mov RegPC, value16
 ENDM

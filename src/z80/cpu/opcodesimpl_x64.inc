@@ -167,7 +167,7 @@ invoke inst_LDI, x_cx
 pop x_cx
 cmp RegBC, 0
 jz LDIR_end
-sub reg_pc, 2
+SUB_REG_PC 2
 invoke SetLDxRInterblockYFXF
 SET_WZ_FROM_REG_PC_WITH_INC x_cx
 LDIR_end:
@@ -206,7 +206,7 @@ invoke inst_LDD, x_cx
 pop x_cx
 cmp RegBC, 0
 jz LDDR_end
-sub reg_pc, 2
+SUB_REG_PC 2
 invoke SetLDxRInterblockYFXF
 SET_WZ_FROM_REG_PC_WITH_INC x_cx
 LDDR_end:
@@ -244,7 +244,7 @@ TestZ80Flag ZF
 jnz CPIR_end
 cmp RegBC, 0
 jz CPIR_end
-sub reg_pc, 2
+SUB_REG_PC 2
 SET_WZ_FROM_REG_PC memPtr
 INC_WZ
 CPIR_end:
@@ -284,7 +284,7 @@ TestZ80Flag ZF
 jnz CPDR_end
 cmp RegBC, 0
 jz CPDR_end
-sub reg_pc, 2
+SUB_REG_PC 2
 CPDR_end:
 INC_WZ
 ret
@@ -1090,11 +1090,7 @@ inst_JP PROC
 ; memPtr:PTR BYTE -> x_cx
 ; dir:WORD -> dx
 
-xor x_bx,x_bx
-mov x_ax,x_cx
-mov bx,dx
-add x_ax,x_bx
-mov reg_pc,x_ax
+SET_REG_PC dx
 
 SET_WZ_FROM_VALUE_16 dx
 
@@ -1108,31 +1104,17 @@ inst_CALL PROC
 ; memPtr:PTR BYTE -> x_cx
 ; dir: WORD -> dx
 
-xor x_bx,x_bx
-xor x_ax,x_ax
-mov x_ax,x_cx
-sub reg_pc,x_cx
-mov bx,RegSP
-add x_cx,x_bx
-dec x_cx
-push x_dx
-mov x_dx, reg_pc
-mov [x_cx],dh
-dec x_cx
-mov [x_cx],dl
-sub bx,2
-mov RegSP,bx
-xor x_bx,x_bx
-pop x_dx
-mov bx,dx
-add x_ax,x_bx
-mov reg_pc,x_ax
+;(SP-1) <- PCh, (SP-2) <- PCl, PC <- nn
 
-mov cx, bx
+GET_REG_PC
+dec RegSP
+STORE8 RegSP, ah
+dec RegSP
+STORE8 RegSP, al
+SET_REG_PC dx
+mov cx, dx
 CALL_C_FUNC cpu_call_opcode_notify
-
 SET_WZ_FROM_VALUE_16 dx
-
 ret
 
 inst_CALL ENDP
@@ -1142,16 +1124,16 @@ inst_RET PROC
 ; parameters
 ; memPtr:PTR BYTE -> x_cx
 
-xor x_bx,x_bx
-xor x_ax,x_ax
-mov reg_pc,x_cx
-mov bx,RegSP
-add x_cx,x_bx
-mov al,[x_cx]
-inc x_cx
-mov ah,[x_cx]
-add reg_pc,x_ax
-add RegSP,2
+; PCl <- (SP), PCh <- (SP+1)
+xor x_dx, x_dx
+FETCH8 RegSP
+mov dl, al
+inc RegSP
+FETCH8 RegSP
+mov dh, al
+SET_REG_PC dx
+inc RegSP
+
 
 SET_WZ_FROM_REG_PC memPtr
 
@@ -1165,26 +1147,15 @@ inst_RST PROC
 ; memPtr:PTR BYTE -> x_cx
 ; dir:BYTE -> dl
 
-push x_dx
-mov x_dx, reg_pc
-xor x_bx,x_bx
-xor x_ax,x_ax
-mov x_ax,x_cx
-sub reg_pc,x_cx
-mov bx,RegSP
-add x_cx,x_bx
-dec x_cx
-mov x_dx, reg_pc
-mov [x_cx],dh
-dec x_cx
-mov [x_cx],dl
-sub bx,2
-mov RegSP,bx
-xor x_bx,x_bx
-pop x_dx
-mov bl,dl
-add x_ax,x_bx
-mov reg_pc,x_ax
+; (SP-1) <- PCh, (SP-2) <- PCl, PCh <- $00, PCl <- p)
+
+GET_REG_PC
+dec RegSP
+STORE8 RegSP, ah
+dec RegSP
+STORE8 RegSP, al
+mov dh, 0
+SET_REG_PC dx
 ret
 
 inst_RST ENDP
@@ -1227,7 +1198,7 @@ INIR_start:
 invoke INST_INI, x_cx
 cmp RegB, 0
 jz INIR_end
-sub reg_pc, 2
+SUB_REG_PC 2
 INIR_end:
 ret
 
@@ -1259,7 +1230,7 @@ INDR_start:
 invoke INST_IND, x_cx
 cmp RegB, 0
 jz INDR_end
-sub reg_pc, 2
+SUB_REG_PC 2
 INDR_end:
 ret
 
@@ -1303,7 +1274,7 @@ OTIR_start:
 invoke INST_OUTI, x_cx
 cmp RegB, 0
 jz OTIR_end
-sub reg_pc, 2
+SUB_REG_PC 2
 OTIR_end:
 ret
 
@@ -1339,7 +1310,7 @@ OTDR_start:
 invoke INST_OUTD, x_cx
 cmp RegB, 0
 jz OTDR_end
-sub reg_pc, 2
+SUB_REG_PC 2
 OTDR_end:
 ret
 
