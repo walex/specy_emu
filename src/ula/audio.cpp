@@ -1,3 +1,7 @@
+
+//// BEST VERSION UNTIL NOW
+
+
 #include "audio.h"
 #include "audio_render.h"
 #include "display.h"
@@ -11,137 +15,113 @@
 #include <cmath>
 #include <chrono>
 
-static std::thread audio_thread;
-static std::atomic<int> audio_running{ 0 };
 static std::mutex audio_buffer_mutex;
 
-// Audio configuration
-constexpr size_t SAMPLE_RATE = 44100;
-constexpr double SAMPLES_TIME_SECS = DISPLAY_REFRESH_RATE_SECS;
-constexpr size_t CHUNK_SIZE = SAMPLES_TIME_SECS * SAMPLE_RATE; // ~20ms de audio
-constexpr size_t BUFFER_SAMPLES = CHUNK_SIZE * 50;
+// Sample rate
+constexpr uint32_t SAMPLE_RATE = 44100.0;
 
 // Number of Z80 cycles per audio sample
-constexpr double CYCLES_PER_SAMPLE = 3500000.0 / SAMPLE_RATE; // ~79.4 tstates
+constexpr uint64_t CYCLES_PER_SAMPLE = (uint64_t)(Z80_CPU_FREQ_HZ / SAMPLE_RATE);
+
+// Chunk pequeño → baja latencia
+constexpr size_t CHUNK_MS = 5;
+constexpr size_t CHUNK_SAMPLES = (SAMPLE_RATE * CHUNK_MS) / 1000;
+
+// Buffer circular grande (≈100 ms)
+constexpr size_t BUFFER_SAMPLES = SAMPLE_RATE / 10;
 
 // Circular audio buffer
 static float audio_buffer[BUFFER_SAMPLES];
-static int buffer_write = 0;
-static int buffer_read = 0;
+static std::atomic<size_t> buffer_write{ 0 };
+static std::atomic<size_t> buffer_read{ 0 };
 
 // Audio state variables
-static double tstate_accum = 0.0;
-static float current_level = 0.0f;
-static uint64_t last_tstate = 0;
-static bool first_call = true;
+static std::atomic<float> current_level{ 0.0f };
+static uint64_t tstate_accum = 0;
+static float last_sample = 0.0f;
 
-// Forward declaration
-void audio_thread_proc();
+
+void audio_render_cb(uint8_t* buffer_out, int len) {
+
+    int16_t* buffer16 = (int16_t*)buffer_out;
+    for (int i = 0; i < len / 2; i++) {
+
+        size_t r = buffer_read.load(std::memory_order_relaxed);
+
+        if (r == buffer_write.load(std::memory_order_acquire)) {
+            // buffer vacío → HOLD (nunca cero)
+            buffer16[i] = (int16_t)(last_sample * 32767.0f);
+            continue;
+        }
+
+        float s = audio_buffer[r];
+        last_sample = s;
+        buffer_read.store((r + 1) % BUFFER_SAMPLES,
+            std::memory_order_release);
+
+        buffer16[i] = (int16_t)(s * 32767.0f);
+    }
+}
 
 // Initialize audio system
 void audio_init() {
-    if (audio_running.load() != 0)
-        return;
 
-    audio_render_init(SAMPLE_RATE);
-
-    audio_thread = std::thread(audio_thread_proc);
-
-    // Wait for audio thread to start
-    while (audio_running.load() == 0)
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    audio_render_init(SAMPLE_RATE, audio_render_cb);
 }
 
 // Shutdown audio system
 void audio_end() {
-    if (audio_running.load() == 0)
-        return;
-    audio_running = 0;
-    if (audio_thread.joinable())
-        audio_thread.join();
 
     audio_render_end();
 }
 
+inline float tv_saturate(float x) {
+    // Saturación suave, simula transistor barato de TV
+    return std::tanh(x * 1.8f);
+}
+
 // Internal function to push a sample into the circular buffer
-static void push_sample(float level) {
-    //std::lock_guard<std::mutex> lock(audio_buffer_mutex);
-    audio_buffer[buffer_write] = level;
-    buffer_write = (buffer_write + 1) % BUFFER_SAMPLES;
-    if (buffer_write == buffer_read)
-        buffer_read = (buffer_read + 1) % BUFFER_SAMPLES;
+static inline void push_sample(float level) {
+    size_t w = buffer_write.load(std::memory_order_relaxed);
+    size_t next = (w + 1) % BUFFER_SAMPLES;
+
+    if (next == buffer_read.load(std::memory_order_acquire)) {
+        // overflow  descartar el sample más viejo
+        buffer_read.store(
+            (buffer_read.load() + 1) % BUFFER_SAMPLES,
+            std::memory_order_release
+        );
+    }
+
+    audio_buffer[w] = level;
+    buffer_write.store(next, std::memory_order_release);
 }
 
 // Main function to send audio samples, called from the ULA emulation
 // `tstates_cpu_total` is the accumulated Z80 cycles since emulation start
-void audio_play(uint64_t tstates_cpu_total, uint8_t value) {
-    int new_ear = (value >> 4) & 1;
+void audio_set_level(uint8_t value) {
     int new_mic = (value >> 3) & 1;
-    float new_level = new_ear * 1.0f;// +new_mic * 0.5f;
+    int new_ear = (value >> 4) & 1;
+    float lvl = new_ear ? 1.0f : -1.0f;
+    current_level.store(lvl, std::memory_order_relaxed);
+}
 
-    if (first_call) {
-        // Fist call: generate one sample at least
-        last_tstate = tstates_cpu_total;
-        first_call = false;
-        tstate_accum = 0;
-        current_level = new_level;
-        push_sample(current_level);
-        return;
-    }
+void audio_tick(uint64_t delta_tstates) {
 
-    // Compute delta cycles since last call
-    uint64_t delta_tstates = tstates_cpu_total - last_tstate;
-    last_tstate = tstates_cpu_total;
-
-    // Limit large delta to avoid clicks due to lag
-    const uint64_t MAX_DELTA = 10000; // aprox 2.85ms a 3.5MHz
-    if (delta_tstates > MAX_DELTA)
-        delta_tstates = MAX_DELTA;
-
-    // Compute number of audio samples to generate
     tstate_accum += delta_tstates;
+
     while (tstate_accum >= CYCLES_PER_SAMPLE) {
-        // Push samples with current level(no filtering)
-        push_sample(current_level);
+
+        // sample & hold del EAR (1-bit real)
+        float s = current_level.load(std::memory_order_relaxed);
+
+        // 0..1 → -1..1
+        s = s * 2.0f - 1.0f;
+
+        push_sample(s);
+
         tstate_accum -= CYCLES_PER_SAMPLE;
     }
-
-    current_level = new_level;
 }
 
-// Audio thread: reads buffer and sends to audio render
-void audio_thread_proc() {
-    audio_running++;
-    float* samples_chunk = new float[CHUNK_SIZE];
-    int16_t* sdl_chunk = new int16_t[CHUNK_SIZE];
 
-    clock_master_handle cmh = clk_master_get("display_sync_clock2");
-
-    while (audio_running.load() != 0) {
-        clk_master_wait(cmh);
-
-        // Fill chunk with samples from buffer
-        size_t fill_len = 0;
-        {
-            while (buffer_read != buffer_write && fill_len < CHUNK_SIZE) {
-                samples_chunk[fill_len++] = audio_buffer[buffer_read];
-                buffer_read = (buffer_read + 1) % BUFFER_SAMPLES;
-            }
-        }
-
-        // If there are not enough samples, fill in with the last level
-        for (size_t i = fill_len; i < CHUNK_SIZE; i++)
-            samples_chunk[i] = current_level;
-
-        // Convert float 0.0-1.0 a int16_t for SDL
-        for (size_t i = 0; i < CHUNK_SIZE; i++) {
-            sdl_chunk[i] = static_cast<int16_t>(std::round(samples_chunk[i] * 32767.0f));
-        }
-
-        // Send to SDL
-        audio_render_play((uint8_t*)sdl_chunk, CHUNK_SIZE * sizeof(int16_t));
-    }
-
-    delete[] samples_chunk;
-    delete[] sdl_chunk;
-}

@@ -5,6 +5,10 @@
 
 void audio_init();
 void audio_end();
-void audio_play(uint64_t tstates_cpu_total, uint8_t value);
+// Avanza el reloj de audio (SIEMPRE)
+void audio_tick(uint64_t delta_tstates);
+
+// Cambia el nivel del beeper (solo en OUT #FE)
+void audio_set_level(uint8_t value);
 
 #endif

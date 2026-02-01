@@ -27,7 +27,7 @@ extern "C" {
 #else
 #endif
 
-#define Z80_EMULATION_SYNC_CYCLES_DELAY 800 // seconds to wait before syncing CPU cycles to real time
+#define Z80_EMULATION_SYNC_CYCLES_DELAY 0 // seconds to wait before syncing CPU cycles to real time
 
 #include "interrupts.h"
 

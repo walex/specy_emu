@@ -125,7 +125,7 @@ void evaluate_keyboard_input(uint32_t key, uint16_t mod, bool pressed) {
             ZX_KEYCODE_8
             break;
         case HOST_KEY_9:
-            ZX_KEYCODE_7
+            ZX_KEYCODE_9
             break;
         case HOST_KEY_A:
             ZX_KEYCODE_A

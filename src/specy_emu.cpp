@@ -101,8 +101,8 @@ int main(int argc, char* argv[]) {
 		printf("Starting Z80 CPU emulation...\n");
 	}
 #else
-	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\1.2a\\z80doc.tap");
-	//tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\Thundercats - Side 1.wav");
+	//tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\1.2a\\z80doc.tap");
+	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\working\\The Great Escape.tap");
 #endif
 	Z80CPU(specy_rom_get_pointer(), 0);	
 	specy_rom_end();

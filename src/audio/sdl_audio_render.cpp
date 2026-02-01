@@ -2,8 +2,19 @@
 #include <SDL3/SDL.h>
 
 static SDL_AudioStream* audio_stream;
+static audio_render_callback user_callback = nullptr;
 
-void audio_render_init(uint32_t sample_rate) {
+
+void audio_cb(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount) {
+
+	static uint8_t buffer[1024];
+	if (user_callback) {
+		user_callback(buffer, additional_amount);
+		SDL_PutAudioStreamData(stream, buffer, additional_amount);
+	}
+}
+
+void audio_render_init(uint32_t sample_rate, audio_render_callback cb) {
 
 	SDL_Init(SDL_INIT_AUDIO);
 	SDL_AudioSpec spec;
@@ -11,12 +22,14 @@ void audio_render_init(uint32_t sample_rate) {
 	spec.format = SDL_AUDIO_S16;
 	spec.channels = 1;
 	spec.freq = sample_rate;
-	
+	user_callback = cb;
+
 	audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);
 	if (!audio_stream) {
 		SDL_Log("Couldn't create audio stream: %s", SDL_GetError());
 		return;
 	}
+	SDL_SetAudioStreamGetCallback(audio_stream, audio_cb, nullptr);
 	SDL_ResumeAudioStreamDevice(audio_stream);
 }
 

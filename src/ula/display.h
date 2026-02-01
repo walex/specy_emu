@@ -6,6 +6,7 @@
 void display_init(uint8_t* system_memory);
 void display_end();
 void display_set_border_color(uint8_t border_color);
+void display_tick(uint64_t delta_cycles);
 
 constexpr int FLASH_FASE_FRAMES = 32;
 constexpr double DISPLAY_REFRESH_RATE_HZ = 50.0;

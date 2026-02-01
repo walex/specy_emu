@@ -44,7 +44,7 @@ static const unsigned int KVideoColorPalleteHILO[8][2] = {
 static const int kDisplayBufferResolutionX = 256;
 static const int kDisplayBufferResolutionY = 192;
 static const int kDisplayResolutionX = 352;
-static const int kDisplayResolutionY = 288;
+static const int kDisplayResolutionY = 288; // 312 ???
 
 static const int kWindowWidth = 1024;
 static const int kWindowHeight = 768;
