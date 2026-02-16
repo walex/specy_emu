@@ -98,7 +98,7 @@ def create_full_opcode_defs():
     return output
 
 
-if __name__ == "__main__":
+if __name__ == "__main__2":
     opcode_defs = create_full_opcode_defs()
     opcode_table = read_opcode_table(opcode_table_file)
     for line in opcode_defs:
@@ -116,3 +116,66 @@ if __name__ == "__main__":
                     print(line)
             except ValueError:
                 print(line)
+
+
+def read_asm_file_lines(file_path):
+    """Read the assembly file line by line and return a list of lines."""
+    try:
+        with open(file_path, "r") as f:
+            return f.readlines()
+    except FileNotFoundError:
+        print(f"Error: {file_path} not found")
+        return []
+
+
+def write_asm_file_lines(file_path, lines):
+    """Write the list of lines to the assembly file."""
+    try:
+        with open(file_path, "w") as f:
+            f.writelines("\n".join(lines))
+    except Exception as e:
+        print(f"Error writing to {file_path}: {e}")
+
+
+if __name__ == "__main__":
+
+    asm_file_lines_proc = []
+    asm_times = read_asm_file_lines("C:\\Users\\wadrw\\Documents\\develop\\asm.txt")
+    asm_opcodes = read_asm_file_lines("C:\\Users\\wadrw\\Documents\\develop\\asm1.txt")
+    total_missing = 0
+    found = False
+    for line_t in asm_times:
+        line_t = line_t.rstrip()
+        lines_t = line_t.split(";")
+        key = f"Op{lines_t[0].strip()}:"
+        for i in range(len(asm_opcodes)):
+            line_o = asm_opcodes[i].rstrip()
+            if found is False and line_o.strip().startswith(key):
+                found = True
+                asm_opcodes[i] = line_o
+                continue
+            elif found is True:
+                found = False
+                line_o2 = line_o.strip()
+                if line_o2.startswith(";"):
+                    idx = line_o.index(";")
+                    asm_opcodes[i] = line_o.replace(
+                        line_o[idx:],
+                        f"; {lines_t[1].strip().upper()} cycles: {lines_t[2].strip()}",
+                    ).rstrip()
+                else:
+                    asm_opcodes[i] = line_o
+                    print(f"Missing comment for {key}")
+                break
+            elif "acumulate_opcode_cycles," in line_o:
+                lines = line_o.split(",")
+                if len(lines) > 2:
+                    asm_opcodes[i] = lines[0] + f",{lines[1].strip()}"
+                    txt = lines[2].split(";")
+                    if len(txt) > 1:
+                        asm_opcodes[i] += f" ;{txt[1].strip()}"
+        for i in range(len(asm_opcodes)):
+            asm_opcodes[i] = asm_opcodes[i].rstrip()
+        write_asm_file_lines(
+            "C:\\Users\\wadrw\\Documents\\develop\\asm_out.txt", asm_opcodes
+        )

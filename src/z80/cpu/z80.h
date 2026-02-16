@@ -12,7 +12,8 @@ typedef void(*clock_call_interceptor_handler)();
 #ifdef __cplusplus
 extern "C" {
 #endif
-	int Z80CPU(uint8_t*, uint8_t* pc);
+	void cpu_z80_init(uint8_t* memPtr, uint16_t pc);
+	void cpu_z80_step();
 	void GetRegPC(uint64_t memPtr, uint16_t* value);
 	void cpu_lock();
 	void cpu_unlock();

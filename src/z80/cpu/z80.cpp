@@ -3,10 +3,7 @@
 #include <atomic>
 #include <thread>
 #include <map>
-#if Z80_EMULATION_SYNC_CYCLES_DELAY > 0
 #include <chrono>
-auto start = std::chrono::high_resolution_clock::now();
-#endif
 
 static std::atomic<bool> cpu_lock_t;
 static std::atomic<uint64_t> clk_cycles{ 0 };
@@ -30,27 +27,14 @@ void cpu_wait() {
     }
 }
 
-
-
 void cpu_sync(uint8_t cycles) {
     
-    static constexpr double CPU_SYNC_RATE_HZ = 120.0;
-    static constexpr uint64_t FRAME_CYCLES = (uint64_t)(Z80_CPU_FREQ_HZ / CPU_SYNC_RATE_HZ);
     static clock_master_handle cpu_sync_clock = clk_master_get("cpu_sync_clock");
 
+    static constexpr double CPU_SYNC_RATE_HZ = 50;
+    static constexpr uint64_t FRAME_CYCLES = (uint64_t)(Z80_CPU_FREQ_HZ / CPU_SYNC_RATE_HZ);
     clk_cycles += (uint64_t)cycles;
-    sync_cycles += (uint64_t)cycles;
-    if (sync_cycles >= FRAME_CYCLES) {
-#if Z80_EMULATION_SYNC_CYCLES_DELAY > 0
-        auto end = std::chrono::high_resolution_clock::now();
-        if (end - start > std::chrono::seconds(Z80_EMULATION_SYNC_CYCLES_DELAY))
-#endif      
-            clk_master_sync(cpu_sync_clock, clk_cycles, sync_cycles);
-            sync_cycles -= FRAME_CYCLES;       
-    }
-    else {
-        clk_master_tick(cpu_sync_clock, clk_cycles);
-    }
+    clk_master_sync(cpu_sync_clock, clk_cycles, FRAME_CYCLES);
 }
 
 uint64_t cpu_get_cycles() {
@@ -71,7 +55,6 @@ void cpu_call_opcode_notify(uint16_t addr) {
 
 uint16_t cpu_get_pc(uint64_t base_addr)
 {
-
     uint16_t pc;
     GetRegPC(base_addr, &pc);
     return pc;

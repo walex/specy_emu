@@ -1238,6 +1238,22 @@ ret
 
 INST_OTDR ENDP
 
+inst_DJNZ PROC 
+
+; parameters
+; memPtr:PTR BYTE -> x_cx
+
+dec BYTE PTR RegB
+jnz inst_DJNZ_bnz
+INC_REG_PC
+jmp inst_DJNZ_exit
+inst_DJNZ_bnz:
+invoke relative_addressing_mode
+inst_DJNZ_exit:
+ret
+
+inst_DJNZ ENDP
+
 ;-----------------------------------------
 
 Noemu PROC

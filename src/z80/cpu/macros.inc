@@ -1,7 +1,6 @@
 
 .code
 
-
 CopyMemToMem8 MACRO org, dest
 	mov al, [org]
 	mov [dest], al
@@ -11,7 +10,6 @@ CopyMemToMem16 MACRO org, dest
 	mov ax, WORD PTR [org]
 	mov [dest], ax
 ENDM
-
 
 IncRegR MACRO 
 
@@ -33,8 +31,7 @@ GetBitMask MACRO dest, args:VARARG
 	push reg_tmp
 	push x_ax
 	mov reg_tmp, 0
-    FOR a, <args>
-		
+    FOR a, <args>		
 		mov x_ax, 1		
 		shl x_ax, a
 		; OF --> PVF
@@ -85,8 +82,7 @@ X86FlagsToZ80Flags MACRO args:VARARG
 	ResetFlagBits args
 	pop ax	
 	xor bx, bx
-	FOR a, <args>
-		
+	FOR a, <args>		
 		IF a EQ OF
 			mov bl, 1
 			shl bl, PVF
@@ -96,8 +92,7 @@ X86FlagsToZ80Flags MACRO args:VARARG
 			and bx, 0800h
 			shr bx, OF_SLICE
 			or RegF, bl
-		ENDIF
-	
+		ENDIF	
 	ENDM
 	GetBitMask x_bx, args
 	and al, bl
@@ -208,7 +203,6 @@ shr bx, 8
 or RegF, bl
 
 ENDM
-
 
 SetIOBlockFlagsOUT MACRO reg8ptr
 
@@ -351,9 +345,7 @@ SetXFYFFromReg8 MACRO reg8
 
 ENDM
 
-
 SetXFYFForLDxR MACRO val8
-
 
 ; t = val8 + A
 ;((t & 2) << 4) |
@@ -440,7 +432,6 @@ inc WORD PTR RegWZ
 
 ENDM
 
-
 INC_WZ MACRO
 
 inc WORD PTR RegWZ
@@ -489,7 +480,6 @@ SET_WZ_FROM_A_AND_VALUE16 MACRO v16
 ; wz = (z->a << 8) | ((v16 + 1) & 0xFF);
 
 SET_WZ_FROM_REG8_AND_VALUE16 RegA, v16
-
 
 ENDM
 
@@ -561,6 +551,10 @@ ENDM
 
 INC_REG_PC MACRO
 inc RegPC
+ENDM
+
+DEC_REG_PC MACRO
+dec RegPC
 ENDM
 
 ADD_REG_PC MACRO value16

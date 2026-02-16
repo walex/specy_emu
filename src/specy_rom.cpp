@@ -7,6 +7,7 @@
 
 // intercept calls functions
 static constexpr uint16_t LD_BYTES = 0x0556;
+static constexpr uint16_t LD_EDGE_1 = 0x05E7;
 
 static uint8_t* system_rom_pointer = nullptr;
 
@@ -37,8 +38,8 @@ uint8_t* create_system_memory(const char* rom_path, size_t mem_size) {
 	return mem;
 }
 
-void specy_rom_on_call_LD_BYTES() {	
-	ula_on_audio_listen();
+void specy_rom_on_call_LD_EDGE_1() {
+	ula_on_load_edge_1();
 }
 
 int specy_rom_init(const char* rom_path, size_t memory_size) {
@@ -47,7 +48,8 @@ int specy_rom_init(const char* rom_path, size_t memory_size) {
 		perror("cannot load rom file");
 		return -1;
 	}
-	cpu_call_opcode_interceptor(LD_BYTES, specy_rom_on_call_LD_BYTES);
+	
+	cpu_call_opcode_interceptor(LD_EDGE_1, specy_rom_on_call_LD_EDGE_1);
 }
 
 void specy_rom_end() {

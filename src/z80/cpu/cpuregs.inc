@@ -196,7 +196,6 @@ data_bus_8 db 0
 
 .code
 
-
 GetRegPC PROC
 	; params
 	; regs memPtr:PTR WORD -> rcx

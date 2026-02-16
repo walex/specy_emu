@@ -41,15 +41,21 @@ static const unsigned int KVideoColorPalleteHILO[8][2] = {
 { 0XFFFFFF, 0XD8D8D8 }
 };
 
-static const int kDisplayBufferResolutionX = 256;
-static const int kDisplayBufferResolutionY = 192;
-static const int kDisplayResolutionX = 352;
-static const int kDisplayResolutionY = 288; // 312 ???
+constexpr int kDisplayBufferResolutionX = 256;
+constexpr int kDisplayBufferResolutionY = 192;
+constexpr int kDisplayResolutionX = 352;
+constexpr int kDisplayResolutionY = 288; // 312 ???
 
-static const int kWindowWidth = 1024;
-static const int kWindowHeight = 768;
-static const int BRIGHT_MODE = 0;
-static const int OPAQUE_MODE = 1;
+constexpr int BRIGHT_MODE = 0;
+constexpr int OPAQUE_MODE = 1;
+
+constexpr int FLASH_FASE_FRAMES = 32;
+constexpr double DISPLAY_REFRESH_RATE_HZ = 50.0;
+constexpr double DISPLAY_REFRESH_RATE_SECS = 1 / DISPLAY_REFRESH_RATE_HZ;
+constexpr uint64_t DISPLAY_REFRESH_RATE_MILLISECS = (uint64_t)(DISPLAY_REFRESH_RATE_SECS * 1000);
+
+constexpr uint64_t HSYNC_CYCLES = 224;
+constexpr uint64_t VSYNC_CYCLES = kDisplayResolutionY * HSYNC_CYCLES; // 312 lines * 224 cycles per line
 
 
 #endif

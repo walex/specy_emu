@@ -12,7 +12,7 @@ extern "C" {
 #endif
 	void ula_read_port(uint16_t addr, uint8_t* value);
 	void ula_write_port(uint16_t addr, uint8_t value);
-	void ula_on_audio_listen();
+	void ula_on_load_edge_1();
 #ifdef __cplusplus
 }
 #endif

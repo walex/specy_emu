@@ -9,7 +9,7 @@ class VsVersions:
 
     def __init__(self):
 
-        self.vs_info = ["Visual Studio 17 2022", "VS170COMNTOOLS", "msvc17x64"]
+        self.vs_info = ["Visual Studio 18 2026", "VS180COMNTOOLS", "msvc18x64"]
 
     def get(self):
 

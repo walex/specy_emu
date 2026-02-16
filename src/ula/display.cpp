@@ -4,6 +4,7 @@
 #include "specy_rom.h"
 #include "ula.h"
 #include "video_render.h"
+#include <mutex>
 #include <thread>
 #include <chrono>
 #include <semaphore>
@@ -13,8 +14,25 @@ static std::atomic<int> display_running{ 0 };
 static std::atomic<uint32_t> border_color{ 0 };
 static uint8_t* system_memory_ptr = nullptr;
 static uint32_t display_buffer[kDisplayResolutionX * kDisplayResolutionY];
+static const int TOTAL_LINES = 312;
+static uint64_t cycle_in_line = 0;
+static std::counting_semaphore<1> hsync_semaphore(0);
+
 void display_thread_proc();
 
+#define PRINT_AVG_TIME(a) \
+			{ \
+			static uint64_t avg_sleep_time = 0; \
+			static uint64_t avg_sleep_cnt = 0; \
+			avg_sleep_time += a; \
+			avg_sleep_cnt++; \
+			if (avg_sleep_cnt % 250 == 0) { \
+				uint64_t avg = avg_sleep_time / avg_sleep_cnt; \
+				avg_sleep_time = 0; \
+				avg_sleep_cnt = 0; \
+				printf("Display avg sleep time: %llu ms\n", avg); \
+			} \
+			}
 void display_init(uint8_t* system_memory) {
 
 	if (display_running.load() != 0)
@@ -35,7 +53,6 @@ void display_end() {
 		display_thread.join();
 }
 
-// FixME: horizontal sync needed at 224 t-states per line
 void display_draw(int y) {
 
 	uint8_t* mem_atrib_video = system_memory_ptr + 0x5800;
@@ -68,10 +85,10 @@ void display_draw(int y) {
 			int buffer_x = byte_x * 8 + (kDisplayResolutionX - kDisplayBufferResolutionX) / 2;
 
 			int mem_index = (kScanConvert[screen_y] << 5) + byte_x;
-			cpu_lock();
+			//cpu_lock();
 			byte = mem_video[mem_index];
 			attrib = mem_atrib_video[(screen_y >> 3) * 32 + byte_x];
-			cpu_unlock();
+			//cpu_unlock();
 
 			flash = attrib & 0x80;
 			bright = attrib & 0x40;
@@ -95,47 +112,28 @@ void display_draw(int y) {
 	}	
 }
 
-void on_display_clock_sync(uint64_t delta_cycles) {
-	
-	ula_assert_INT_line();
-	video_render_draw();
-}
-
-static const int TOTAL_LINES = 312;
-static std::atomic<int> current_line = 0;
-static uint64_t cycle_in_line = 0;
-
-
-std::counting_semaphore<1> hsync_semaphore(0);
-std::counting_semaphore<1> hsync_semaphore2(0);
-
 void display_tick(uint64_t delta_cycles) {
-	
-	constexpr uint64_t HSYNC_CYCLES = 224;
 
 	cycle_in_line += delta_cycles;
 
-	while (cycle_in_line >= HSYNC_CYCLES) {
+	if (cycle_in_line >= HSYNC_CYCLES) {
 		cycle_in_line -= HSYNC_CYCLES;
 
-		// Aquí se podría disparar HSYNC
 		hsync_semaphore.release();
-		hsync_semaphore2.acquire();
-		current_line++;
-		if (current_line == kDisplayResolutionY) {
-			current_line = 0; // Nuevo frame
-		}
+		
 	}
-
 }
 
 void display_thread_proc() {
 
+	constexpr int kWindowWidth = 1024;
+	constexpr int kWindowHeight = 768;
+	int current_line = 0;
+	auto last_draw_time = std::chrono::high_resolution_clock::now();
+
 	video_render_init(display_buffer, kDisplayResolutionX, kDisplayResolutionY,
 		kWindowWidth, kWindowHeight);
 	display_running++;
-	int y = 0;
-	uint64_t render_cycles = 0;
 	while (true) {
 
 		if (display_running.load() == 0)
@@ -143,52 +141,31 @@ void display_thread_proc() {
 
 		hsync_semaphore.acquire();
 
-		int y = current_line.load();
-		display_draw(y++);
+		display_draw(current_line++);
 
 		// FixME: should be 312 lines
-		if (y == kDisplayResolutionY) {
+		// wrong resolution now (border+paper)
+		if (current_line == kDisplayResolutionY) {
 			// FixME: should fit 20 ms per frame
+
 			ula_assert_INT_line();
 			video_render_draw();
+			auto now = std::chrono::high_resolution_clock::now();
+			uint64_t frame_duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_draw_time).count();
+			last_draw_time = now;
+			current_line = 0;
+			if (frame_duration < DISPLAY_REFRESH_RATE_MILLISECS) {
+				uint64_t sleep_time = DISPLAY_REFRESH_RATE_MILLISECS - frame_duration;
+				// FixMe: should not be necesary ?
+				std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
+				continue;
+			}
 		}
-
-		hsync_semaphore2.release();
-		
+		std::this_thread::yield();
 	}
 	video_render_end();
 }
 
-void display_thread_proc2() {
-
-	clock_master_handle cmh = clk_master_create("display_sync_clock", Z80_CPU_FREQ_HZ); // 50 Hz
-	clk_master_subscribe_sync_callback(cmh, on_display_clock_sync);
-	constexpr uint64_t HSYNC_CYCLES = 224;
-
-	video_render_init(display_buffer, kDisplayResolutionX, kDisplayResolutionY,
-				kWindowWidth, kWindowHeight);
-	display_running++;
-	int y = 0;
-	uint64_t render_cycles = 0;
-	while (true) {
-
-		if (display_running.load() == 0)
-			break;
-		
-		display_draw(y++);
-		render_cycles += HSYNC_CYCLES;
-		if (y >= kDisplayResolutionY) {			
-			// FixME: should fit 20 ms per frame
-			// wrong resolution now (border+paper)
-			render_cycles = 70000; // approx 20 ms at 3.5 MHz
-			clk_master_sync(cmh, render_cycles, render_cycles);
-			render_cycles = 0;
-			y = 0;
-		}
-	}
-	video_render_end();
-	clk_master_destroy(cmh);
-}
 
 void display_set_border_color(uint8_t color) {
 	border_color = KVideoColorPalleteHILO[color & 0x7][OPAQUE_MODE];;

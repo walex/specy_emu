@@ -97,12 +97,12 @@ extern "C" void inst_DAA_C(uint8_t* reg_a, uint8_t* reg_f)
 
 }
 
-extern "C" void acumulate_opcode_cycles_c(uint8_t cycles, uint8_t m_cycles) {
+extern "C" void acumulate_opcode_cycles_c(uint8_t cycles) {
     
     cpu_sync(cycles);
 }
 
-extern "C" void acumulate_opcode_cycles_zero_c(uint8_t cycles0, uint8_t m_cycles0, uint8_t cycles1, uint8_t m_cycles1, uint16_t value) {
+extern "C" void acumulate_opcode_cycles_zero_c(uint8_t cycles0, uint8_t cycles1, uint16_t value) {
 
     if (value == 0) {
         cpu_sync(cycles0);
@@ -110,5 +110,4 @@ extern "C" void acumulate_opcode_cycles_zero_c(uint8_t cycles0, uint8_t m_cycles
     else {
         cpu_sync(cycles1);
 	}
-
 }

@@ -32,6 +32,7 @@
 #include "specy_rom.h"
 #include "tape_audio.h"
 #include <filesystem>
+#include <thread>
 
 const char* SPECY_48K_ROM_FILE = "spec_48.rom";
 const char* SPECY_128K_ROM_FILE = "spec_128.rom";
@@ -84,7 +85,7 @@ int main(int argc, char* argv[]) {
 
 	auto exe_dir = get_executable_directory();
 	exe_dir.append("roms");
-	auto rom_path = exe_dir.append(TK90X_48K_ROM_V3_FILE);
+	auto rom_path = exe_dir.append(SPECY_48K_ROM_FILE);
 	if (!specy_rom_init(rom_path.string().c_str(), ROM_48K_SIZE + RAM_48K_SIZE)) {
 		perror("rom init failed");
 		return -1;
@@ -102,9 +103,17 @@ int main(int argc, char* argv[]) {
 	}
 #else
 	//tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\1.2a\\z80doc.tap");
-	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\working\\The Great Escape.tap");
+	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\working\\manic_miner.TAP");
 #endif
-	Z80CPU(specy_rom_get_pointer(), 0);	
+	using clock = std::chrono::steady_clock;
+
+	auto last = clock::now();
+	uint64_t cycle_accum = 0.0;
+	cpu_z80_init(specy_rom_get_pointer(), 0);
+	while (true) {
+		cpu_z80_step();		
+	}
+	
 	specy_rom_end();
 
 	return 0;

@@ -50,11 +50,13 @@ uint8_t tape_audio_next_pulse(uint64_t cycles) {
 	if (!tape_active)
 		return 0;
 
+	sync_cycles += cycles;
+
 	// ---- update tape according to cycles ----
 	if (tape_active && tape_pulse_index < tape_pulses.size()) {
 
 		while (tape_pulse_index < tape_pulses.size() &&
-			cycles >= (sync_cycles+tape_pulses[tape_pulse_index].end_cycle)) {
+			sync_cycles >= (tape_pulses[tape_pulse_index].end_cycle)) {
 
 			current_ear = tape_pulses[tape_pulse_index].ear_level;
 			tape_pulse_index++;
@@ -137,9 +139,9 @@ void tape_audio_set_bytes(uint8_t* data, size_t size) {
 	delete[] data_ptr;
 }
 
-void tape_audio_sync(uint64_t cycles) {
+void tape_audio_sync() {
 
-	sync_cycles = cycles;
+	sync_cycles = tape_pulses[tape_pulse_index].end_cycle;
 }
 
 void tape_audio_load_wav(const char* filename) {
