@@ -67,19 +67,19 @@ void clk_master_sync(clock_master_handle cmh, uint64_t total_cycles, uint64_t sy
 		auto now = std::chrono::high_resolution_clock::now();
 		double elapsed_cpu_time = sync_cycles / (cm->frequency / 1000000.0);  // microseconds
 		auto target_time = cm->clock + std::chrono::microseconds((int64_t)elapsed_cpu_time);
-		
 		// Sleep until target time (smooth pacing)
 		if (now < target_time) {
-			uint64_t cc = std::chrono::duration_cast<std::chrono::milliseconds>(target_time-now).count();
-			if (cc > 0) {
-				uint64_t delta_c = (total_cycles - last_total_cycles) / cc;
+			const uint64_t delta_t = std::chrono::duration_cast<std::chrono::microseconds>(target_time-now).count();
+			if (delta_t > 0) {
+				uint64_t delta_c = (total_cycles - last_total_cycles) / delta_t;
 				while (now < target_time) {
 					last_total_cycles += delta_c;
-					if (last_total_cycles <= total_cycles)
+					if (last_total_cycles < total_cycles) {
 						clk_master_tick(cmh, (uint64_t)last_total_cycles);
+					}
 					std::this_thread::yield();
 					now = std::chrono::high_resolution_clock::now();
-				}
+				}				
 			}
 			if (last_total_cycles < total_cycles)
 				clk_master_tick(cmh, total_cycles);
