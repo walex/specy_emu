@@ -34,16 +34,6 @@
 #include <filesystem>
 #include <thread>
 
-const char* SPECY_48K_ROM_FILE = "spec_48.rom";
-const char* SPECY_128K_ROM_FILE = "spec_128.rom";
-const char* TK95_48K_ROM_FILE = "TK95.Spanish.rom";
-const char* TK90X_48K_ROM_FILE = "TK90X.v1.Spanish.rom";
-const char* TK90X_48K_ROM_V3_FILE = "TK90X_v3EN.rom";
-const size_t ROM_48K_SIZE = 16 * 1024;
-const size_t ROM_16K_SIZE = 16 * 1024;
-const size_t RAM_48K_SIZE = 48 * 1024;
-const size_t ROM_128K_SIZE = 128 * 1024;
-
 #ifdef _WIN32
 #include <Windows.h>
 
@@ -83,10 +73,9 @@ std::filesystem::path get_executable_directory() {
 #define Z80_TEST
 int main(int argc, char* argv[]) {
 
-	auto exe_dir = get_executable_directory();
-	exe_dir.append("roms");
-	auto rom_path = exe_dir.append(SPECY_48K_ROM_FILE);
-	if (!specy_rom_init(rom_path.string().c_str(), ROM_48K_SIZE + RAM_48K_SIZE)) {
+	auto roms_dir = get_executable_directory();
+	roms_dir = roms_dir.append("roms");
+	if (specy_rom_init(SPECTRUM_128K_SYSTEM, roms_dir.string().c_str())) {
 		perror("rom init failed");
 		return -1;
 	}
@@ -103,17 +92,12 @@ int main(int argc, char* argv[]) {
 	}
 #else
 	//tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\1.2a\\z80doc.tap");
-	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\working\\manic_miner.TAP");
+	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\working\\exolon.tap");
 #endif
-	using clock = std::chrono::steady_clock;
 
-	auto last = clock::now();
-	uint64_t cycle_accum = 0.0;
 	cpu_z80_init(specy_rom_get_pointer(), 0);
-	while (true) {
-		cpu_z80_step();		
-	}
-	
+	while (true)
+		cpu_z80_step();	
 	specy_rom_end();
 
 	return 0;

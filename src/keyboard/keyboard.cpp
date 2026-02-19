@@ -49,7 +49,7 @@ std::map<uint8_t, uint8_t> keyboard_map = {
 #define ZX_KEYCODE_R { pos = 0xFB; shift = 3; }
 #define ZX_KEYCODE_S { pos = 0xFD; shift = 1; }
 #define ZX_KEYCODE_T { pos = 0xFB; shift = 4; }
-#define ZX_KEYCODE_U { pos = 0xFB; shift = 3; }
+#define ZX_KEYCODE_U { pos = 0xDF; shift = 3; }
 #define ZX_KEYCODE_V { pos = 0xFE; shift = 4; }
 #define ZX_KEYCODE_W { pos = 0xFB; shift = 1; }
 #define ZX_KEYCODE_X { pos = 0xFE; shift = 2; }

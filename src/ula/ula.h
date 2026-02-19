@@ -11,7 +11,7 @@ void ula_assert_INT_line();
 extern "C" {
 #endif
 	void ula_read_port(uint16_t addr, uint8_t* value);
-	void ula_write_port(uint16_t addr, uint8_t value);
+	void ula_write_port_FE(uint16_t addr, uint8_t value);
 	void ula_on_load_edge_1();
 #ifdef __cplusplus
 }

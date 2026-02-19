@@ -4,8 +4,12 @@
 #include <chrono>
 #include <thread>
 
+constexpr uint16_t PAGING_CONTROL_PORT = 0x7FFD;
+constexpr uint16_t PORT_FE = 0xFE;
+
 extern "C" void ula_read_port(uint16_t addr, uint8_t* value);
-extern "C" void ula_write_port(uint16_t addr, uint8_t value);
+extern "C" void ula_write_port_FE(uint16_t addr, uint8_t value);
+extern "C" void memory_paging_bank_switch(uint8_t value);
 
 extern "C" void  inst_IN_Impl(uint16_t addr, uint8_t* value) {
 	
@@ -14,16 +18,18 @@ extern "C" void  inst_IN_Impl(uint16_t addr, uint8_t* value) {
 
 extern "C" void inst_OUT_Impl(uint16_t addr, uint8_t value) {
 
+    if (addr == PAGING_CONTROL_PORT) {
+        memory_paging_bank_switch(value);
+    } else {
 
-	addr = addr & 0x00FF;
-	switch (addr) {
-	case 0xFE:
-		ula_write_port(addr, value);
-		break;
-	default:
-		break;
-	}
-
+        switch (addr & 0x00FF) {
+        case PORT_FE:
+            ula_write_port_FE(addr, value);
+            break;
+        default:
+            break;
+        }
+    }
 }
 
 extern "C" uint8_t parity(uint8_t c) {

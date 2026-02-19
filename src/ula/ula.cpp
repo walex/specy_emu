@@ -99,7 +99,7 @@ void ula_read_port(uint16_t addr, uint8_t* value) {
 	*value = 0xFF;
 }
 
-void ula_write_port(uint16_t addr, uint8_t value) {
+void ula_write_port_FE(uint16_t addr, uint8_t value) {
 
 	// border = value & 0x7;
 	// mic = value & 0x8;

@@ -4,6 +4,7 @@
 #include "specy_rom.h"
 #include "ula.h"
 #include "video_render.h"
+#include "tempo.h"
 #include <mutex>
 #include <thread>
 #include <chrono>
@@ -15,24 +16,11 @@ static std::atomic<uint32_t> border_color{ 0 };
 static uint8_t* system_memory_ptr = nullptr;
 static uint32_t display_buffer[kDisplayResolutionX * kDisplayResolutionY];
 static const int TOTAL_LINES = 312;
-static uint64_t cycle_in_line = 0;
-static std::counting_semaphore<1> hsync_semaphore(0);
+static std::atomic<uint64_t> cycle_in_line = 0;
+static std::counting_semaphore<1> line_drawn_semaphore(0);
 
 void display_thread_proc();
 
-#define PRINT_AVG_TIME(a) \
-			{ \
-			static uint64_t avg_sleep_time = 0; \
-			static uint64_t avg_sleep_cnt = 0; \
-			avg_sleep_time += a; \
-			avg_sleep_cnt++; \
-			if (avg_sleep_cnt % 250 == 0) { \
-				uint64_t avg = avg_sleep_time / avg_sleep_cnt; \
-				avg_sleep_time = 0; \
-				avg_sleep_cnt = 0; \
-				printf("Display avg sleep time: %llu ms\n", avg); \
-			} \
-			}
 void display_init(uint8_t* system_memory) {
 
 	if (display_running.load() != 0)
@@ -46,11 +34,12 @@ void display_init(uint8_t* system_memory) {
 
 void display_end() {
 
-	if (display_running.load() == 0)
-		return;
-	display_running = 0;
-	if (display_thread.joinable())
-		display_thread.join();
+	if (display_running.load() != 0) {
+		display_running = 0;
+		if (display_thread.joinable())
+			display_thread.join();
+	}
+	
 }
 
 void display_draw(int y) {
@@ -114,13 +103,15 @@ void display_draw(int y) {
 
 void display_tick(uint64_t delta_cycles) {
 
+	static int y = 0;
 	cycle_in_line += delta_cycles;
-
 	if (cycle_in_line >= HSYNC_CYCLES) {
 		cycle_in_line -= HSYNC_CYCLES;
-
-		hsync_semaphore.release();
-		
+		display_draw(y++);
+		if (y == kDisplayResolutionY) {
+			y = 0;
+			line_drawn_semaphore.release();
+		}
 	}
 }
 
@@ -128,40 +119,19 @@ void display_thread_proc() {
 
 	constexpr int kWindowWidth = 1024;
 	constexpr int kWindowHeight = 768;
-	int current_line = 0;
-	auto last_draw_time = std::chrono::high_resolution_clock::now();
-
 	video_render_init(display_buffer, kDisplayResolutionX, kDisplayResolutionY,
 		kWindowWidth, kWindowHeight);
 	display_running++;
-	while (true) {
+	while (true) {		
 
 		if (display_running.load() == 0)
 			break;
 
-		hsync_semaphore.acquire();
-
-		display_draw(current_line++);
-
-		// FixME: should be 312 lines
-		// wrong resolution now (border+paper)
-		if (current_line == kDisplayResolutionY) {
-			// FixME: should fit 20 ms per frame
-
-			ula_assert_INT_line();
-			video_render_draw();
-			auto now = std::chrono::high_resolution_clock::now();
-			uint64_t frame_duration = std::chrono::duration_cast<std::chrono::milliseconds>(now - last_draw_time).count();
-			last_draw_time = now;
-			current_line = 0;
-			if (frame_duration < DISPLAY_REFRESH_RATE_MILLISECS) {
-				uint64_t sleep_time = DISPLAY_REFRESH_RATE_MILLISECS - frame_duration;
-				// FixMe: should not be necesary ?
-				std::this_thread::sleep_for(std::chrono::milliseconds(sleep_time));
-				continue;
-			}
-		}
-		std::this_thread::yield();
+		MEASURE_ELAPSED_TIME(100, 
+		line_drawn_semaphore.acquire();
+		video_render_draw();
+		ula_assert_INT_line();
+			)		
 	}
 	video_render_end();
 }
