@@ -56,9 +56,10 @@ void clk_master_tick(clock_master_handle cmh, uint64_t total_cycles) {
 
 void clk_master_sync(clock_master_handle cmh, uint64_t total_cycles, uint64_t sync_cycles) {
 
+	static uint64_t last_total_cycles = 0;
+#ifdef CPU_CLOCK_SYNC
 	clock_master* cm = (clock_master*)cmh;	
 	uint64_t delta_cycles = total_cycles - cm->cycles;
-	static uint64_t last_total_cycles = 0;
 	if (cm->sync_cycles == 0)
 		cm->clock = std::chrono::high_resolution_clock::now();	
 	cm->sync_cycles += delta_cycles;
@@ -87,6 +88,7 @@ void clk_master_sync(clock_master_handle cmh, uint64_t total_cycles, uint64_t sy
 		}		
 		cm->sync_cycles -= sync_cycles;
 	}	
+#endif
 	clk_master_tick(cmh, total_cycles);
 	last_total_cycles = total_cycles;
 }

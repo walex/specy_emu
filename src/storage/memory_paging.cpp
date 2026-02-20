@@ -37,16 +37,12 @@ uint8_t* memory_paging_init() {
 	};
 
 	// 8 banks plus 2 roms
-	uint8_t* mem = (uint8_t*)memory_page_create(BANK_COUNT+2, BANK_SIZE, base_addr, base_bank_index);
-	
-	//test_memory_paging(mem);
-
-	return mem;
+	return (uint8_t*)memory_page_create(BANK_COUNT+2, BANK_SIZE, base_addr, base_bank_index);
 }
 
-void memory_paging_end(uint8_t* mem) {
+void memory_paging_end() {
 
-	memory_page_free(mem);
+	memory_page_free();
 }
 
 void memory_paging_bank_switch(uint8_t value) {
@@ -56,15 +52,15 @@ void memory_paging_bank_switch(uint8_t value) {
 
 	// RAM – The RAM bank to page into& C000 to& FFFF
 	uint8_t masked_value = value & PAGING_RAM_BANK_MASK;
-	memory_page_set_map(BANK_ADDR_RAM, masked_value, BANK_SIZE);
+	memory_page_set_map(BANK_ADDR_RAM, masked_value);
 
 	// SCR – Set to 0 to display normal screen, 1 to display screen in bank 7
 	masked_value = value & PAGING_SCREEN_MASK;
-	memory_page_set_map(BANK_ADDR_FIXED_SCREEN, masked_value ? BANK_FIXED_SCREEN_2_INDEX : BANK_FIXED_SCREEN_1_INDEX, BANK_SIZE);
+	memory_page_set_map(BANK_ADDR_FIXED_SCREEN, masked_value ? BANK_FIXED_SCREEN_2_INDEX : BANK_FIXED_SCREEN_1_INDEX);
 //
 	// ROM – Set to 0 to page in the 128K editor, or 1 to page in the 48K BASIC ROM
 	masked_value = value & PAGING_ROM_MASK;
-	memory_page_set_map(BANK_ADDR_ROM, masked_value ? BANK_ROM_1_INDEX : BANK_ROM_0_INDEX, BANK_SIZE);
+	memory_page_set_map(BANK_ADDR_ROM, masked_value ? BANK_ROM_1_INDEX : BANK_ROM_0_INDEX);
 
 	// DIS – Set to 1 to disable memory paging until next reset
 	masked_value = value & PAGING_LOCK_MASK;

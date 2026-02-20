@@ -14,7 +14,7 @@ constexpr uint32_t BANK_RAM_INDEX = 3;
 extern "C" {
 #endif
 	uint8_t* memory_paging_init();
-	void memory_paging_end(uint8_t* mem);
+	void memory_paging_end();
 	void memory_paging_bank_switch(uint8_t value);
 	void memory_paging_copy_mem_to_bank(uint8_t* mem, uint32_t bank_id, size_t size);
 #ifdef __cplusplus

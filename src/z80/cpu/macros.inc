@@ -504,11 +504,6 @@ pop x_ax
 
 ENDM
 
-SET_REG_PC MACRO value16
-push value16
-pop RegPC
-ENDM
-
 GET_REG_PC MACRO
 xor x_ax, x_ax
 mov ax, RegPC

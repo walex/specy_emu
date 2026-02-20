@@ -82,7 +82,7 @@ uint8_t* specy_rom_create_system_memory(uint32_t machine_id, const char* base_pa
 
 void specy_rom_free_system_memory() {
 	if (system_rom_pointer)
-		memory_paging_end(system_rom_pointer);
+		memory_paging_end();
 }
 
 void specy_rom_on_call_LD_EDGE_1() {

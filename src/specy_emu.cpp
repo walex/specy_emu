@@ -92,7 +92,7 @@ int main(int argc, char* argv[]) {
 	}
 #else
 	//tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\1.2a\\z80doc.tap");
-	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\working\\exolon.tap");
+	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\Goody.tap");
 #endif
 
 	cpu_z80_init(specy_rom_get_pointer(), 0);

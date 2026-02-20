@@ -74,12 +74,14 @@ inline float tv_saturate(float x) {
 // Main function to send audio samples, called from the ULA emulation
 // `tstates_cpu_total` is the accumulated Z80 cycles since emulation start
 void audio_set_level(uint64_t total_cycles, uint8_t value) {
+#ifdef CPU_CLOCK_SYNC
     int new_mic = (value >> 3) & 1;
     int new_ear = (value >> 4) & 1;
     float lvl = new_ear ? 1.0f : 0.0f;
     if (lvl == 0)
         lvl = 0;
     current_level.store({ total_cycles, lvl }, std::memory_order_relaxed);
+#endif
 }
 
 void audio_tick(uint64_t delta_tstates) {

@@ -6,15 +6,17 @@
 #include <Windows.h>
 #include <stdio.h>
 #include <vector>
+#include <map>
 
 #pragma comment(lib, "onecore.lib")
 
-constexpr size_t VISIBLE_SIZE = 64 * 1024;
+constexpr size_t BANK_ALIGNED_SIZE = 64 * 1024;
 static HANDLE mem_handle = nullptr;
 static void* placeholder_page = nullptr;
-static std::vector<void*> memory_views;
+static std::map<uint16_t, void*> memory_views;
+static size_t bank_size = 0;
 
-inline void log_w32_last_error() {
+inline void print_w32_last_error(const char* func, int line) {
 
     char error_desc[256];
     FormatMessageA(
@@ -25,8 +27,9 @@ inline void log_w32_last_error() {
         error_desc,
         sizeof(error_desc),
         nullptr);
-    printf("Failed:\n%s\n", error_desc);
+    printf("Error %s (%d):\n%s\n\n", func, line, error_desc);
 }
+#define PRINT_W32_ERROR() print_w32_last_error(__FUNCTION__, __LINE__)
 
 inline void* memory_page_alloc_placeholder(size_t size) {
     
@@ -39,43 +42,15 @@ inline void* memory_page_alloc_placeholder(size_t size) {
         nullptr,
         0);
     if (place_holder == nullptr)
-        log_w32_last_error();
+        PRINT_W32_ERROR();
 	return place_holder;
 }
-
-//void switch_bank(int slot, int new_bank)
-//{
-//    void* addr = base + slot * VIRTUAL_BANK_SIZE;
-//
-//    UnmapViewOfFile(addr);
-//
-//    VirtualFree(
-//        addr,
-//        VIRTUAL_BANK_SIZE,
-//        MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER
-//    );
-//
-//   void* map = MapViewOfFile3(
-//        hSection[new_bank],
-//        GetCurrentProcess(),
-//        addr,
-//        0,
-//        VIRTUAL_BANK_SIZE,
-//        MEM_REPLACE_PLACEHOLDER,
-//        PAGE_READWRITE,
-//        nullptr,
-//        0
-//    );
-//   if (!map)
-//       log_w32_last_error();
-//}
-
 
 inline HANDLE memory_page_get_handle() {
     return mem_handle;
 }
 
-inline void* memory_page_create(const size_t max_banks, const size_t bank_size, const std::vector<uint16_t>& base_addr,
+inline void* memory_page_create(const size_t max_banks, const size_t size, const std::vector<uint16_t>& base_addr,
     const std::vector<uint32_t>& base_bank_index) {
 
     if (base_addr.size() != base_bank_index.size()) {
@@ -83,8 +58,9 @@ inline void* memory_page_create(const size_t max_banks, const size_t bank_size, 
         return nullptr;
     }
 
+    bank_size = size;
     size_t block_count = base_addr.size();
-    size_t mem_size = max_banks * VISIBLE_SIZE;
+    size_t mem_size = max_banks * BANK_ALIGNED_SIZE;
 
     mem_handle = CreateFileMapping(
         INVALID_HANDLE_VALUE,
@@ -94,14 +70,14 @@ inline void* memory_page_create(const size_t max_banks, const size_t bank_size, 
         mem_size,
         nullptr);
     if (mem_handle == nullptr) {
-        log_w32_last_error();
+        PRINT_W32_ERROR();
         return nullptr;
     }
 
     // Allocate placeholder for 64KB visible address space (0x0000-0xFFFF)
-    placeholder_page = memory_page_alloc_placeholder(VISIBLE_SIZE);
+    placeholder_page = memory_page_alloc_placeholder(BANK_ALIGNED_SIZE);
     if (placeholder_page == nullptr) {
-        log_w32_last_error();
+        PRINT_W32_ERROR();
         return nullptr;
     }
 
@@ -114,15 +90,14 @@ inline void* memory_page_create(const size_t max_banks, const size_t bank_size, 
             MEM_RELEASE | MEM_PRESERVE_PLACEHOLDER
         );
         if (!res) {
-            printf("VirtualFree split error at 0x%X\n", base_addr[i]);
-            log_w32_last_error();
+            PRINT_W32_ERROR();
         }
     }
 
     // Map each region to its corresponding bank in the file mapping
     for (size_t i = 0; i < block_count; i++) {
         void* target = (void*)((ULONG_PTR)placeholder_page + base_addr[i]);
-        ULONG64 offset = base_bank_index[i] * VISIBLE_SIZE;
+        ULONG64 offset = base_bank_index[i] * BANK_ALIGNED_SIZE;
 
         void* result = MapViewOfFile3(
             mem_handle,
@@ -135,36 +110,42 @@ inline void* memory_page_create(const size_t max_banks, const size_t bank_size, 
             nullptr,
             0);
         if (!result) {
-            printf("MapViewOfFile3 error at virtual 0x%X -> bank %u (offset 0x%llX)\n",
-                base_addr[i], base_bank_index[i], offset);
-            log_w32_last_error();
+            PRINT_W32_ERROR();
         }
         else {
-            memory_views.push_back(result);
+            memory_views[base_addr[i]] = result;
         }
     }
 
-    return memory_views.at(0);
+    return memory_views[base_addr[0]];
 }
 
-inline void memory_page_free(uint8_t* memory) {
-
- //   VirtualFree(placeholder_page, 0, MEM_RELEASE);
-    UnmapViewOfFile(memory);
+inline void memory_page_free() {
+    
     CloseHandle(mem_handle);
+    for (auto& view : memory_views) {
+        BOOL res = UnmapViewOfFileEx(view.second, 0);
+        if (!res) {
+            PRINT_W32_ERROR();
+        }
+    }
+    memory_views.clear();
+    placeholder_page = nullptr;
+	mem_handle = nullptr;
 }
 
-inline void* memory_page_remap(void* base_address, uint16_t virtual_offset, uint32_t new_bank_index, size_t bank_size)
+inline void* memory_page_remap(void* base_address, uint16_t virtual_offset, uint32_t new_bank_index)
 {
     void* target = (void*)((ULONG_PTR)base_address + virtual_offset);
-    ULONG64 file_offset = new_bank_index * VISIBLE_SIZE;
+    ULONG64 file_offset = new_bank_index * BANK_ALIGNED_SIZE;
 
     // Step 1: Unmap the current view at this virtual address
     if (!UnmapViewOfFile2(GetCurrentProcess(), target, MEM_PRESERVE_PLACEHOLDER)) {
-        printf("UnmapViewOfFile2 failed at offset 0x%X\n", virtual_offset);
-        log_w32_last_error();
+        PRINT_W32_ERROR();
         return nullptr;
     }
+
+    memory_views[virtual_offset] = nullptr;
 
     // Step 2: Map the new bank to the same virtual address
     void* result = MapViewOfFile3(
@@ -179,22 +160,15 @@ inline void* memory_page_remap(void* base_address, uint16_t virtual_offset, uint
         0);
 
     if (!result) {
-        printf("MapViewOfFile3 failed: virtual 0x%X -> bank %u (offset 0x%llX)\n",
-            virtual_offset, new_bank_index, file_offset);
-        log_w32_last_error();
+        PRINT_W32_ERROR();
     }
-
+    memory_views[virtual_offset] = result;
     return result;
 }
 
-inline void* memory_page_set_map(uint16_t visibleOffset, uint32_t bankNumber, size_t bank_size)
+inline void* memory_page_set_map(uint16_t visibleOffset, uint32_t bankNumber)
 {
-    return memory_page_remap(placeholder_page, visibleOffset, bankNumber, bank_size);
-}
-
-inline void memory_page_destroy_map(HANDLE bank) {
-
-    CloseHandle(bank);
+    return memory_page_remap(placeholder_page, visibleOffset, bankNumber);
 }
 
 inline void memory_paging_copy_mem_to_bank_w32(uint8_t* mem, uint32_t bank_id, size_t size) {
@@ -202,7 +176,7 @@ inline void memory_paging_copy_mem_to_bank_w32(uint8_t* mem, uint32_t bank_id, s
     HANDLE file_handle = memory_page_get_handle();
 
     // Map bank directly at a different virtual address
-    uint64_t bank_offset = bank_id * (uint64_t)VISIBLE_SIZE;
+    uint64_t bank_offset = bank_id * (uint64_t)BANK_ALIGNED_SIZE;
     uint8_t* direct_bank = (uint8_t*)MapViewOfFile(
         file_handle,
         FILE_MAP_ALL_ACCESS,
@@ -220,44 +194,6 @@ inline void memory_paging_copy_mem_to_bank_w32(uint8_t* mem, uint32_t bank_id, s
         printf("Error getting memory bank %d\n", bank_id);
     }
 }
-
-//inline void test_memory_paging(uint8_t* mem) {
-//
-//    // Get the file mapping handle to create a direct view
-//    HANDLE file_handle = memory_page_get_handle();
-//
-//    size_t virtual_index = BANK_ADDR_ROM;
-//    size_t real_index = BANK_ROM_0_INDEX;
-//
-//    // Map bank directly at a different virtual address
-//    uint64_t bank_offset = real_index * (uint64_t)VISIBLE_SIZE;
-//    uint8_t* direct_bank = (uint8_t*)MapViewOfFile(
-//        file_handle,
-//        FILE_MAP_ALL_ACCESS,
-//        (DWORD)(bank_offset >> 32),
-//        (DWORD)(bank_offset & 0xFFFFFFFF),
-//        BANK_SIZE
-//    );
-//
-//    if (direct_bank) {
-//        // Write directly to bank 5's backing store
-//        direct_bank[0] = 0x42;
-//
-//        // This change is now visible at mem[16384]
-//        printf("Direct write: direct_bank[0] = 0x42\n");
-//        printf("Virtual view: mem[%lld] = 0x%02X (should be 0x42)\n", virtual_index, mem[virtual_index]);
-//
-//        // Write from virtual address
-//        mem[virtual_index] = 0x99;
-//        printf("Virtual write: mem[%lld] = 0x99\n", virtual_index);
-//        printf("Direct view: direct_bank5[0] = 0x%02X (should be 0x99)\n", direct_bank[0]);
-//
-//        UnmapViewOfFile(direct_bank);
-//    }
-//    else {
-//        printf("Error getting memory bank %lld\n", real_index);
-//    }
-//}
 
 #endif // !__MEMORY_PAGE_W32__
 
