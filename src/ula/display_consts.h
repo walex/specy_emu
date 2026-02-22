@@ -44,7 +44,7 @@ static const unsigned int KVideoColorPalleteHILO[8][2] = {
 constexpr int kDisplayBufferResolutionX = 256;
 constexpr int kDisplayBufferResolutionY = 192;
 constexpr int kDisplayResolutionX = 352;
-constexpr int kDisplayResolutionY = 288; // 312 ???
+constexpr int kDisplayResolutionY = 312;
 
 constexpr int BRIGHT_MODE = 0;
 constexpr int OPAQUE_MODE = 1;

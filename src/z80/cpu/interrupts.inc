@@ -1,5 +1,7 @@
 .data
 
+EXTERNDEF count_interrupt_calls_c:PROC
+
 IFF_DELAY db 0
 
 .code
@@ -13,6 +15,13 @@ inst_RST PROTO
 inst_PUSH PROTO
 
 .code
+
+count_interrupt_calls PROC
+
+CALL_C_FUNC count_interrupt_calls_c
+ret
+
+count_interrupt_calls ENDP
 
 interrupts_enable_request PROC
 mov IFF_DELAY, 1
@@ -90,6 +99,8 @@ interrupts_accept_nmi PROC
 ; parameter
 ; x_cx -> memPtr
 
+mov HALT, 0
+invoke acumulate_opcode_cycles,11
 IncRegR
 
 mov NMI_LINE, 0
@@ -111,9 +122,10 @@ interrupts_accept_mi PROC
 ; parameter
 ; x_cx -> memPtr
 
+mov HALT, 0
+invoke acumulate_opcode_cycles,13
 IncRegR
 
-mov INT_LINE, 0
 cmp IFF1, 1
 jnz execute_MI_interrupt_exit
 
@@ -141,6 +153,7 @@ execute_MI_interrupt_m2:
 invoke interrupts_execute_mi_2, x_cx
 
 execute_MI_interrupt_exit:
+
 ret
 
 interrupts_accept_mi ENDP
@@ -168,6 +181,7 @@ jmp execute_interrupts_exit
 execute_interrupts_MI:
 cmp INT_LINE, 1
 jnz execute_interrupts_exit
+mov INT_LINE, 0
 invoke interrupts_accept_mi, x_cx
 execute_interrupts_exit:
 ret
@@ -177,15 +191,12 @@ interrupts_accept ENDP
 
 interrupts_request_nmi PROC
 	
-  mov HALT, 0
   mov NMI_LINE, 1
   ret
 
 interrupts_request_nmi ENDP
 
-interrupts_request_mi PROC
-	
-  mov HALT, 0
+interrupts_request_mi PROC  
 
   cmp NMI_LINE, 1
   jz interrupts_request_mi_exit
@@ -196,8 +207,6 @@ interrupts_request_mi PROC
   ret
 
 interrupts_request_mi ENDP
-
-
 
 interrupts_set_im PROC
 

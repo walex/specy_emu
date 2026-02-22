@@ -75,7 +75,7 @@ int main(int argc, char* argv[]) {
 
 	auto roms_dir = get_executable_directory();
 	roms_dir = roms_dir.append("roms");
-	if (specy_rom_init(SPECTRUM_128K_SYSTEM, roms_dir.string().c_str())) {
+	if (specy_rom_init(SPECTRUM_48K_SYSTEM, roms_dir.string().c_str())) {
 		perror("rom init failed");
 		return -1;
 	}
@@ -91,8 +91,8 @@ int main(int argc, char* argv[]) {
 		printf("Starting Z80 CPU emulation...\n");
 	}
 #else
-	//tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\1.2a\\z80doc.tap");
-	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\Goody.tap");
+	//tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\z80doc.tap");
+	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\working\\EXOLON.tap");
 #endif
 
 	cpu_z80_init(specy_rom_get_pointer(), 0);

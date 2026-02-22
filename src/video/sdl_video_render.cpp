@@ -104,13 +104,6 @@ void render_thread_proc() {
             if (event.type == SDL_EVENT_QUIT) {
                 break;
             }
-            else if (event.type == SDL_EVENT_KEY_DOWN) {
-                keyboard_set_input(event.key.key, event.key.mod);
-            }
-            else if (event.type == SDL_EVENT_KEY_UP) {
-                keyboard_unset_input(event.key.key, event.key.mod);
-            }
-
         }
         
 		SDL_AppIterate(nullptr);

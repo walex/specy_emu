@@ -122,7 +122,6 @@ inline void* memory_page_create(const size_t max_banks, const size_t size, const
 
 inline void memory_page_free() {
     
-    CloseHandle(mem_handle);
     for (auto& view : memory_views) {
         BOOL res = UnmapViewOfFileEx(view.second, 0);
         if (!res) {
@@ -130,6 +129,7 @@ inline void memory_page_free() {
         }
     }
     memory_views.clear();
+    CloseHandle(mem_handle);
     placeholder_page = nullptr;
 	mem_handle = nullptr;
 }

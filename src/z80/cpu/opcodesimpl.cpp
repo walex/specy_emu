@@ -117,3 +117,16 @@ extern "C" void acumulate_opcode_cycles_zero_c(uint8_t cycles0, uint8_t cycles1,
         cpu_sync(cycles1);
 	}
 }
+
+extern "C" void count_interrupt_calls_c() {
+    
+    static uint64_t calls = 0;
+	static auto start = std::chrono::high_resolution_clock::now();
+    calls++;
+    auto end = std::chrono::high_resolution_clock::now();
+	if (std::chrono::duration_cast<std::chrono::seconds>(end - start).count() >= 1) {
+        printf("Interrupt calls per second: %llu\n", calls);
+        calls = 0;
+        start = end;
+    }
+}

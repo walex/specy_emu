@@ -6,6 +6,7 @@
 #include "display.h"
 #include "audio.h"
 #include "automata.h"
+#include "tempo.h"
 #include <atomic>
 #include <thread>
 #include <chrono>
@@ -46,11 +47,23 @@ void ula_on_load_edge_1() {
 void ula_on_cpu_cycles(uint64_t total_cycles) {
 
 	static uint64_t last_cycles = 0;
+	static uint64_t int_cycles = 0;
 
 	uint64_t delta_cycles = total_cycles - last_cycles;
 	audio_tick(delta_cycles);
 	display_tick(delta_cycles);
 	//force_tape_state(total_cycles);
+
+	int_cycles += delta_cycles;
+	if (int_cycles >= 69888)
+	{
+		MEASURE_ELAPSED_TIME("int assert time:", 200,
+			int_cycles -= 69888;
+			keyboard_tick(delta_cycles);
+			ula_assert_INT_line();
+		);
+	}
+
 	last_cycles = total_cycles;
 }
 
@@ -70,6 +83,7 @@ void ula_read_port(uint16_t addr, uint8_t* value) {
 
 	if (port == 0xFE) {
 
+		MEASURE_ELAPSED_TIME("keyboard scan time:", 200, ;)
 		// timing
 		auto clock_cycle = cpu_get_cycles();
 		uint64_t delta_tstates = clock_cycle - last_clock;

@@ -110,7 +110,17 @@ uint8_t* specy_rom_get_pointer() {
 	return system_rom_pointer;
 }
 
-uint16_t specy_rom_get_system_var_value(uint16_t system_var_id) {
+uint16_t specy_rom_get_system_var_value_16(uint16_t system_var_id) {
 
 	return *(uint16_t*)(system_rom_pointer + system_var_id);
+}
+
+uint8_t specy_rom_get_system_var_value_8(uint16_t system_var_id) {
+
+	return *(uint8_t*)(system_rom_pointer + system_var_id);
+}
+
+void specy_rom_set_system_var_value_8(uint16_t system_var_id, uint8_t value) {
+
+	*(uint8_t*)(system_rom_pointer + system_var_id) = value;
 }

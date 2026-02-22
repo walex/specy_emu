@@ -209,7 +209,33 @@ def main2() -> None:
         fh.write(table)
 
 
+import os
+from pathlib import Path
+
+
+def print_tap_files(folder_path):
+    """Print all .tap files in the specified folder."""
+    folder = Path(folder_path)
+    tap_files = list(folder.glob("*.tap"))
+
+    if tap_files:
+        print(f"Found {len(tap_files)} .tap file(s) in {folder_path}:")
+        for file in sorted(tap_files):
+            if file.is_file():
+                print(f"{file.stem}")
+    else:
+        print(f"No .tap files found in {folder_path}")
+
+
+# Example usage:
+# print_tap_files(".")
 if __name__ == "__main__":
+
+    print_tap_files(
+        r"C:\Users\wadrw\Documents\develop\projects\personal\z80\specy_emu\media\working"
+    )
+    exit(0)
+
     # main()
 
     v1 = toggle_bits(0xED, 0x0, 0x0)

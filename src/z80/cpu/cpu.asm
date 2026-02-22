@@ -19,10 +19,10 @@ include x64_arch.inc
 include invoke.inc
 include macros.inc
 include cpuregs.inc
-include interrupts.inc
 include bitops_x64.inc
 include dirs_x64.inc
 include opcodesimpl_x64.inc
+include interrupts.inc
 
 .code
 

@@ -34,6 +34,11 @@ constexpr size_t BUFFER_SAMPLES = (size_t)(SAMPLE_RATE*0.1);
 // Audio state variables
 static std::atomic<audio_level> current_level;
 
+inline float tv_saturate(float x) {
+    // Saturación suave, simula transistor barato de TV
+    return std::tanh(x * 1.8f);
+}
+
 void audio_render_cb(uint8_t* buffer_out, int len) {
 
     int16_t* buffer16 = (int16_t*)buffer_out;
@@ -51,7 +56,7 @@ void audio_init() {
         audio_render_init((uint32_t)SAMPLE_RATE, nullptr);
         while (true) {
             for (int i = 0; i < buffsiz; i++)
-                buffer16[i] = (int16_t)(circular_buffer_pop_sample() * 32767.0f);
+                buffer16[i] = (int16_t)(tv_saturate(circular_buffer_pop_sample()) * 32767.0f);
 			audio_render_play((uint8_t*)buffer16, buffsiz * 2);    
             std::this_thread::yield();
         }
@@ -64,11 +69,6 @@ void audio_end() {
 
     audio_render_end();
     circular_buffer_end();
-}
-
-inline float tv_saturate(float x) {
-    // Saturación suave, simula transistor barato de TV
-    return std::tanh(x * 1.8f);
 }
 
 // Main function to send audio samples, called from the ULA emulation

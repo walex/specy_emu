@@ -2,7 +2,6 @@
 #include "display_consts.h"
 #include "z80.h"
 #include "specy_rom.h"
-#include "ula.h"
 #include "video_render.h"
 #include "tempo.h"
 #include <mutex>
@@ -15,7 +14,6 @@ static std::atomic<int> display_running{ 0 };
 static std::atomic<uint32_t> border_color{ 0 };
 static uint8_t* system_memory_ptr = nullptr;
 static uint32_t display_buffer[kDisplayResolutionX * kDisplayResolutionY];
-static const int TOTAL_LINES = 312;
 static std::atomic<uint64_t> cycle_in_line = 0;
 static std::counting_semaphore<1> line_drawn_semaphore(0);
 
@@ -50,7 +48,7 @@ void display_draw(int y) {
 	int x;
 	uint32_t ink, paper, flash, bright;
 	uint8_t byte, attrib;
-	uint16_t frame_count = specy_rom_get_system_var_value(SPECY_48K_SYS_VAR_FRAMES);
+	uint16_t frame_count = specy_rom_get_system_var_value_16(SPECY_48K_SYS_VAR_FRAMES);
 
 	int buffer_height = (kDisplayResolutionY - kDisplayBufferResolutionY) / 2;
 	int buffer_width = (kDisplayResolutionX - kDisplayBufferResolutionX) / 2;
@@ -109,8 +107,10 @@ void display_tick(uint64_t delta_cycles) {
 		cycle_in_line -= HSYNC_CYCLES;
 		display_draw(y++);
 		if (y == kDisplayResolutionY) {
-			y = 0;
-			line_drawn_semaphore.release();
+			MEASURE_ELAPSED_TIME("display ready time:", 200,
+				y = 0;
+				line_drawn_semaphore.release();
+			);
 		}
 	}
 }
@@ -127,10 +127,9 @@ void display_thread_proc() {
 		if (display_running.load() == 0)
 			break;
 
-		MEASURE_ELAPSED_TIME(100, 
+		MEASURE_ELAPSED_TIME("display scan time:", 100,
 		line_drawn_semaphore.acquire();
 		video_render_draw();
-		ula_assert_INT_line();
 			)		
 	}
 	video_render_end();
