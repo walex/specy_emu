@@ -77,7 +77,6 @@ void clk_master_sync(clock_master_handle cmh, uint64_t total_cycles, uint64_t sy
 					if (last_total_cycles < total_cycles) {
 						clk_master_tick(cmh, (uint64_t)last_total_cycles);
 					}
-					std::this_thread::yield();
 					now = std::chrono::high_resolution_clock::now();
 				}				
 			}			

@@ -10,21 +10,20 @@ static std::atomic<uint64_t> clk_cycles{ 0 };
 static std::atomic<uint64_t> sync_cycles{ 0 };
 static std::map < uint16_t, clock_call_interceptor_handler> call_interceptors;
 
-void cpu_lock() {
-
-    cpu_lock_t.store(true);
+void cpu_set_wait_state(uint64_t cycles) {
+    
+	cpu_lock_t.store(true);
+    clk_cycles.fetch_add(cycles);
 }
 
-void cpu_unlock() {
+void cpu_unset_wait_state() {
 
     cpu_lock_t.store(false);
 }
 
-void cpu_wait() {
+bool cpu_get_wait_state() {
     
-    while (cpu_lock_t.load()) {
-        std::this_thread::sleep_for(std::chrono::microseconds(1));
-    }
+	return cpu_lock_t.load();
 }
 
 void cpu_sync(uint8_t cycles) {
@@ -38,6 +37,10 @@ void cpu_sync(uint8_t cycles) {
 
 uint64_t cpu_get_cycles() {
     return clk_cycles.load();
+}
+
+void cpu_set_cycles(uint64_t cycles) {
+    clk_cycles.store(cycles);
 }
 
 void cpu_call_opcode_interceptor(uint16_t addr, clock_call_interceptor_handler handler) {

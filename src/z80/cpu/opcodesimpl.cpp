@@ -10,6 +10,7 @@ constexpr uint16_t PORT_FE = 0xFE;
 extern "C" void ula_read_port(uint16_t addr, uint8_t* value);
 extern "C" void ula_write_port_FE(uint16_t addr, uint8_t value);
 extern "C" void memory_paging_bank_switch(uint8_t value);
+extern "C" uint8_t* system_memory_get_pointer();
 
 extern "C" void  inst_IN_Impl(uint16_t addr, uint8_t* value) {
 	

@@ -15,11 +15,12 @@ extern "C" {
 	void cpu_z80_init(uint8_t* memPtr, uint16_t pc);
 	void cpu_z80_step();
 	void GetRegPC(uint64_t memPtr, uint16_t* value);
-	void cpu_lock();
-	void cpu_unlock();
-	void cpu_wait();
+	void cpu_set_wait_state(uint64_t cycles);
+	void cpu_unset_wait_state();
+	bool cpu_get_wait_state();
 	void cpu_sync(uint8_t cycles);
 	uint64_t cpu_get_cycles();
+	void cpu_set_cycles(uint64_t cycles);
 	void cpu_call_opcode_interceptor(uint16_t addr, clock_call_interceptor_handler handler);
 	void cpu_call_opcode_notify(uint16_t addr);
 	uint16_t cpu_get_pc(uint64_t base_addr);

@@ -1,7 +1,8 @@
 #include "display.h"
 #include "display_consts.h"
+#include "ula.h"
 #include "z80.h"
-#include "specy_rom.h"
+#include "system_memory.h"
 #include "video_render.h"
 #include "tempo.h"
 #include <mutex>
@@ -48,26 +49,24 @@ void display_draw(int y) {
 	int x;
 	uint32_t ink, paper, flash, bright;
 	uint8_t byte, attrib;
-	uint16_t frame_count = specy_rom_get_system_var_value_16(SPECY_48K_SYS_VAR_FRAMES);
+	uint16_t frame_count = system_memory_get_system_var_value_16(SPECY_48K_SYS_VAR_FRAMES);
 
 	int buffer_height = (kDisplayResolutionY - kDisplayBufferResolutionY) / 2;
 	int buffer_width = (kDisplayResolutionX - kDisplayBufferResolutionX) / 2;
-
+	static size_t state_index = 0;
 	// Fill top and bottom borders
-	if (y < buffer_height || y >= kDisplayBufferResolutionY + buffer_height) {
-		for (x = 0; x < kDisplayResolutionX; x++) {
+	if (y < kHighBorderSizeY || y >= kDisplayBufferResolutionY + kHighBorderSizeY) {
+		for (x = 0; x < kDisplayResolutionX; x++)
 			display_buffer[y * kDisplayResolutionX + x] = border_color.load();
-		}
 	}
-	else {
-
+	else {		
 		// left border
-		for (x = 0; x < buffer_width; x++) {
+		for (x = 0; x < buffer_width; x++)
 			display_buffer[y * kDisplayResolutionX + x] = border_color.load();
-		}
-
+		cpu_set_wait_state(DELAY_PATTERN_48k[state_index]);
+		state_index = (state_index + 1) % DELAY_PATTERN_48k_SIZE;
 		// center of the screen
-		int screen_y = y - buffer_height;
+		int screen_y = y - kHighBorderSizeY;
 		for (int byte_x = 0; byte_x < 32; byte_x++) {
 			int buffer_x = byte_x * 8 + (kDisplayResolutionX - kDisplayBufferResolutionX) / 2;
 
@@ -91,19 +90,23 @@ void display_draw(int y) {
 					(byte & (0x80 >> bit)) ? ink : paper;
 			}
 		}
-
+		cpu_unset_wait_state();
 		// right border
-		for (x = buffer_width + kDisplayBufferResolutionX; x < kDisplayResolutionX; x++) {
+		for (x = buffer_width + kDisplayBufferResolutionX; x < kDisplayResolutionX; x++)
 			display_buffer[y * kDisplayResolutionX + x] = border_color.load();
-		}
 	}	
 }
 
 void display_tick(uint64_t delta_cycles) {
 
+	static uint64_t cycle_in_frame = 0;
 	static int y = 0;
 	cycle_in_line += delta_cycles;
+	if (y == 0) {
+		ula_assert_INT_line();
+	}
 	if (cycle_in_line >= HSYNC_CYCLES) {
+		cycle_in_frame += HSYNC_CYCLES;
 		cycle_in_line -= HSYNC_CYCLES;
 		display_draw(y++);
 		if (y == kDisplayResolutionY) {
@@ -111,6 +114,7 @@ void display_tick(uint64_t delta_cycles) {
 				y = 0;
 				line_drawn_semaphore.release();
 			);
+			cycle_in_frame = 0;
 		}
 	}
 }

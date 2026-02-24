@@ -1,4 +1,4 @@
-#include "specy_rom.h"
+#include "system_memory.h"
 #include "z80.h"
 #include "ula.h"
 #include "memory_paging.h"
@@ -38,8 +38,9 @@ std::map<uint32_t, machine_info> machines = {
 };
 
 static uint8_t* system_rom_pointer = nullptr;
+static int32_t system_machine_id = UNKNOWN_SYSTEM;
 
-size_t specy_rom_load(uint8_t* mem, const char* base_path, const char* rom_name) {
+size_t system_memory_load_rom(uint8_t* mem, const char* base_path, const char* rom_name) {
 
 	std::filesystem::path rom_path(base_path);
 	rom_path = rom_path.append(rom_name);
@@ -59,68 +60,99 @@ size_t specy_rom_load(uint8_t* mem, const char* base_path, const char* rom_name)
 	return rom_size;
 }
 
-uint8_t* specy_rom_create_system_memory(uint32_t machine_id, const char* base_path) {
+uint8_t* system_memory_create_48k_rom(const char* base_path, machine_info& machine_info, size_t mem_size) {
+
+	uint8_t* mem = new uint8_t[mem_size];
+	if (mem == nullptr) {
+		perror("48k RAM memory error");
+		return nullptr;
+	}
+	memset(mem, 0, mem_size);
+	system_memory_load_rom(mem, base_path, machine_info.rom_name);
+	return mem;
+}
+
+uint8_t* system_memory_create_128k_rom(const char* base_path, machine_info& machine_info, size_t mem_size) {
+	uint8_t* mem = memory_paging_init();
+	if (mem == nullptr) {
+		perror("128k RAM memory error");
+		return nullptr;
+	}
+	if (!system_memory_load_rom(mem, base_path, machine_info.rom_name)) {
+		memory_paging_end();
+		perror("128k rom load error");
+		return nullptr;
+	}
+	uint8_t* rom_48k = system_memory_create_48k_rom(base_path, machine_info, mem_size);
+	size_t rom_size = system_memory_load_rom(rom_48k, base_path, SPECTRUM_48K_ROM_FILE);
+	if (!rom_size) {
+		return nullptr;
+	}
+	memory_paging_copy_mem_to_bank(rom_48k, BANK_ROM_1_INDEX, BANK_SIZE);
+	delete[] rom_48k;
+	return mem;
+}
+
+
+
+uint8_t* system_memory_create(uint32_t machine_id, const char* base_path) {
 
 	auto it = machines.find(machine_id);
 	machine_info& machine_info = it->second;
 	size_t mem_size = machine_info.rom_size + machine_info.ram_size;
-	uint8_t* mem = memory_paging_init();
-	if (mem == nullptr) {
-		perror("RAM memory error");
-		return nullptr;
-	}
-	specy_rom_load(mem, base_path, machine_info.rom_name);
-	if (machine_id == SPECTRUM_128K_SYSTEM) {
-
-		uint8_t* rom_48k = new uint8_t[ROM_48K_SIZE];
-		size_t rom_size = specy_rom_load(rom_48k, base_path, SPECTRUM_48K_ROM_FILE);
-		memory_paging_copy_mem_to_bank(rom_48k, BANK_ROM_1_INDEX, rom_size);
-		delete[] rom_48k;
-	}
+	uint8_t* mem = nullptr;
+	switch (machine_id) {
+	case SPECTRUM_128K_SYSTEM:
+		mem = system_memory_create_128k_rom(base_path, machine_info, mem_size);
+		break;
+	default:
+		mem = system_memory_create_48k_rom(base_path, machine_info, mem_size);
+		break;
+	}		
 	return mem;
 }
 
-void specy_rom_free_system_memory() {
+void system_memory_free() {
 	if (system_rom_pointer)
 		memory_paging_end();
 }
 
-void specy_rom_on_call_LD_EDGE_1() {
+void system_memory_on_rom_call_LD_EDGE_1() {
 	ula_on_load_edge_1();
 }
 
-int specy_rom_init(uint32_t machine_id, const char* base_path) {
-	system_rom_pointer = specy_rom_create_system_memory(machine_id, base_path);
+int system_memory_init(uint32_t machine_id, const char* base_path) {
+	system_rom_pointer = system_memory_create(machine_id, base_path);
 	if (!system_rom_pointer) {
 		perror("cannot load rom file");
 		return -1;
 	}
 	
-	cpu_call_opcode_interceptor(LD_EDGE_1, specy_rom_on_call_LD_EDGE_1);
+	cpu_call_opcode_interceptor(LD_EDGE_1, system_memory_on_rom_call_LD_EDGE_1);
 	return 0;
 }
 
-void specy_rom_end() {
+void system_memory_end() {
 
-	specy_rom_free_system_memory();
+	system_memory_free();
 	
 }
 
-uint8_t* specy_rom_get_pointer() {
+uint8_t* system_memory_get_pointer() {
 	return system_rom_pointer;
 }
 
-uint16_t specy_rom_get_system_var_value_16(uint16_t system_var_id) {
+uint16_t system_memory_get_system_var_value_16(uint16_t system_var_id) {
 
 	return *(uint16_t*)(system_rom_pointer + system_var_id);
 }
 
-uint8_t specy_rom_get_system_var_value_8(uint16_t system_var_id) {
+uint8_t system_memory_get_system_var_value_8(uint16_t system_var_id) {
 
 	return *(uint8_t*)(system_rom_pointer + system_var_id);
 }
 
-void specy_rom_set_system_var_value_8(uint16_t system_var_id, uint8_t value) {
+void system_memory_set_system_var_value_8(uint16_t system_var_id, uint8_t value) {
 
 	*(uint8_t*)(system_rom_pointer + system_var_id) = value;
 }

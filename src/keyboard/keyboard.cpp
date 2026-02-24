@@ -1,5 +1,5 @@
 #include "keyboard.h"
-#include "specy_rom.h"
+#include "system_memory.h"
 #include "sdl_keyboard.h"
 #include <vector>
 
@@ -129,7 +129,11 @@ std::map<int, KeyMappingExt> key_mapping_extra = {
     {HOST_KEY_LEFTBRACKET, {{{ZX_KEYCODE_Y, ZX_KEYCODE_RSHIFT}}, EDITOR_MODE_E}},
     {HOST_KEY_RIGHTBRACKET, {{{ZX_KEYCODE_U, ZX_KEYCODE_RSHIFT}}, EDITOR_MODE_E}},
     {HOST_KEY_SINGLE_QUOTE, {{{ZX_KEYCODE_P, ZX_KEYCODE_RSHIFT}}, EDITOR_MODE_ALL, true,  {{ZX_KEYCODE_P, ZX_KEYCODE_RSHIFT}}}},
-    {HOST_KEY_GRAVE, {{{ZX_KEYCODE_A, ZX_KEYCODE_RSHIFT}}, EDITOR_MODE_E}}
+    {HOST_KEY_GRAVE, {{{ZX_KEYCODE_A, ZX_KEYCODE_RSHIFT}}, EDITOR_MODE_E}},
+    {HOST_KEY_LEFT, {{{ZX_KEYCODE_5, ZX_KEYCODE_LSHIFT}}}},
+    {HOST_KEY_RIGHT, {{{ZX_KEYCODE_8, ZX_KEYCODE_LSHIFT}}}},
+    {HOST_KEY_UP, {{{ZX_KEYCODE_7, ZX_KEYCODE_LSHIFT}}}},
+    {HOST_KEY_DOWN, {{{ZX_KEYCODE_6, ZX_KEYCODE_LSHIFT}}}}
 };
 
 uint8_t keyboard_get_map_addr(uint8_t addr) {
@@ -154,7 +158,7 @@ void keyboard_tick(uint64_t delta_cycles) {
     }
     if (exit)
         return;
-	int editor_mode = specy_rom_get_system_var_value_8(SPECY_48K_SYS_VAR_MODE);
+	int editor_mode = system_memory_get_system_var_value_8(SPECY_48K_SYS_VAR_MODE);
     for (auto& [i, km] : key_mapping_extra) {
         if (keys[i] == true) {
             if (km.editor_mode != editor_mode && km.editor_mode == EDITOR_MODE_E) {

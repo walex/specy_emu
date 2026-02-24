@@ -26,10 +26,11 @@
 // https://gist.github.com/drhelius/8497817
 // https://github.com/redcode/Z80/blob/master/sources/Z80.c#L992
 // https://github.com/superzazu/z80/blob/master/z80.c#L256
+// https://skoolkit.ca/disassemblies/
 
 #include "z80.h"
 #include "ula.h"
-#include "specy_rom.h"
+#include "system_memory.h"
 #include "tape_audio.h"
 #include <filesystem>
 #include <thread>
@@ -75,11 +76,11 @@ int main(int argc, char* argv[]) {
 
 	auto roms_dir = get_executable_directory();
 	roms_dir = roms_dir.append("roms");
-	if (specy_rom_init(SPECTRUM_48K_SYSTEM, roms_dir.string().c_str())) {
+	if (system_memory_init(SPECTRUM_128K_SYSTEM, roms_dir.string().c_str())) {
 		perror("rom init failed");
 		return -1;
 	}
-	ula_init(specy_rom_get_pointer());
+	ula_init(system_memory_get_pointer());
 
 #ifndef Z80_TEST
 	if (argc > 1) {
@@ -91,14 +92,14 @@ int main(int argc, char* argv[]) {
 		printf("Starting Z80 CPU emulation...\n");
 	}
 #else
-	//tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\z80doc.tap");
-	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\working\\EXOLON.tap");
+	//tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\zexall.tap");
+	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\Renegade (1987)(Ocean Software).tap");
 #endif
 
-	cpu_z80_init(specy_rom_get_pointer(), 0);
+	cpu_z80_init(system_memory_get_pointer(), 0);
 	while (true)
 		cpu_z80_step();	
-	specy_rom_end();
+	system_memory_end();
 
 	return 0;
 }

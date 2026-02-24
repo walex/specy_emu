@@ -9,6 +9,7 @@ constexpr uint32_t BANK_FIXED_SCREEN_1_INDEX = 5;
 constexpr uint32_t BANK_FIXED_SCREEN_2_INDEX = 7;
 constexpr uint32_t BANK_FIXED_RAM_INDEX = 2;
 constexpr uint32_t BANK_RAM_INDEX = 3;
+constexpr size_t BANK_SIZE = 16 * 1024; // 16KB per RAM bank
 
 #ifdef __cplusplus
 extern "C" {

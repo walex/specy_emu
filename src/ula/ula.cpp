@@ -1,7 +1,7 @@
 #include "ula.h"
 #include "tape_audio.h"
 #include "z80.h"
-#include "specy_rom.h"
+#include "system_memory.h"
 #include "keyboard.h"
 #include "display.h"
 #include "audio.h"
@@ -55,12 +55,12 @@ void ula_on_cpu_cycles(uint64_t total_cycles) {
 	//force_tape_state(total_cycles);
 
 	int_cycles += delta_cycles;
-	if (int_cycles >= 69888)
+	if (int_cycles >= kULASyncCycles)
 	{
 		MEASURE_ELAPSED_TIME("int assert time:", 200,
-			int_cycles -= 69888;
+			int_cycles -= kULASyncCycles;
 			keyboard_tick(delta_cycles);
-			ula_assert_INT_line();
+			
 		);
 	}
 
@@ -126,5 +126,5 @@ void ula_write_port_FE(uint16_t addr, uint8_t value) {
 
 void ula_assert_INT_line() {
 
-	interrupts_request_mi();
+	interrupts_request_mi_c(0xFF);
 }

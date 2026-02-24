@@ -1,7 +1,7 @@
 #include "memory_paging.h"
 #define WINDOWS_PLATFORM
 #include "memory_paging_w32.h" 
-#include "specy_rom.h"
+#include "system_memory.h"
 #include <map>
 #include <vector>
 
@@ -12,7 +12,6 @@ constexpr uint8_t PAGING_LOCK_MASK = 0x20; // Bit 5 for paging lock
 constexpr uint8_t PAGING_UNUSED_MASK = 0xC0; // Bits 6-7 are unused
 
 constexpr size_t BANK_COUNT = 8; // Total number of memory banks (1 ROM + 7 RAM)
-constexpr size_t BANK_SIZE = 16 * 1024; // 16KB per RAM bank
 
 constexpr uint16_t BANK_ADDR_ROM = 0x0;
 constexpr uint16_t BANK_ADDR_FIXED_SCREEN = 0x4000;

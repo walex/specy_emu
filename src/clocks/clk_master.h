@@ -22,6 +22,6 @@ extern "C" {
 }
 #endif
 
-#define CPU_CLOCK_SYNC
+#define xCPU_CLOCK_SYNC
 
 #endif

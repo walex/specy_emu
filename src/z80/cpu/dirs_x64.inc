@@ -30,8 +30,8 @@ relative_addressing_mode PROC
 ; memPtr -> x_cx
 
 GET_REG_PC
-mov bx, ax
-FETCH8 bx
+add x_cx, x_ax
+FETCH8 x_cx
 movsx x_dx, al
 INC_REG_PC ; PC+1 
 ADD_REG_PC dx ;PC + e
@@ -45,8 +45,8 @@ extended_indirect_addressing_mode PROC
 ; memPtr -> x_cx
 
 GET_REG_PC
-mov bx,ax
-FETCH16 bx
+add x_cx,x_ax
+FETCH16 x_cx
 mov reg_di, x_ax
 ADD_REG_PC 2
 ret
@@ -63,8 +63,8 @@ mov reg_di,x_cx
 xor reg_si,reg_si
 mov si,dx
 GET_REG_PC
-mov bx, ax 
-FETCH8 bx
+add x_cx, x_ax
+FETCH8 x_cx
 movsx x_ax,al
 add si,ax
 add reg_di,reg_si

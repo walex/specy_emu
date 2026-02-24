@@ -2,11 +2,15 @@
 ;https://clrhome.org/table/
 .code
 
-ProcessNextOpcode MACRO JumpTable,addr16
-	FETCH8 addr16
+ProcessNextOpcode MACRO JumpTable
+	xor x_ax, x_ax
+	xor x_cx, x_cx
+	mov cx, RegPC
+	add x_cx, memPtr
+	FETCH8 x_cx
 	mov x_cx,OFFSET JumpTable   ; Load the base address of the jump table into RBP
 	mov x_bx,[x_cx + x_ax*PTR_SIZE]      ; Load the function address from the table
-	inc addr16
+	inc RegPC
 	jmp x_bx
 ENDM
 
@@ -14,6 +18,7 @@ ENDM
 
 BYTE_PTR TYPEDEF PTR BYTE
 memPtr BYTE_PTR 0
+memPtrAlt BYTE_PTR 0
 
 include x64_arch.inc
 include invoke.inc
@@ -32,6 +37,7 @@ cpu_z80_init PROC
 ; pc init value: PTR BYTE -> rdx
 
 mov memPtr,rcx
+mov memPtrAlt,rcx
 ADD_REG_PC dx
 invoke interrupts_set_im,0
 
@@ -63,7 +69,7 @@ AfterRegQ:
 	cmp HALT,1
 	jz Z80Halt
 	IncRegR
-	ProcessNextOpcode _TOp1B,RegPC
+	ProcessNextOpcode _TOp1B
 Op00:
    ; NOP cycles: 4
 	nop
@@ -199,7 +205,7 @@ Op17:
 	jmp Z80StepEnd
 Op18:
    ; JR D cycles: 12
-	invoke relative_addressing_mode
+	invoke relative_addressing_mode,memPtr
 	SET_WZ_FROM_REG_PC memPtr
 	invoke acumulate_opcode_cycles,12
 	jmp Z80StepEnd
@@ -937,127 +943,125 @@ Op9F:
 	jmp Z80StepEnd
 OpA0:
    ; AND B cycles: 4
-	invoke inst_AND,RegB
+	invoke inst_AND,OFFSET RegB
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpA1:
    ; AND C cycles: 4
-	invoke inst_AND,RegC
+	invoke inst_AND,OFFSET RegC
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpA2:
    ; AND D cycles: 4
-	invoke inst_AND,RegD
+	invoke inst_AND,OFFSET RegD
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpA3:
    ; AND E cycles: 4
-	invoke inst_AND,RegE
+	invoke inst_AND,OFFSET RegE
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpA4:
    ; AND H cycles: 4
-	invoke inst_AND,RegH
+	invoke inst_AND,OFFSET RegH
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpA5:
    ; AND L cycles: 4
-	invoke inst_AND,RegL
+	invoke inst_AND,OFFSET RegL
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpA6:
    ; AND (HL) cycles: 7
 	invoke register_indirect_addressing_mode,memPtr,RegHL
-	invoke inst_AND,BYTE PTR [reg_di]
+	invoke inst_AND,reg_di
 	invoke acumulate_opcode_cycles,7
 	jmp Z80StepEnd
 OpA7:
    ; AND A cycles: 4
-	invoke inst_AND,RegA
+	invoke inst_AND,OFFSET RegA
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpA8:
    ; XOR B cycles: 4
-	invoke inst_XOR,RegB
+	invoke inst_XOR,OFFSET RegB
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpA9:
    ; XOR C cycles: 4
-	invoke inst_XOR,RegC
+	invoke inst_XOR,OFFSET RegC
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpAA:
    ; XOR D cycles: 4
-	invoke inst_XOR,RegD
+	invoke inst_XOR,OFFSET RegD
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpAB:
    ; XOR E cycles: 4
-	invoke inst_XOR,RegE
+	invoke inst_XOR,OFFSET RegE
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpAC:
    ; XOR H cycles: 4
-	invoke inst_XOR,RegH
+	invoke inst_XOR,OFFSET RegH
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpAD:
    ; XOR L cycles: 4
-	invoke inst_XOR,RegL
+	invoke inst_XOR,OFFSET RegL
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpAE:
    ; XOR (HL) cycles: 7
 	invoke register_indirect_addressing_mode,memPtr,RegHL
-	mov al,[reg_di]
-	invoke inst_XOR,al
+	invoke inst_XOR,reg_di
 	invoke acumulate_opcode_cycles,7
 	jmp Z80StepEnd
 OpAF:
    ; XOR A cycles: 4
-	invoke inst_XOR,RegA
+	invoke inst_XOR,OFFSET RegA
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpB0:
    ; OR B cycles: 4
-	invoke inst_OR,RegB
+	invoke inst_OR,OFFSET RegB
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpB1:
    ; OR C cycles: 4
-	invoke inst_OR,RegC
+	invoke inst_OR,OFFSET RegC
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpB2:
    ; OR D cycles: 4
-	invoke inst_OR,RegD
+	invoke inst_OR,OFFSET RegD
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpB3:
    ; OR E cycles: 4
-	invoke inst_OR,RegE
+	invoke inst_OR,OFFSET RegE
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpB4:
    ; OR H cycles: 4
-	invoke inst_OR,RegH
+	invoke inst_OR,OFFSET RegH
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpB5:
    ; OR L cycles: 4
-	invoke inst_OR,RegL
+	invoke inst_OR,OFFSET RegL
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpB6:
    ; OR (HL) cycles: 7
 	invoke register_indirect_addressing_mode,memPtr,RegHL
-	mov al,[reg_di]
-	invoke inst_OR,al
+	invoke inst_OR,reg_di
 	invoke acumulate_opcode_cycles,7
 	jmp Z80StepEnd
 OpB7:
    ; OR A cycles: 4
-	invoke inst_OR,RegA
+	invoke inst_OR,OFFSET RegA
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpB8:
@@ -1126,7 +1130,7 @@ OpC2:
 OpC3:
    ; JP NN cycles: 10
 	invoke immediate_addressing_mode_ext,memPtr
-	invoke inst_JP,memPtr,WORD PTR[reg_di]
+	invoke inst_JP,reg_di
 	invoke acumulate_opcode_cycles,10
 	jmp Z80StepEnd
 OpC4:
@@ -1176,7 +1180,7 @@ OpCA:
 	jmp Z80StepEnd
 OpCB:
 	IncRegR
-	ProcessNextOpcode _TOpCB,RegPC
+	ProcessNextOpcode _TOpCB
 OpCC:
    ; CALL Z,NN cycles: 17/10
 	test RegF,40h
@@ -1187,7 +1191,7 @@ OpCC:
 OpCD:
    ; CALL NN cycles: 17
 	invoke immediate_addressing_mode_ext,memPtr
-	invoke inst_CALL,memPtr,WORD PTR[reg_di]
+	invoke inst_CALL,memPtr,reg_di
 	invoke acumulate_opcode_cycles,17
 	jmp Z80StepEnd
 OpCE:
@@ -1303,7 +1307,7 @@ OpDC:
 	jmp Z80StepEnd
 OpDD:
 	IncRegR
-	ProcessNextOpcode _TOpDD,RegPC
+	ProcessNextOpcode _TOpDD
 OpDE:
    ; SBC A,N cycles: 7
 	invoke immediate_addressing_mode,memPtr
@@ -1340,7 +1344,7 @@ OpE2:
 OpE3:
    ; EX (SP),HL cycles: 19
 	invoke register_indirect_addressing_mode,memPtr,RegSP
-	invoke inst_EX16,OFFSET RegHL,reg_di
+	invoke inst_EX,OFFSET RegHL,reg_di
 	SET_WZ_FROM_VALUE_16 di
 	invoke acumulate_opcode_cycles,19
 	jmp Z80StepEnd
@@ -1359,7 +1363,7 @@ OpE5:
 OpE6:
    ; AND N cycles: 7
 	invoke immediate_addressing_mode,memPtr
-	invoke inst_AND,BYTE PTR [reg_di]
+	invoke inst_AND,reg_di
 	invoke acumulate_opcode_cycles,7
 	jmp Z80StepEnd
 OpE7:
@@ -1379,7 +1383,7 @@ OpE8:
 	jmp Z80StepEnd
 OpE9:
    ; JP (HL) cycles: 4
-	invoke inst_JP,memPtr,RegHL
+	invoke inst_JP,OFFSET RegHL
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 OpEA:
@@ -1403,7 +1407,7 @@ OpEC:
 	jmp Z80StepEnd
 OpED:
 	IncRegR
-	ProcessNextOpcode _TOpED,RegPC
+	ProcessNextOpcode _TOpED
 OpED00:
    ; IN0 B,(N) cycles: 12
 	invoke immediate_addressing_mode,memPtr
@@ -1901,7 +1905,7 @@ OpEDBB:
 OpEE:
    ; XOR N cycles: 7
 	invoke immediate_addressing_mode,memPtr
-	invoke inst_XOR,BYTE PTR [reg_di]
+	invoke inst_XOR,reg_di
 	invoke acumulate_opcode_cycles,7
 	jmp Z80StepEnd
 OpEF:
@@ -1951,7 +1955,7 @@ OpF5:
 OpF6:
    ; OR N cycles: 7
 	invoke immediate_addressing_mode,memPtr
-	invoke inst_OR,BYTE PTR [reg_di]
+	invoke inst_OR,reg_di
 	invoke acumulate_opcode_cycles,7
 	jmp Z80StepEnd
 OpF7:
@@ -1995,7 +1999,7 @@ OpFC:
 	jmp Z80StepEnd
 OpFD:
 	IncRegR
-	ProcessNextOpcode _TOpFD,RegPC
+	ProcessNextOpcode _TOpFD
 OpFE:
    ; CP N cycles: 7
 	invoke immediate_addressing_mode,memPtr
@@ -3840,18 +3844,18 @@ OpDDA3:
 	jmp OpA3
 OpDDA4:
    ; AND IXH cycles: 8
-	invoke inst_AND,RegIXH
+	invoke inst_AND,OFFSET RegIXH
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpDDA5:
    ; AND IXL cycles: 8
-	invoke inst_AND,RegIXL
+	invoke inst_AND,OFFSET RegIXL
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpDDA6:
    ; AND (IX+D) cycles: 19
 	invoke indexed_addressing_mode,memPtr,RegIX
-	invoke inst_AND,BYTE PTR [reg_di]
+	invoke inst_AND,reg_di
 	SET_WZ_FROM_VALUE_16 reg_tmp16
 	invoke acumulate_opcode_cycles,19
 	jmp Z80StepEnd
@@ -3867,18 +3871,18 @@ OpDDAB:
 	jmp OpAB
 OpDDAC:
    ; XOR IXH cycles: 8
-	invoke inst_XOR,RegIXH
+	invoke inst_XOR,OFFSET RegIXH
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpDDAD:
    ; XOR IXL cycles: 8
-	invoke inst_XOR,RegIXL
+	invoke inst_XOR,OFFSET RegIXL
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpDDAE:
    ; XOR (IX+D) cycles: 19
 	invoke indexed_addressing_mode,memPtr,RegIX
-	invoke inst_XOR,BYTE PTR [reg_di]
+	invoke inst_XOR,reg_di
 	SET_WZ_FROM_VALUE_16 reg_tmp16
 	invoke acumulate_opcode_cycles,19
 	jmp Z80StepEnd
@@ -3894,18 +3898,18 @@ OpDDB3:
 	jmp OpB3
 OpDDB4:
    ; OR IXH cycles: 8
-	invoke inst_OR,RegIXH
+	invoke inst_OR,OFFSET RegIXH
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpDDB5:
    ; OR IXL cycles: 8
-	invoke inst_OR,RegIXL
+	invoke inst_OR,OFFSET RegIXL
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpDDB6:
    ; OR (IX+D) cycles: 19
 	invoke indexed_addressing_mode,memPtr,RegIX
-	invoke inst_OR,BYTE PTR [reg_di]
+	invoke inst_OR,reg_di
 	SET_WZ_FROM_VALUE_16 reg_tmp16
 	invoke acumulate_opcode_cycles,19
 	jmp Z80StepEnd
@@ -3941,7 +3945,7 @@ OpDDBF:
 OpDDCB:
 	invoke indexed_addressing_mode,memPtr,RegIX
 	SET_WZ_FROM_VALUE_16 reg_tmp16
-	ProcessNextOpcode _TOpDDCB,RegPC
+	ProcessNextOpcode _TOpDDCB
 OpDDCB00:
    ; RLC (IX+D),B cycles: 23
 	invoke inst_RLC,reg_di
@@ -5246,7 +5250,7 @@ OpDDE5:
 	jmp Z80StepEnd
 OpDDE9:
    ; JP (IX) cycles: 8
-	invoke inst_JP,memPtr,RegIX
+	invoke inst_JP,OFFSET RegIX
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpDDF9:
@@ -5777,18 +5781,18 @@ OpFDA3:
 	jmp	OpA3
 OpFDA4:
    ; AND IYH cycles: 8
-	invoke inst_AND,RegIYH
+	invoke inst_AND,OFFSET RegIYH
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpFDA5:
    ; AND IYL cycles: 8
-	invoke inst_AND,RegIYL
+	invoke inst_AND,OFFSET RegIYL
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpFDA6:
    ; AND (IY+D) cycles: 19
 	invoke indexed_addressing_mode,memPtr,RegIY
-	invoke inst_AND,BYTE PTR [reg_di]
+	invoke inst_AND,reg_di
 	SET_WZ_FROM_VALUE_16 reg_tmp16
 	invoke acumulate_opcode_cycles,19
 	jmp Z80StepEnd
@@ -5804,18 +5808,18 @@ OpFDAB:
 	jmp	OpAB
 OpFDAC:
    ; XOR IYH cycles: 8
-	invoke inst_XOR,RegIYH
+	invoke inst_XOR,OFFSET RegIYH
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpFDAD:
    ; XOR IYL cycles: 8
-	invoke inst_XOR,RegIYL
+	invoke inst_XOR,OFFSET RegIYL
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpFDAE:
    ; XOR (IY+D) cycles: 19
 	invoke indexed_addressing_mode,memPtr,RegIY
-	invoke inst_XOR,BYTE PTR [reg_di]
+	invoke inst_XOR,reg_di
 	SET_WZ_FROM_VALUE_16 reg_tmp16
 	invoke acumulate_opcode_cycles,19
 	jmp Z80StepEnd
@@ -5831,18 +5835,18 @@ OpFDB3:
 	jmp	OpB3
 OpFDB4:
    ; OR IYH cycles: 8
-	invoke inst_OR,RegIYH
+	invoke inst_OR,OFFSET RegIYH
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpFDB5:
    ; OR IYL cycles: 8
-	invoke inst_OR,RegIYL
+	invoke inst_OR,OFFSET RegIYL
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpFDB6:
    ; OR (IY+D) cycles: 19
 	invoke indexed_addressing_mode,memPtr,RegIY
-	invoke inst_OR,BYTE PTR [reg_di]
+	invoke inst_OR,reg_di
 	SET_WZ_FROM_VALUE_16 reg_tmp16
 	invoke acumulate_opcode_cycles,19
 	jmp Z80StepEnd
@@ -5878,7 +5882,7 @@ OpFDBF:
 OpFDCB:
 	invoke indexed_addressing_mode,memPtr,RegIY
 	SET_WZ_FROM_VALUE_16 reg_tmp16
-	ProcessNextOpcode _TOpFDCB,RegPC
+	ProcessNextOpcode _TOpFDCB
 OpFDCB00:
    ; RLC (IY+D),B cycles: 23
 	invoke inst_RLC,reg_di
@@ -7183,7 +7187,7 @@ OpFDE5:
 	jmp Z80StepEnd
 OpFDE9:
    ; JP (IY) cycles: 8
-	invoke inst_JP,memPtr,RegIY
+	invoke inst_JP,OFFSET RegIY
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpFDF9:

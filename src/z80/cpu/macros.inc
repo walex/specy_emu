@@ -1,3 +1,5 @@
+.data
+EXTERNDEF check_contained_memory_c:PROC
 
 .code
 
@@ -509,34 +511,20 @@ xor x_ax, x_ax
 mov ax, RegPC
 ENDM
 
-STORE8 MACRO addr16, value8
-xor x_cx, x_cx
-mov cx, addr16
-add x_cx, memPtr
-mov BYTE PTR [x_cx], value8
+STORE8 MACRO addr64, value8
+mov BYTE PTR [addr64], value8
 ENDM
 
-STORE16 MACRO addr16, value16
-xor x_cx, x_cx
-mov cx, addr16
-add x_cx, memPtr
-mov WORD PTR [x_cx], value16
+STORE16 MACRO addr64, value16
+mov WORD PTR [addr64], value16
 ENDM
 
-FETCH8 MACRO addr16
-xor x_ax, x_ax
-xor x_cx, x_cx
-mov cx, addr16
-add x_cx, memPtr
-mov al, BYTE PTR[x_cx]
+FETCH8 MACRO addr64
+mov al, BYTE PTR [addr64]
 ENDM
 
-FETCH16 MACRO addr16
-xor x_ax, x_ax
-xor x_cx, x_cx
-mov cx, addr16
-add x_cx, memPtr
-mov ax, WORD PTR [x_cx]
+FETCH16 MACRO addr64
+mov ax, WORD PTR [addr64]
 ENDM
 
 GET_REG_PC_MEM_PTR MACRO
