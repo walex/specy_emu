@@ -31,7 +31,9 @@
 #include "z80.h"
 #include "ula.h"
 #include "system_memory.h"
+#include "memory_paging.h"
 #include "tape_audio.h"
+#include "sna_loader.h"
 #include <filesystem>
 #include <thread>
 
@@ -93,10 +95,27 @@ int main(int argc, char* argv[]) {
 	}
 #else
 	//tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\zexall.tap");
-	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\Renegade (1987)(Ocean Software).tap");
+	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\working\\EXOLON.TAP");
+	//sna_load_48k("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\automania.sna", system_memory_get_pointer(0x4000));
+	
 #endif
 
-	cpu_z80_init(system_memory_get_pointer(), 0);
+	std::thread th([&]() {
+		const size_t mem_size = 16 * 1024;
+		std::this_thread::sleep_for(std::chrono::seconds(5));
+		uint8_t* mem = new uint8_t[BANK_SIZE];
+		if (mem == nullptr) {
+			perror("48k RAM memory error");
+			return nullptr;
+		}
+		memset(mem, 0, mem_size);
+		system_memory_load_rom(mem, roms_dir.string().c_str(), "TK95.Spanish.rom");
+		memory_paging_copy_mem_to_bank(mem, BANK_ROM_1_INDEX, BANK_SIZE);
+		delete[] mem;
+		});
+
+	uint8_t force_retn = 0;
+	cpu_z80_init(system_memory_get_pointer(), force_retn);
 	while (true)
 		cpu_z80_step();	
 	system_memory_end();

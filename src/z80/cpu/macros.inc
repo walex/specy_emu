@@ -4,25 +4,25 @@ EXTERNDEF check_contained_memory_c:PROC
 .code
 
 CopyMemToMem8 MACRO org, dest
-	mov al, [org]
-	mov [dest], al
+	mov x_a8l, [org]
+	mov [dest], x_a8l
 ENDM
 
 CopyMemToMem16 MACRO org, dest
-	mov ax, WORD PTR [org]
-	mov [dest], ax
+	mov x_a16, WORD PTR [org]
+	mov [dest], x_a16
 ENDM
 
 IncRegR MACRO 
 
 ;  z->r = (z->r & 0x80) | ((z->r + 1) & 0x7f);
-mov al, RegR
-mov ah, RegR
-and al, 080h
-inc ah
-and ah, 07Fh
-or al, ah
-mov RegR, al
+mov x_a8l, RegR
+mov x_a8h, RegR
+and x_a8l, 080h
+inc x_a8h
+and x_a8h, 07Fh
+or x_a8l, x_a8h
+mov RegR, x_a8l
 
 ENDM
 
@@ -37,10 +37,10 @@ GetBitMask MACRO dest, args:VARARG
 		mov x_ax, 1		
 		shl x_ax, a
 		; OF --> PVF
-		and ah, 08h
-		shr ah, 1
-		or al, ah
-		xor ah, ah
+		and x_a8h, 08h
+		shr x_a8h, 1
+		or x_a8l, x_a8h
+		xor x_a8h, x_a8h
 		or reg_tmp, x_ax
 	ENDM
 	pop x_ax
@@ -59,7 +59,7 @@ ResetFlagBits MACRO args:VARARG
 
 push x_cx
 GetBitMaskNeg x_cx, args
-and RegF, cl
+and RegF, x_c8l
 pop x_cx
 
 ENDM
@@ -68,7 +68,7 @@ SetFlagBits MACRO args:VARARG
 
 push x_cx
 GetBitMask x_cx, args
-or RegF, cl
+or RegF, x_c8l
 pop x_cx
 
 ENDM
@@ -82,23 +82,23 @@ X86FlagsToZ80Flags MACRO args:VARARG
 	push x_ax
 	pushf
 	ResetFlagBits args
-	pop ax	
-	xor bx, bx
+	pop x_a16	
+	xor x_b16, x_b16
 	FOR a, <args>		
 		IF a EQ OF
-			mov bl, 1
-			shl bl, PVF
-			not bl
-			and al, bl
-			mov bx, ax
-			and bx, 0800h
-			shr bx, OF_SLICE
-			or RegF, bl
+			mov x_b8l, 1
+			shl x_b8l, PVF
+			not x_b8l
+			and x_a8l, x_b8l
+			mov x_b16, x_a16
+			and x_b16, 0800h
+			shr x_b16, OF_SLICE
+			or RegF, x_b8l
 		ENDIF	
 	ENDM
 	GetBitMask x_bx, args
-	and al, bl
-	or RegF, al
+	and x_a8l, x_b8l
+	or RegF, x_a8l
 	pop x_ax
 	pop x_bx
 
@@ -108,13 +108,13 @@ SetPVFromBC MACRO
 
 push x_ax
 ResetFlagBits PVF
-mov ax, RegBC
-test ax, ax
+mov x_a16, RegBC
+test x_a16, x_a16
 lahf
-and ah, 040h
-xor ah, 040h
-shr ah, ZF-PVF
-or RegF, ah
+and x_a8h, 040h
+xor x_a8h, 040h
+shr x_a8h, ZF-PVF
+or RegF, x_a8h
 pop x_ax
 
 ENDM
@@ -122,8 +122,8 @@ ENDM
 SetIOFlags MACRO value
 
 push x_ax
-mov al, value
-test al, al
+mov x_a8l, value
+test x_a8l, x_a8l
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
 pop x_ax
@@ -136,11 +136,11 @@ push x_ax
 push x_bx
 GetBitMaskNeg x_bx, CF
 lahf
-and ah, bl
-not bl
-mov bh, RegF
-and bh, bl
-or ah, bh
+and x_a8h, x_b8l
+not x_b8l
+mov x_b8h, RegF
+and x_b8h, x_b8l
+or x_a8h, x_b8h
 sahf
 pop x_bx
 pop x_ax
@@ -151,9 +151,9 @@ TestZ80Flag MACRO flag
 
 push x_cx
 GetBitMask x_cx, flag
-mov ch, RegF
-and ch, cl
-test ch, ch
+mov x_c8h, RegF
+and x_c8h, x_c8l
+test x_c8h, x_c8h
 pop x_cx
 
 ENDM
@@ -164,22 +164,22 @@ Z80HFCarryFromBit11 MACRO memptr16_a, memptr16_b, usecf
 ; (((a & 0xFFF) + (b & 0xFFF)) & 0x1000) == 0x1000
 
 ResetFlagBits HF
-mov ax, WORD PTR [memptr16_a]
-mov bx, WORD PTR [memptr16_b]
-and ax, 0FFFh
-and bx, 0FFFh
+mov x_a16, WORD PTR [memptr16_a]
+mov x_b16, WORD PTR [memptr16_b]
+and x_a16, 0FFFh
+and x_b16, 0FFFh
 IF usecf EQ 1
-push dx
-xor dx, dx
-mov dl, RegF
-and dl, 1
-add ax, dx
-pop dx
+push x_d16
+xor x_d16, x_d16
+mov x_d8l, RegF
+and x_d8l, 1
+add x_a16, x_d16
+pop x_d16
 ENDIF
-add bx, ax
-and bx, 01000h
-shr bx, 8
-or RegF, bl
+add x_b16, x_a16
+and x_b16, 01000h
+shr x_b16, 8
+or RegF, x_b8l
 
 ENDM
 
@@ -187,22 +187,22 @@ Z80HFBorrowFromBit12 MACRO memptr16_a, memptr16_b, usecf
 
 ; ((a & 0xFFF) - (b & 0xFFF)) & 0x1000) == 0x1000
 ResetFlagBits HF
-mov ax, WORD PTR [memptr16_a]
-mov bx, WORD PTR [memptr16_b]
-and ax, 0FFFh
-and bx, 0FFFh
+mov x_a16, WORD PTR [memptr16_a]
+mov x_b16, WORD PTR [memptr16_b]
+and x_a16, 0FFFh
+and x_b16, 0FFFh
 IF usecf EQ 1
-push dx
-xor dx, dx
-mov dl, RegF
-and dl, 1
-add ax, dx
-pop dx
+push x_d16
+xor x_d16, x_d16
+mov x_d8l, RegF
+and x_d8l, 1
+add x_a16, x_d16
+pop x_d16
 ENDIF
-sub bx, ax
-and bx, 01000h
-shr bx, 8
-or RegF, bl
+sub x_b16, x_a16
+and x_b16, 01000h
+shr x_b16, 8
+or RegF, x_b8l
 
 ENDM
 
@@ -214,44 +214,44 @@ push x_bx
 ResetFlagBits HF, PVF, NF, CF
 
 ; SF, ZF flags Affected by decreasing register B
-mov al, RegB
-test al, al
+mov x_a8l, RegB
+test x_a8l, x_a8l
 X86FlagsToZ80Flags SF, ZF
 
 ;The N flag is a copy of bit 7 of the last value read from/written too the I/O port
-mov al, [reg8ptr]
-and al, 080h
-shr al, SF-NF
-or RegF, al
+mov x_a8l, [reg8ptr]
+and x_a8l, 080h
+shr x_a8l, SF-NF
+or RegF, x_a8l
 
 ; HF and CF Both set if ((HL) + L > 255)
 xor x_ax, x_ax
 xor x_bx, x_bx
-mov al, [reg8ptr]
-mov bl, RegL
-add ax, bx
-and ax, 0FF00h
-test ah, ah
+mov x_a8l, [reg8ptr]
+mov x_b8l, RegL
+add x_a16, x_b16
+and x_a16, 0FF00h
+test x_a8h, x_a8h
 lahf
-and ah, 040h
-xor ah, 040h
-shr ah, ZF-CF
-or RegF, ah
-shl ah, HF-CF
-or RegF, ah
+and x_a8h, 040h
+xor x_a8h, 040h
+shr x_a8h, ZF-CF
+or RegF, x_a8h
+shl x_a8h, HF-CF
+or RegF, x_a8h
 
 ;PF The parity of ((((HL) + L) & 7) xor B)
 xor x_ax, x_ax
 xor x_bx, x_bx
-mov al, [reg8ptr]
-mov bl, RegL
-add ax, bx
-and ax, 07h
-mov bl, RegB
-xor ax, bx
+mov x_a8l, [reg8ptr]
+mov x_b8l, RegL
+add x_a16, x_b16
+and x_a16, 07h
+mov x_b8l, RegB
+xor x_a16, x_b16
 lahf
-and ah, 04h
-or RegF, ah
+and x_a8h, 04h
+or RegF, x_a8h
 
 pop x_bx
 pop x_ax
@@ -266,45 +266,45 @@ push x_bx
 ResetFlagBits HF, PVF, NF, CF
 
 ; SF, ZF flags Affected by decreasing register B
-mov al, RegB
-test al, al
+mov x_a8l, RegB
+test x_a8l, x_a8l
 X86FlagsToZ80Flags SF, ZF
 
 ;The N flag is a copy of bit 7 of the last value read from/written too the I/O port
-mov al, [reg8ptr]
-and al, 080h
-shr al, SF-NF
-or RegF, al
+mov x_a8l, [reg8ptr]
+and x_a8l, 080h
+shr x_a8l, SF-NF
+or RegF, x_a8l
 
 ;HF and CF Both set if ((HL) + ((C +/- 1) & 255) > 255)
 xor x_ax, x_ax
 xor x_bx, x_bx
-mov al, [reg8ptr]
-mov bl, RegC
-add bl, incdec
-add ax, bx
-and ax, 0FFh
-and ax, 0FF00h
-test ah, ah
+mov x_a8l, [reg8ptr]
+mov x_b8l, RegC
+add x_b8l, incdec
+add x_a16, x_b16
+and x_a16, 0FFh
+and x_a16, 0FF00h
+test x_a8h, x_a8h
 lahf
-and ah, 040h
-xor ah, 040h
-shr ah, ZF-CF
-or RegF, ah
-shl ah, HF-CF
-or RegF, ah
+and x_a8h, 040h
+xor x_a8h, 040h
+shr x_a8h, ZF-CF
+or RegF, x_a8h
+shl x_a8h, HF-CF
+or RegF, x_a8h
 
 ;PF The parity of (((HL) + ((C +/- 1) & 255)) & 7) xor B)
 xor x_ax, x_ax
-mov al, [reg8ptr]
-add al, RegC
-add al, incdec
-and al, 0FFh
-and al, 07h
-xor al, RegB
+mov x_a8l, [reg8ptr]
+add x_a8l, RegC
+add x_a8l, incdec
+and x_a8l, 0FFh
+and x_a8l, 07h
+xor x_a8l, RegB
 lahf
-and ah, 04h
-or RegF, ah
+and x_a8h, 04h
+or RegF, x_a8h
 
 pop x_bx
 pop x_ax
@@ -326,24 +326,24 @@ SetYFXFByRegAQ MACRO
 ; XF = A.3 | (XFi ^ XQi)
 
 ResetFlagBits YF, XF
-mov al, RegA
-mov bl, RegF
-mov cl, RegQ
-xor bl, cl
-or al, bl
-and al, 028h
-or RegF, al
+mov x_a8l, RegA
+mov x_b8l, RegF
+mov x_c8l, RegQ
+xor x_b8l, x_c8l
+or x_a8l, x_b8l
+and x_a8l, 028h
+or RegF, x_a8l
 
 ENDM
 
 SetXFYFFromReg8 MACRO reg8
 	
    ResetFlagBits XF, YF
-	push ax
-	mov al, reg8
-	and al, 28h
-	or RegF, al
-	pop ax
+	push x_a16
+	mov x_a8l, reg8
+	and x_a8l, 28h
+	or RegF, x_a8l
+	pop x_a16
 
 ENDM
 
@@ -356,17 +356,17 @@ SetXFYFForLDxR MACRO val8
 ResetFlagBits YF, XF
 push x_cx
 push x_ax
-mov al, val8
-add al, RegA
-push ax
+mov x_a8l, val8
+add x_a8l, RegA
+push x_a16
 GetBitMask x_cx, 01h
-and al, cl
-shl al, YF - 01h
-or RegF, al
-pop ax
+and x_a8l, x_c8l
+shl x_a8l, YF - 01h
+or RegF, x_a8l
+pop x_a16
 GetBitMask x_cx, XF
-and al, cl
-or RegF, al
+and x_a8l, x_c8l
+or RegF, x_a8l
 pop x_ax
 pop x_cx
 
@@ -375,24 +375,24 @@ ENDM
 SetXFYFForCPIx MACRO reg8
 
 push x_ax
-mov al, RegA ; Take the value of register A
-sub al, reg8  ;  subtract the value of (HL)
+mov x_a8l, RegA ; Take the value of register A
+sub x_a8l, reg8  ;  subtract the value of (HL)
 ; subtract the value of HF flag
 GetBitMask x_cx, HF ; get flag index
-mov ah, RegF ; copy flags register to ah
-and ah, cl   ; extract H flag
-shr ah, HF ; mov flag to bit 0
-sub al, ah ; substract H flag from value
+mov x_a8h, RegF ; copy flags register to x_a8h
+and x_a8h, x_c8l   ; extract H flag
+shr x_a8h, HF ; mov flag to bit 0
+sub x_a8l, x_a8h ; substract H flag from value
 ResetFlagBits YF, XF ; reset undoc flags
 GetBitMask x_cx, 01h
-push ax
-and al, cl ; get bit 1 from value
-shl al, YF - 01h ; move to YF position
-or RegF, al ; copy to flags register
-pop ax
+push x_a16
+and x_a8l, x_c8l ; get bit 1 from value
+shl x_a8l, YF - 01h ; move to YF position
+or RegF, x_a8l ; copy to flags register
+pop x_a16
 GetBitMask x_cx, 03h 
-and al, cl ; get bit 3 value
-or RegF, al ;copy to flags register
+and x_a8l, x_c8l ; get bit 3 value
+or RegF, x_a8l ;copy to flags register
 pop x_ax
 
 ENDM
@@ -450,13 +450,13 @@ SET_WZ_FROM_REG8_AND_VALUE16 MACRO reg8, v16
 
 ; wz = (reg8 << 8) | ((v16 + 1) & 0xFF);
 push x_ax
-xor ax, ax
-mov ah, reg8
-mov bx, v16
-inc bx
-and bx, 0FFh
-or ax, bx
-SET_WZ_FROM_VALUE_16 ax
+xor x_a16, x_a16
+mov x_a8h, reg8
+mov x_b16, v16
+inc x_b16
+and x_b16, 0FFh
+or x_a16, x_b16
+SET_WZ_FROM_VALUE_16 x_a16
 pop x_ax
 
 ENDM
@@ -465,14 +465,14 @@ SET_WZ_FROM_REG8_AND_VALUE8 MACRO reg8, v8
 
 ; wz = (reg8 << 8) | ((v8 + 1) & 0xFF);
 push x_ax
-xor ax, ax
-xor bx, bx
-mov ah, reg8
-mov bl, v8
-inc bx
-and bx, 0FFh
-or ax, bx
-SET_WZ_FROM_VALUE_16 ax
+xor x_a16, x_a16
+xor x_b16, x_b16
+mov x_a8h, reg8
+mov x_b8l, v8
+inc x_b16
+and x_b16, 0FFh
+or x_a16, x_b16
+SET_WZ_FROM_VALUE_16 x_a16
 pop x_ax
 
 ENDM
@@ -498,17 +498,17 @@ SET_WZ_FROM_PORT_AND_VALUE8 MACRO port, v8
 ; wz = (port + 1) | (z->a << 8);
 
 push x_ax
-mov al, port
-inc al
-mov ah, v8
-SET_WZ_FROM_VALUE_16 ax
+mov x_a8l, port
+inc x_a8l
+mov x_a8h, v8
+SET_WZ_FROM_VALUE_16 x_a16
 pop x_ax
 
 ENDM
 
 GET_REG_PC MACRO
 xor x_ax, x_ax
-mov ax, RegPC
+mov x_a16, RegPC
 ENDM
 
 STORE8 MACRO addr64, value8
@@ -520,11 +520,11 @@ mov WORD PTR [addr64], value16
 ENDM
 
 FETCH8 MACRO addr64
-mov al, BYTE PTR [addr64]
+mov x_a8l, BYTE PTR [addr64]
 ENDM
 
 FETCH16 MACRO addr64
-mov ax, WORD PTR [addr64]
+mov x_a16, WORD PTR [addr64]
 ENDM
 
 GET_REG_PC_MEM_PTR MACRO
@@ -550,4 +550,16 @@ ENDM
 
 SET_REG_PC MACRO value16
 mov RegPC, value16
+ENDM
+
+ProcessNextOpcode MACRO JumpTable
+	xor x_ax, x_ax
+	xor x_cx, x_cx
+	mov x_c16, RegPC
+	add x_cx, memPtr
+	FETCH8 x_cx
+	mov x_cx,OFFSET JumpTable   ; Load the base address of the jump table into RBP
+	mov x_bx,[x_cx + x_ax*PTR_SIZE]      ; Load the function address from the table
+	inc RegPC
+	jmp x_bx
 ENDM

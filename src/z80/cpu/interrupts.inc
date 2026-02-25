@@ -46,16 +46,16 @@ interrupts_disable ENDP
 
 interrupts_restore PROC
 
-	mov al, IFF2
-	mov IFF1, al
+	mov x_a8l, IFF2
+	mov IFF1, x_a8l
 	ret
 
 interrupts_restore ENDP
 
 interrupts_execute_mi_0 PROC
 
-;lea rcx, data_bus_8 ; what happens with a multibly instruction ?
-;ProcessNextOpcode _TOp1B, rcx
+;lea x_cx, data_bus_8 ; what happens with a multibly instruction ?
+;ProcessNextOpcode _TOp1B, x_cx
 ret
 
 interrupts_execute_mi_0 ENDP
@@ -82,8 +82,8 @@ invoke inst_PUSH,x_cx,RegPC
 
 ; addr = (I << 8) | vector
 xor x_ax, x_ax
-mov ah, RegI
-mov al, data_bus_8
+mov x_a8h, RegI
+mov x_a8l, data_bus_8
 
 ;[memptr] = LOW
 ;[memptr+1] = HIGH
@@ -91,7 +91,7 @@ pop x_cx
 
 add x_cx, x_ax
 FETCH16 x_cx
-SET_REG_PC ax
+SET_REG_PC x_a16
 
 ret
 
@@ -200,7 +200,7 @@ interrupts_request_nmi ENDP
 
 interrupts_request_mi PROC  
   
-	mov data_bus_8, cl
+	mov data_bus_8, x_c8l
 	cmp NMI_LINE, 1
 	jz interrupts_request_mi_exit
 	cmp INT_LINE, 1
@@ -214,9 +214,9 @@ interrupts_request_mi ENDP
 interrupts_set_im PROC
 
   ; parameters
-  ; mode:BYTE -> cl
+  ; mode:BYTE -> x_c8l
 
-  mov IMF, cl
+  mov IMF, x_c8l
   ret
 
 interrupts_set_im ENDP

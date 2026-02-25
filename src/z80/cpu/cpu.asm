@@ -2,23 +2,11 @@
 ;https://clrhome.org/table/
 .code
 
-ProcessNextOpcode MACRO JumpTable
-	xor x_ax, x_ax
-	xor x_cx, x_cx
-	mov cx, RegPC
-	add x_cx, memPtr
-	FETCH8 x_cx
-	mov x_cx,OFFSET JumpTable   ; Load the base address of the jump table into RBP
-	mov x_bx,[x_cx + x_ax*PTR_SIZE]      ; Load the function address from the table
-	inc RegPC
-	jmp x_bx
-ENDM
-
 .data
 
 BYTE_PTR TYPEDEF PTR BYTE
 memPtr BYTE_PTR 0
-memPtrAlt BYTE_PTR 0
+forceRETN db 0
 
 include x64_arch.inc
 include invoke.inc
@@ -33,13 +21,13 @@ include interrupts.inc
 
 cpu_z80_init PROC
 ; params
-; mem:PTR BYTE -> rcx
-; pc init value: PTR BYTE -> rdx
+; mem:PTR BYTE -> x_cx
+; force retn: BYTE -> x_d8l
 
-mov memPtr,rcx
-mov memPtrAlt,rcx
-ADD_REG_PC dx
+mov memPtr,x_cx
+mov forceRETN,x_d8l
 invoke interrupts_set_im,0
+ret
 
 cpu_z80_init ENDP
 
@@ -52,12 +40,15 @@ include opcodesdef.inc
 .code
 
 Z80Init:
-	mov al,reg_f_ant
-	mov ah,RegF
-	mov reg_f_ant,ah
-	test al,ah
+   cmp forceRETN,1
+	mov forceRETN,0
+	jz OpED45
+	mov x_a8l,reg_f_ant
+	mov x_a8h,RegF
+	mov reg_f_ant,x_a8h
+	test x_a8l,x_a8h
 	jz ResetRegQ
-	mov RegQ,ah
+	mov RegQ,x_a8h
 	jmp AfterRegQ
 Z80Halt:
 	jmp Op00
@@ -160,9 +151,9 @@ Op0F:
 Op10:
    ; DJNZ D cycles: 13/8
 	invoke inst_DJNZ,memPtr
-	mov ax, RegBC
-	shr ax,8
-	invoke acumulate_opcode_cycles_zero,8,13,ax
+	mov x_a16, RegBC
+	shr x_a16,8
+	invoke acumulate_opcode_cycles_zero,8,13,x_a16
 	jmp Z80StepEnd
 Op11:
    ; LD DE,NN cycles: 10
@@ -1107,13 +1098,13 @@ OpBF:
 	jmp Z80StepEnd
 OpC0:
    ; RET NZ cycles: 11/5
-	xor ax,ax
-	mov al, RegF
-	and al, 40h
+	xor x_a16,x_a16
+	mov x_a8l, RegF
+	and x_a8l, 40h
 	jnz OpC0_exit
 	invoke inst_RET,memPtr
 	OpC0_exit:
-	invoke acumulate_opcode_cycles_zero,5,11,ax
+	invoke acumulate_opcode_cycles_zero,5,11,x_a16
 	jmp Z80StepEnd
 OpC1:
    ; POP BC cycles: 10
@@ -1158,13 +1149,13 @@ OpC7:
 	jmp Z80StepEnd
 OpC8:
    ; RET Z cycles: 11/5
-	xor ax,ax
-	mov al, RegF
-	and al, 40h
+	xor x_a16,x_a16
+	mov x_a8l, RegF
+	and x_a8l, 40h
 	jz OpC8_exit
 	invoke inst_RET,memPtr
 	OpC8_exit:
-	invoke acumulate_opcode_cycles_zero,11,5,ax
+	invoke acumulate_opcode_cycles_zero,11,5,x_a16
 	jmp Z80StepEnd
 OpC9:
    ; RET cycles: 10
@@ -1207,13 +1198,13 @@ OpCF:
 	jmp Z80StepEnd
 OpD0:
    ; RET NC cycles: 11/5
-	xor ax,ax
-	mov al, RegF
-	and al, 1h
+	xor x_a16,x_a16
+	mov x_a8l, RegF
+	and x_a8l, 1h
 	jnz OpD0_exit
 	invoke inst_RET,memPtr
 	OpD0_exit:
-	invoke acumulate_opcode_cycles_zero,5,11,ax
+	invoke acumulate_opcode_cycles_zero,5,11,x_a16
 	jmp Z80StepEnd
 OpD1:
    ; POP DE cycles: 10
@@ -1231,13 +1222,13 @@ OpD3:
    ; OUT (N),A cycles: 11
 	invoke immediate_addressing_mode,memPtr
 	xor x_bx,x_bx
-	mov bl,[reg_di]
-	mov bh,RegA
-	push bx
-	invoke INST_OUT,bx,RegA
-	pop bx
+	mov x_b8l,[reg_di]
+	mov x_b8h,RegA
+	push x_b16
+	invoke INST_OUT,x_b16,RegA
+	pop x_b16
    ; wz = (port + 1) | (z->a << 8);
-	SET_WZ_FROM_PORT_AND_VALUE8 bl,RegA
+	SET_WZ_FROM_PORT_AND_VALUE8 x_b8l,RegA
 	invoke acumulate_opcode_cycles,11
 	jmp Z80StepEnd
 OpD4:
@@ -1265,13 +1256,13 @@ OpD7:
 	jmp Z80StepEnd
 OpD8:
    ; RET C cycles: 11/5
-	xor ax,ax
-	mov al, RegF
-	and al, 1h
+	xor x_a16,x_a16
+	mov x_a8l, RegF
+	and x_a8l, 1h
 	jz OpD8_exit
 	invoke inst_RET,memPtr
 	OpD8_exit:
-	invoke acumulate_opcode_cycles_zero,11,5,ax
+	invoke acumulate_opcode_cycles_zero,11,5,x_a16
 	jmp Z80StepEnd
 OpD9:
    ; EXX cycles: 4
@@ -1289,13 +1280,13 @@ OpDB:
    ; IN A,(N) cycles: 11
 	invoke immediate_addressing_mode,memPtr
 	xor x_ax,x_ax
-	mov al,[reg_di]
-	mov ah,RegA
-	push ax
-	invoke INST_IN,ax,OFFSET RegA
-	pop ax
+	mov x_a8l,[reg_di]
+	mov x_a8h,RegA
+	push x_a16
+	invoke INST_IN,x_a16,OFFSET RegA
+	pop x_a16
    ; wz = (a << 8) | (z->a + 1);
-	SET_WZ_FROM_REG8_AND_VALUE8 al,RegA
+	SET_WZ_FROM_REG8_AND_VALUE8 x_a8l,RegA
 	invoke acumulate_opcode_cycles,11
 	jmp Z80StepEnd
 OpDC:
@@ -1321,13 +1312,13 @@ OpDF:
 	jmp Z80StepEnd
 OpE0:
    ; RET PO cycles: 11/5
-	xor ax,ax
-	mov al, RegF
-	and al, 4h
+	xor x_a16,x_a16
+	mov x_a8l, RegF
+	and x_a8l, 4h
 	jnz OpE0_exit
 	invoke inst_RET,memPtr
 	OpE0_exit:
-	invoke acumulate_opcode_cycles_zero,5,11,ax
+	invoke acumulate_opcode_cycles_zero,5,11,x_a16
 	jmp Z80StepEnd
 OpE1:
    ; POP HL cycles: 10
@@ -1373,13 +1364,13 @@ OpE7:
 	jmp Z80StepEnd
 OpE8:
    ; RET PE cycles: 11/5
-	xor ax,ax
-	mov al, RegF
-	and al, 4h
+	xor x_a16,x_a16
+	mov x_a8l, RegF
+	and x_a8l, 4h
 	jz OpE8_exit
 	invoke inst_RET,memPtr
 	OpE8_exit:
-	invoke acumulate_opcode_cycles_zero,11,5,ax
+	invoke acumulate_opcode_cycles_zero,11,5,x_a16
 	jmp Z80StepEnd
 OpE9:
    ; JP (HL) cycles: 4
@@ -1412,8 +1403,8 @@ OpED00:
    ; IN0 B,(N) cycles: 12
 	invoke immediate_addressing_mode,memPtr
 	xor x_bx,x_bx
-	mov bl,[reg_di]
-	invoke INST_IN,bx,OFFSET RegB
+	mov x_b8l,[reg_di]
+	invoke INST_IN,x_b16,OFFSET RegB
 	SetIOFlags RegB
 	invoke acumulate_opcode_cycles,12
 	jmp Z80StepEnd
@@ -1421,16 +1412,16 @@ OpED01:
    ; OUT0 (N),B cycles: 13
 	invoke immediate_addressing_mode,memPtr
 	xor x_bx,x_bx
-	mov bl,[reg_di]
-	invoke INST_OUT,bx,RegB
+	mov x_b8l,[reg_di]
+	invoke INST_OUT,x_b16,RegB
 	invoke acumulate_opcode_cycles,13
 	jmp Z80StepEnd
 OpED08:
    ; IN0 C,(N) cycles: 12
 	invoke immediate_addressing_mode,memPtr
 	xor x_bx,x_bx
-	mov bl,[reg_di]
-	invoke INST_IN,bx,OFFSET RegC
+	mov x_b8l,[reg_di]
+	invoke INST_IN,x_b16,OFFSET RegC
 	SetIOFlags RegB
 	invoke acumulate_opcode_cycles,12
 	jmp Z80StepEnd
@@ -1438,16 +1429,16 @@ OpED09:
    ; OUT0 (N),C cycles: 13
 	invoke immediate_addressing_mode,memPtr
 	xor x_bx,x_bx
-	mov bl,[reg_di]
-	invoke INST_OUT,bx,RegC
+	mov x_b8l,[reg_di]
+	invoke INST_OUT,x_b16,RegC
 	invoke acumulate_opcode_cycles,13
 	jmp Z80StepEnd
 OpED10:
    ; IN0 D,(N) cycles: 12
 	invoke immediate_addressing_mode,memPtr
 	xor x_bx,x_bx
-	mov bl,[reg_di]
-	invoke INST_IN,bx,OFFSET RegD
+	mov x_b8l,[reg_di]
+	invoke INST_IN,x_b16,OFFSET RegD
 	SetIOFlags RegD
 	invoke acumulate_opcode_cycles,12
 	jmp Z80StepEnd
@@ -1915,13 +1906,13 @@ OpEF:
 	jmp Z80StepEnd
 OpF0:
    ; RET P cycles: 11/5
-	xor ax,ax
-	mov al, RegF
-	and al, 80h
+	xor x_a16,x_a16
+	mov x_a8l, RegF
+	and x_a8l, 80h
 	jnz OpF0_exit
 	invoke inst_RET,memPtr
 	OpF0_exit:
-	invoke acumulate_opcode_cycles_zero,5,11,ax
+	invoke acumulate_opcode_cycles_zero,5,11,x_a16
 	jmp Z80StepEnd
 OpF1:
    ; POP AF cycles: 10
@@ -1965,13 +1956,13 @@ OpF7:
 	jmp Z80StepEnd
 OpF8:
    ; RET M cycles: 11/5
-	xor ax,ax
-	mov al, RegF
-	and al, 80h
+	xor x_a16,x_a16
+	mov x_a8l, RegF
+	and x_a8l, 80h
 	jz OpF8_exit
 	invoke inst_RET,memPtr
 	OpF8_exit:
-	invoke acumulate_opcode_cycles_zero,11,5,ax
+	invoke acumulate_opcode_cycles_zero,11,5,x_a16
 	jmp Z80StepEnd
 OpF9:
    ; LD SP,HL cycles: 6
@@ -5237,7 +5228,7 @@ OpDDE3:
 	invoke inst_EX8,OFFSET RegIXL,reg_di,
 	mov x_cx,reg_di
 	sub x_cx,memPtr
-	inc cx
+	inc x_c16
 	mov reg_di,memPtr
 	add reg_di,x_cx
 	invoke inst_EX8,OFFSET RegIXH,reg_di
@@ -7174,7 +7165,7 @@ OpFDE3:
 	invoke inst_EX8,OFFSET RegIYL,reg_di,
 	mov x_cx,reg_di
 	sub x_cx,memPtr
-	inc cx
+	inc x_c16
 	mov reg_di,memPtr
 	add reg_di,x_cx
 	invoke inst_EX8,OFFSET RegIYH,reg_di
@@ -7196,7 +7187,148 @@ OpFDF9:
 	invoke acumulate_opcode_cycles,10
 	jmp Z80StepEnd
 Z80StepEnd:
-	xor rax,rax
+	xor x_ax,x_ax
 	ret
 cpu_z80_step ENDP
+
+cpu_get_register_AF PROC
+	mov x_ax,OFFSET RegAF
+	ret
+cpu_get_register_AF ENDP
+
+cpu_get_register_AF_ PROC
+	mov x_ax,OFFSET RegAF_ESP
+	ret
+cpu_get_register_AF_ ENDP
+
+cpu_get_register_BC PROC
+	mov x_ax,OFFSET RegBC
+	ret
+cpu_get_register_BC ENDP
+
+cpu_get_register_BC_ PROC
+	mov x_ax,OFFSET RegBC_ESP
+	ret
+cpu_get_register_BC_ ENDP
+
+cpu_get_register_DE PROC
+	mov x_ax,OFFSET RegDE
+	ret
+cpu_get_register_DE ENDP
+
+cpu_get_register_DE_ PROC
+	mov x_ax,OFFSET RegDE_ESP
+	ret
+cpu_get_register_DE_ ENDP
+
+cpu_get_register_HL PROC
+	mov x_ax,OFFSET RegHL
+	ret
+cpu_get_register_HL ENDP
+
+cpu_get_register_HL_ PROC
+	mov x_ax,OFFSET RegHL_ESP
+	ret
+cpu_get_register_HL_ ENDP
+
+cpu_get_register_IX PROC
+	mov x_ax,OFFSET RegIX
+	ret
+cpu_get_register_IX ENDP
+
+cpu_get_register_IY PROC
+	mov x_ax,OFFSET RegIY
+	ret
+cpu_get_register_IY ENDP
+
+cpu_get_register_SP PROC
+	mov x_ax,OFFSET RegSP
+	ret
+cpu_get_register_SP ENDP
+
+cpu_get_register_PC PROC
+	mov x_ax,OFFSET RegPC
+	ret
+cpu_get_register_PC ENDP
+
+cpu_get_register_I PROC
+	mov x_ax,OFFSET RegI
+	ret
+cpu_get_register_I ENDP
+
+cpu_get_register_R PROC
+	mov x_ax,OFFSET RegR
+	ret
+cpu_get_register_R ENDP
+
+cpu_set_register_AF PROC
+	mov RegAF,x_c16
+	ret
+cpu_set_register_AF ENDP
+
+cpu_set_register_AF_ PROC
+	mov RegAF_ESP,x_c16
+	ret
+cpu_set_register_AF_ ENDP
+
+cpu_set_register_BC PROC
+	mov RegBC,x_c16
+	ret
+cpu_set_register_BC ENDP
+
+cpu_set_register_BC_ PROC
+	mov RegBC_ESP,x_c16
+	ret
+cpu_set_register_BC_ ENDP
+
+cpu_set_register_DE PROC
+	mov RegDE,x_c16
+	ret
+cpu_set_register_DE ENDP
+
+cpu_set_register_DE_ PROC
+	mov RegDE_ESP,x_c16
+	ret
+cpu_set_register_DE_ ENDP
+
+cpu_set_register_HL PROC
+	mov RegHL,x_c16
+	ret
+cpu_set_register_HL ENDP
+
+cpu_set_register_HL_ PROC
+	mov RegHL_ESP,x_c16
+	ret
+cpu_set_register_HL_ ENDP
+
+cpu_set_register_IX PROC
+	mov RegIX,x_c16
+	ret
+cpu_set_register_IX ENDP
+
+cpu_set_register_IY PROC
+	mov RegIY,x_c16
+	ret
+cpu_set_register_IY ENDP
+
+cpu_set_register_SP PROC
+	mov RegSP,x_c16
+	ret
+cpu_set_register_SP ENDP
+
+cpu_set_register_I PROC
+	mov RegI, x_c8l
+	ret
+cpu_set_register_I ENDP
+
+cpu_set_register_R PROC
+	mov RegR, x_c8l
+	ret
+cpu_set_register_R ENDP
+
+cpu_set_register_PC PROC
+	mov RegPC,x_c16
+	ret
+cpu_set_register_PC ENDP
+
 END

@@ -31,7 +31,7 @@ inst_LD8 PROC
 
 
 FETCH8 x_cx
-STORE8 x_dx, al
+STORE8 x_dx, x_a8l
 ret
 
 inst_LD8 ENDP
@@ -43,7 +43,7 @@ inst_LD16 PROC
 ; Reg_Dest:PTR WORD -> x_dx
 
 FETCH16 x_cx
-STORE16 x_dx, ax
+STORE16 x_dx, x_a16
 ret
 
 inst_LD16 ENDP
@@ -52,13 +52,13 @@ inst_PUSH PROC
 
 ; parameters
 ; memPtr:PTR BYTE -> x_cx
-; Reg:WORD -> dx
+; Reg:WORD -> x_d16
 
 sub RegSP,2
 xor x_ax, x_ax
-mov ax, RegSP
+mov x_a16, RegSP
 add x_cx, x_ax
-STORE16 x_cx, dx
+STORE16 x_cx, x_d16
 ret
 
 inst_PUSH ENDP
@@ -70,11 +70,11 @@ inst_POP PROC
 ; Reg: PTR WORD -> x_dx
 
 xor x_ax, x_ax
-mov ax, RegSP
+mov x_a16, RegSP
 add x_cx, x_ax
 FETCH16 x_cx
 add RegSP,2
-STORE16 x_dx, ax
+STORE16 x_dx, x_a16
 
 ret
 
@@ -87,10 +87,10 @@ inst_EX PROC
 ; Reg_Dest:PTR WORD -> x_dx
 
 FETCH16 x_cx
-mov bx,ax
+mov x_b16,x_a16
 FETCH16 x_dx
-STORE16 x_cx, ax
-STORE16 x_dx, bx
+STORE16 x_cx, x_a16
+STORE16 x_dx, x_b16
 ret
 
 inst_EX ENDP
@@ -102,10 +102,10 @@ inst_EX8 PROC
 ; Reg_Dest:PTR BYTE -> x_dx
 
 FETCH8 x_cx
-mov bl, al
+mov x_b8l, x_a8l
 FETCH8 x_dx
-STORE8 x_cx, al
-STORE8 x_dx, bl
+STORE8 x_cx, x_a8l
+STORE8 x_dx, x_b8l
 ret
 
 inst_EX8 ENDP
@@ -173,7 +173,7 @@ dec WORD PTR RegHL
 dec WORD PTR RegBC
 SetPVFromBC
 ResetFlagBits HF, NF
-SetXFYFForLDxR al
+SetXFYFForLDxR x_a8l
 ret
 
 inst_LDD ENDP
@@ -204,14 +204,14 @@ inst_CPI PROC
 
 invoke register_indirect_addressing_mode,x_cx,RegHL
 FETCH8 reg_di
-mov bl,al
-cmp RegA,bl
+mov x_b8l,x_a8l
+cmp RegA,x_b8l
 X86FlagsToZ80Flags SF, ZF, HF
 inc WORD PTR RegHL
 dec WORD PTR RegBC
 SetPVFromBC
 SetFlagBits NF
-SetXFYFForCPIx bl
+SetXFYFForCPIx x_b8l
 INC_WZ
 ret
 
@@ -243,14 +243,14 @@ inst_CPD PROC
 
 invoke register_indirect_addressing_mode,x_cx,RegHL
 FETCH8 reg_di
-mov bl,al
+mov x_b8l,x_a8l
 dec WORD PTR RegHL
 dec WORD PTR RegBC
-cmp RegA,bl
+cmp RegA,x_b8l
 X86FlagsToZ80Flags SF, ZF, HF
 SetPVFromBC
 SetFlagBits NF
-SetXFYFForCPIx bl
+SetXFYFForCPIx x_b8l
 DEC_WZ
 DEC_WZ
 
@@ -282,7 +282,7 @@ inst_ADD8 PROC
 ; Reg_Ori:PTR BYTE -> x_cx
 
 FETCH8 x_cx
-add RegA, al
+add RegA, x_a8l
 X86FlagsToZ80Flags SF, ZF, HF, OF, CF
 ResetFlagBits NF
 SetXFYFFromReg8 RegA
@@ -297,7 +297,7 @@ inst_ADC8 PROC
 
 FETCH8 x_cx
 LoadZ80CarryFlag
-adc RegA, al
+adc RegA, x_a8l
 X86FlagsToZ80Flags SF, ZF, HF, OF, CF
 ResetFlagBits NF
 SetXFYFFromReg8 RegA
@@ -311,7 +311,7 @@ inst_SUB PROC
 ; Reg_Ori:PTR BYTE -> x_cx
 
 FETCH8 x_cx
-sub RegA,al
+sub RegA,x_a8l
 X86FlagsToZ80Flags SF, ZF, HF, OF, CF
 SetFlagBits NF
 SetXFYFFromReg8 RegA
@@ -326,7 +326,7 @@ inst_SBC8 PROC
 
 LoadZ80CarryFlag
 FETCH8 x_cx
-sbb RegA, al
+sbb RegA, x_a8l
 X86FlagsToZ80Flags SF, ZF, HF, OF, CF
 SetFlagBits NF
 SetXFYFFromReg8 RegA
@@ -341,7 +341,7 @@ inst_AND PROC
 
 ResetFlagBits SF, ZF, NF, PVF, CF
 FETCH8 x_cx
-and RegA,al
+and RegA,x_a8l
 X86FlagsToZ80Flags SF, ZF, PVF
 SetFlagBits HF
 SetXFYFFromReg8 RegA
@@ -356,7 +356,7 @@ inst_OR PROC
 
 ResetFlagBits SF, ZF, HF, NF, PVF, CF
 FETCH8 x_cx
-or RegA,al
+or RegA,x_a8l
 X86FlagsToZ80Flags SF, ZF, PVF
 SetXFYFFromReg8 RegA
 ret
@@ -369,7 +369,7 @@ inst_XOR PROC
 ; Reg_Ori:PTR BYTE -> x_cx
 		
 FETCH8 x_cx
-xor RegA,al
+xor RegA,x_a8l
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF, CF
 SetXFYFFromReg8 RegA
@@ -383,10 +383,10 @@ inst_CP PROC
 ; Reg:PTR BYTE -> x_cx
 
 FETCH8 x_cx
-cmp RegA,al
+cmp RegA,x_a8l
 X86FlagsToZ80Flags SF, ZF, HF, OF, CF
 SetFlagBits NF
-SetXFYFFromReg8 al
+SetXFYFFromReg8 x_a8l
 ret
 
 inst_CP ENDP
@@ -397,11 +397,11 @@ inst_INC8 PROC
 ; Reg_Dest:PTR BYTE -> x_cx
 
 FETCH8 x_cx
-inc al
-STORE8 x_cx, al
+inc x_a8l
+STORE8 x_cx, x_a8l
 X86FlagsToZ80Flags SF, ZF, HF, OF
 ResetFlagBits NF
-SetXFYFFromReg8 al
+SetXFYFFromReg8 x_a8l
 ret
 
 inst_INC8 ENDP
@@ -412,19 +412,19 @@ inst_DEC8 PROC
 ; Reg_Dest:PTR BYTE -> x_cx
 
 FETCH8 x_cx
-dec al
-STORE8 x_cx, al
+dec x_a8l
+STORE8 x_cx, x_a8l
 X86FlagsToZ80Flags SF, ZF, HF, OF
 SetFlagBits NF
-SetXFYFFromReg8 al
+SetXFYFFromReg8 x_a8l
 ret
 
 inst_DEC8 ENDP
 
 inst_DAA PROC
 
-mov rcx, OFFSET RegA
-mov rdx, OFFSET RegF
+mov x_cx, OFFSET RegA
+mov x_dx, OFFSET RegF
 CALL_C_FUNC inst_DAA_C
 ret
 
@@ -432,7 +432,7 @@ inst_DAA ENDP
 
 inst_CPL PROC
 
-mov al, RegA
+mov x_a8l, RegA
 not RegA
 SetFlagBits HF, NF
 SetXFYFFromReg8 RegA
@@ -452,12 +452,12 @@ inst_NEG ENDP
 
 inst_CCF PROC
 
-mov al, RegF
-and al, 1
-shl al, HF
+mov x_a8l, RegF
+and x_a8l, 1
+shl x_a8l, HF
 ResetFlagBits HF, NF
 xor RegF, 1
-or RegF, al
+or RegF, x_a8l
 ; undoc flags
 SetYFXFByRegAQ
 ret
@@ -483,14 +483,14 @@ inst_ADD16 PROC
 
 Z80HFCarryFromBit11 x_cx, x_dx, 0
 FETCH16 x_cx
-mov bx, ax
+mov x_b16, x_a16
 FETCH16 x_dx
-add ax,bx
-STORE16 x_dx, ax
+add x_a16,x_b16
+STORE16 x_dx, x_a16
 X86FlagsToZ80Flags CF
 ResetFlagBits NF
-SetXFYFFromReg8 ah
-SET_WZ_FROM_VALUE_16_AND_INC ax
+SetXFYFFromReg8 x_a8h
+SET_WZ_FROM_VALUE_16_AND_INC x_a16
 ret
 
 inst_ADD16 ENDP
@@ -504,7 +504,7 @@ mov x_dx, OFFSET RegHL
 Z80HFCarryFromBit11 x_cx, x_dx, 1
 LoadZ80CarryFlag
 FETCH16 x_cx
-adc RegHL,ax
+adc RegHL,x_a16
 X86FlagsToZ80Flags SF, ZF, OF, CF
 ResetFlagBits NF
 SetXFYFFromReg8 RegH
@@ -522,12 +522,12 @@ mov x_dx, OFFSET RegHL
 Z80HFBorrowFromBit12 x_cx, x_dx, 1
 LoadZ80CarryFlag
 FETCH16 x_cx
-sbb RegHL,ax
+sbb RegHL,x_a16
 X86FlagsToZ80Flags SF, ZF, OF, CF
 SetFlagBits NF
 SetXFYFFromReg8 RegH
-pop ax
-SET_WZ_FROM_VALUE_16_AND_INC ax
+pop x_a16
+SET_WZ_FROM_VALUE_16_AND_INC x_a16
 ret
 
 inst_SBC16 ENDP
@@ -538,8 +538,8 @@ inst_INC16 PROC
 ; Reg_Dest:PTR WORD -> x_cx
 
 FETCH16 x_cx
-inc ax
-STORE16 x_cx, ax
+inc x_a16
+STORE16 x_cx, x_a16
 ret
 
 inst_INC16 ENDP
@@ -550,8 +550,8 @@ inst_DEC16 PROC
 ; Reg_Dest:PTR WORD -> x_cx
 
 FETCH16 x_cx
-dec ax
-STORE16 x_cx, ax
+dec x_a16
+STORE16 x_cx, x_a16
 ret
 
 inst_DEC16 ENDP
@@ -604,13 +604,13 @@ inst_RLC PROC
 ; Reg:PTR BYTE -> x_cx
 
 FETCH8 x_cx
-rol al,1
-STORE8 x_cx, al
+rol x_a8l,1
+STORE8 x_cx, x_a8l
 X86FlagsToZ80Flags CF
-test al, al
+test x_a8l, x_a8l
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
-SetXFYFFromReg8 al
+SetXFYFFromReg8 x_a8l
 ret
 
 inst_RLC ENDP
@@ -622,13 +622,13 @@ inst_RL PROC
 
 LoadZ80CarryFlag
 FETCH8 x_cx
-rcl al,1
-STORE8 x_cx, al
+rcl x_a8l,1
+STORE8 x_cx, x_a8l
 X86FlagsToZ80Flags CF
-test al, al
+test x_a8l, x_a8l
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
-SetXFYFFromReg8 al
+SetXFYFFromReg8 x_a8l
 ret
 
 inst_RL ENDP
@@ -639,13 +639,13 @@ inst_RRC PROC
 ; Reg:PTR BYTE -> x_cx
 
 FETCH8 x_cx
-ror al,1
-STORE8 x_cx, al
+ror x_a8l,1
+STORE8 x_cx, x_a8l
 X86FlagsToZ80Flags CF
-test al, al
+test x_a8l, x_a8l
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
-SetXFYFFromReg8 al
+SetXFYFFromReg8 x_a8l
 ret
 
 inst_RRC ENDP
@@ -657,13 +657,13 @@ inst_RR PROC
 
 LoadZ80CarryFlag
 FETCH8 x_cx
-rcr al,1
-STORE8 x_cx, al
+rcr x_a8l,1
+STORE8 x_cx, x_a8l
 X86FlagsToZ80Flags CF
-test al, al
+test x_a8l, x_a8l
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
-SetXFYFFromReg8 al
+SetXFYFFromReg8 x_a8l
 ret
 
 inst_RR ENDP
@@ -674,13 +674,13 @@ inst_SLA PROC
 ; Reg:PTR BYTE -> x_cx
 
 FETCH8 x_cx
-sal al,1
-STORE8 x_cx, al
+sal x_a8l,1
+STORE8 x_cx, x_a8l
 X86FlagsToZ80Flags CF
-test al, al
+test x_a8l, x_a8l
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
-SetXFYFFromReg8 al
+SetXFYFFromReg8 x_a8l
 ret
 
 inst_SLA ENDP
@@ -696,16 +696,16 @@ inst_SLL PROC
 ResetFlagBits HF, NF, CF
 
 FETCH8 x_cx
-mov dl, al
-and dl, 080h
-shr dl, 7
-sal al,1
-or al, 1
-STORE8 x_cx, al
-test al, al
+mov x_d8l, x_a8l
+and x_d8l, 080h
+shr x_d8l, 7
+sal x_a8l,1
+or x_a8l, 1
+STORE8 x_cx, x_a8l
+test x_a8l, x_a8l
 X86FlagsToZ80Flags SF, ZF, PVF
-or RegF, dl
-SetXFYFFromReg8 al
+or RegF, x_d8l
+SetXFYFFromReg8 x_a8l
 ret
 
 inst_SLL ENDP
@@ -716,13 +716,13 @@ inst_SRA PROC
 ; Reg:PTR BYTE -> x_cx
 
 FETCH8 x_cx
-sar al,1
-STORE8 x_cx, al
+sar x_a8l,1
+STORE8 x_cx, x_a8l
 X86FlagsToZ80Flags CF
-test al, al
+test x_a8l, x_a8l
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
-SetXFYFFromReg8 al
+SetXFYFFromReg8 x_a8l
 ret
 
 inst_SRA ENDP
@@ -733,13 +733,13 @@ inst_SRL PROC
 ; Reg:PTR BYTE -> x_cx
 
 FETCH8 x_cx
-shr al,1
-STORE8 x_cx, al
+shr x_a8l,1
+STORE8 x_cx, x_a8l
 X86FlagsToZ80Flags CF
-test al, al
+test x_a8l, x_a8l
 X86FlagsToZ80Flags ZF, PVF
 ResetFlagBits SF, HF, NF
-SetXFYFFromReg8 al
+SetXFYFFromReg8 x_a8l
 ret
 
 inst_SRL ENDP
@@ -756,21 +756,21 @@ inst_RLD PROC
 ; (HL) = $ZX -> 030f
 
 invoke register_indirect_addressing_mode,x_cx,RegHL
-xor cx, cx
-mov ch, RegA ;WX
+xor x_c16, x_c16
+mov x_c8h, RegA ;WX
 FETCH8 reg_di
-mov cl, al
-push cx
-and ch, 0fh  ;0X
-shl cl, 4	 ;Z0
-or cl, ch	 ;ZX
-STORE8 reg_di, cl
-pop cx ;WX ;YZ
-and ch, 0F0h ;W0
-shr cl, 4 ;Y
-or ch, cl ; WY
-mov RegA, ch
-test ch, ch
+mov x_c8l, x_a8l
+push x_c16
+and x_c8h, 0fh  ;0X
+shl x_c8l, 4	 ;Z0
+or x_c8l, x_c8h	 ;ZX
+STORE8 reg_di, x_c8l
+pop x_c16 ;WX ;YZ
+and x_c8h, 0F0h ;W0
+shr x_c8l, 4 ;Y
+or x_c8h, x_c8l ; WY
+mov RegA, x_c8h
+test x_c8h, x_c8h
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
 SetXFYFFromReg8 RegA
@@ -785,26 +785,26 @@ inst_RRD PROC
 ; memPtr:PTR BYTE -> x_cx
 
 invoke register_indirect_addressing_mode,x_cx,RegHL
-xor cx, cx
+xor x_c16, x_c16
 FETCH8 reg_di
-mov cl, al
-mov ch, cl
-and cl, 0fh	 ; low (HL)
-and ch, 0f0h  ; high (HL) 
-xor ax, ax
-mov al, RegA
-mov ah, al
-and al, 0fh ; low A
-and ah, 0f0h ; high A
+mov x_c8l, x_a8l
+mov x_c8h, x_c8l
+and x_c8l, 0fh	 ; low (HL)
+and x_c8h, 0f0h  ; high (HL) 
+xor x_a16, x_a16
+mov x_a8l, RegA
+mov x_a8h, x_a8l
+and x_a8l, 0fh ; low A
+and x_a8h, 0f0h ; high A
 ; NEW A
-or cl, ah
-mov RegA, cl
+or x_c8l, x_a8h
+mov RegA, x_c8l
 ; new (HL)
-shl al, 4
-shr ch, 4
-or al, ch
-STORE8 reg_di, al
-test cl, cl
+shl x_a8l, 4
+shr x_c8h, 4
+or x_a8l, x_c8h
+STORE8 reg_di, x_a8l
+test x_c8l, x_c8l
 X86FlagsToZ80Flags SF, ZF, PVF
 ResetFlagBits HF, NF
 SetXFYFFromReg8 RegA
@@ -817,7 +817,7 @@ inst_BIT_HL PROC
 
 ; parameters
 ; Reg:PTR BYTE -> x_cx
-; Idx:BYTE -> dl
+; Idx:BYTE -> x_d8l
 
 ;HF flag Always set.
 ;NF flag Always reset.
@@ -825,10 +825,10 @@ inst_BIT_HL PROC
 ResetFlagBits SF, ZF, NF, PVF, XF, YF
 SetFlagBits HF
 FETCH8 x_cx
-mov cl, dl
-mov bl, 1
-shl bl, cl
-test al, bl
+mov x_c8l, x_d8l
+mov x_b8l, 1
+shl x_b8l, x_c8l
+test x_a8l, x_b8l
 ;ZF flag Set if the tested bit is reset.
 X86FlagsToZ80Flags ZF
 ;PVF flag Set just like ZF flag.
@@ -838,7 +838,7 @@ SetFlagBits PVF
 jmp skip_sf_bit
 skip_pvf_bit:
 ;SF flag Set if n = 7 and tested bit is set.
-cmp cl, 7
+cmp x_c8l, 7
 jnz skip_sf_bit
 SetFlagBits SF
 ; P/V, Z, S set as the other BIT instructions, but the 5 and 3 flags are
@@ -851,9 +851,9 @@ SetFlagBits SF
 ; LD r,r'	       (not affected)
 ; others         not tested -- any additions welcome!
 skip_sf_bit:
-mov ch, RegW
-and ch, 028h
-or RegF, ch 
+mov x_c8h, RegW
+and x_c8h, 028h
+or RegF, x_c8h 
 bit_exit:
 ret
 
@@ -863,7 +863,7 @@ inst_BIT_IXIY PROC
 
 ; parameters
 ; Reg:PTR BYTE -> x_cx
-; Idx:BYTE -> dl
+; Idx:BYTE -> x_d8l
 
 ;HF flag Always set.
 ;NF flag Always reset.
@@ -871,10 +871,10 @@ inst_BIT_IXIY PROC
 ResetFlagBits SF, ZF, NF, PVF, XF, YF
 SetFlagBits HF
 FETCH8 x_cx
-mov cl, dl
-mov bl, 1
-shl bl, cl
-test al, bl
+mov x_c8l, x_d8l
+mov x_b8l, 1
+shl x_b8l, x_c8l
+test x_a8l, x_b8l
 ;ZF flag Set if the tested bit is reset.
 X86FlagsToZ80Flags ZF
 ;PVF flag Set just like ZF flag.
@@ -884,15 +884,15 @@ SetFlagBits PVF
 jmp skip_sf_bit
 skip_pvf_bit:
 ;SF flag Set if n = 7 and tested bit is set.
-cmp cl, 7
+cmp x_c8l, 7
 jnz skip_sf_bit
 SetFlagBits SF
 ; flags 5 and 3 flags are a copy of bit 5 and 3 of the high
 ; byte of IX/IY+d (the value after the addition of d to IX or IY).
 skip_sf_bit:
-mov cx, RegWZ
-and ch, 028h
-or RegF, ch 
+mov x_c16, RegWZ
+and x_c8h, 028h
+or RegF, x_c8h 
 bit_exit:
 ret
 
@@ -902,7 +902,7 @@ inst_BIT PROC
 
 ; parameters
 ; Reg:PTR BYTE -> x_cx
-; Idx:BYTE -> dl
+; Idx:BYTE -> x_d8l
 
 ;HF flag Always set.
 ;NF flag Always reset.
@@ -910,11 +910,11 @@ inst_BIT PROC
 ResetFlagBits SF, ZF, NF, PVF, XF, YF
 SetFlagBits HF
 FETCH8 x_cx
-push ax
-mov cl, dl
-mov bl, 1
-shl bl, cl
-and al, bl
+push x_a16
+mov x_c8l, x_d8l
+mov x_b8l, 1
+shl x_b8l, x_c8l
+and x_a8l, x_b8l
 ;ZF flag Set if the tested bit is reset.
 X86FlagsToZ80Flags ZF
 ;PVF flag Set just like ZF flag.
@@ -923,12 +923,12 @@ jz skip_pvf_bit
 SetFlagBits PVF
 skip_pvf_bit:
 ; SF flag copy from result
-and al, 080h
-or RegF, al
+and x_a8l, 080h
+or RegF, x_a8l
 ; YF, XF flag copy from source
-pop ax
-and al, 028h
-or RegF, al
+pop x_a16
+and x_a8l, 028h
+or RegF, x_a8l
 ret
 
 inst_BIT ENDP
@@ -937,16 +937,16 @@ inst_SET PROC
 
 ; parameters
 ; Reg:PTR BYTE -> x_cx
-; Idx:BYTE -> dl
+; Idx:BYTE -> x_d8l
 
 push x_cx
-mov cl, dl
-GetBitMask x_cx, cl
-mov dl, cl
+mov x_c8l, x_d8l
+GetBitMask x_cx, x_c8l
+mov x_d8l, x_c8l
 pop x_cx
 FETCH8 x_cx
-or al, dl
-STORE8 x_cx, al
+or x_a8l, x_d8l
+STORE8 x_cx, x_a8l
 ret
 
 inst_SET ENDP
@@ -955,16 +955,16 @@ inst_RES PROC
 
 ; parameters
 ; Reg:PTR BYTE -> x_cx
-; Idx:BYTE -> dl
+; Idx:BYTE -> x_d8l
 
 push x_cx
-mov cl, dl
-GetBitMaskNeg x_cx, cl
-mov dl, cl
+mov x_c8l, x_d8l
+GetBitMaskNeg x_cx, x_c8l
+mov x_d8l, x_c8l
 pop x_cx
 FETCH8 x_cx
-and al, dl
-STORE8 x_cx, al
+and x_a8l, x_d8l
+STORE8 x_cx, x_a8l
 ret
 
 inst_RES ENDP
@@ -975,8 +975,8 @@ inst_JP PROC
 ; Reg:PTR BYTE -> x_cx
 
 FETCH16 x_cx
-SET_REG_PC ax
-SET_WZ_FROM_VALUE_16 ax
+SET_REG_PC x_a16
+SET_WZ_FROM_VALUE_16 x_a16
 ret
 
 inst_JP ENDP
@@ -990,20 +990,20 @@ inst_CALL PROC
 ;(SP-1) <- PCh, (SP-2) <- PCl, PC <- nn
 
 FETCH16 x_dx
-mov dx, ax
+mov x_d16, x_a16
 GET_REG_PC
 dec RegSP
 xor x_bx, x_bx
-mov bx, RegSP
+mov x_b16, RegSP
 add x_bx, x_cx
-STORE8 x_bx, ah
+STORE8 x_bx, x_a8h
 dec RegSP
 dec x_bx
-STORE8 x_bx, al
-SET_REG_PC dx
-mov cx, dx
+STORE8 x_bx, x_a8l
+SET_REG_PC x_d16
+mov x_c16, x_d16
 CALL_C_FUNC cpu_call_opcode_notify
-SET_WZ_FROM_VALUE_16 dx
+SET_WZ_FROM_VALUE_16 x_d16
 ret
 
 inst_CALL ENDP
@@ -1015,15 +1015,15 @@ inst_RET PROC
 
 ; PCl <- (SP), PCh <- (SP+1)
 xor x_dx, x_dx
-mov dx, RegSP
+mov x_d16, RegSP
 add x_cx, x_dx
 FETCH8 x_cx
-mov dl, al
+mov x_d8l, x_a8l
 inc RegSP
 inc x_cx
 FETCH8 x_cx
-mov dh, al
-SET_REG_PC dx
+mov x_d8h, x_a8l
+SET_REG_PC x_d16
 inc RegSP
 dec x_cx
 SET_WZ_FROM_REG_PC x_cx
@@ -1035,21 +1035,21 @@ inst_RST PROC
 
 ; parameters
 ; memPtr:BYTE PTR -> x_cx
-; dir:BYTE -> dl
+; dir:BYTE -> x_d8l
 
 ; (SP-1) <- PCh, (SP-2) <- PCl, PCh <- $00, PCl <- p)
 
 GET_REG_PC
 dec RegSP
 xor x_bx, x_bx
-mov bx, RegSP
+mov x_b16, RegSP
 add x_bx, x_cx
-STORE8 x_bx, ah
+STORE8 x_bx, x_a8h
 dec RegSP
 dec x_bx
-STORE8 x_bx, al
-mov dh, 0
-SET_REG_PC dx
+STORE8 x_bx, x_a8l
+mov x_d8h, 0
+SET_REG_PC x_d16
 ret
 
 inst_RST ENDP
@@ -1057,7 +1057,7 @@ inst_RST ENDP
 inst_IN PROC 
 
 ; parameters
-; port:WORD -> cx
+; port:WORD -> x_c16
 ; dest:PTR BYTE -> x_dx
 
 CALL_C_FUNC inst_IN_Impl
@@ -1131,10 +1131,10 @@ INST_INDR ENDP
 inst_OUT PROC
 
 ; parameters
-; port:WORD -> cx
-; value:BYTE -> dl
+; port:WORD -> x_c16
+; value:BYTE -> x_d8l
 
-CALL_C_FUNC inst_OUT_Impl, cx, dl
+CALL_C_FUNC inst_OUT_Impl, x_c16, x_d8l
 ret
 
 inst_OUT ENDP
@@ -1146,9 +1146,9 @@ INST_OUTI PROC
 
 invoke register_indirect_addressing_mode, x_cx, RegHL
 dec BYTE PTR RegB
-invoke INST_OUT, RegBC, dl	 
+invoke INST_OUT, RegBC, x_d8l	 
 inc WORD PTR RegHL
-mov reg_tmp8, dl
+mov reg_tmp8, x_d8l
 mov x_cx, OFFSET reg_tmp8
 SetIOBlockFlagsOUT x_cx
 SET_WZ_FROM_VALUE_16_AND_INC RegBC
@@ -1178,10 +1178,10 @@ INST_OUTD PROC
 
 invoke register_indirect_addressing_mode, x_cx, RegHL 
 dec BYTE PTR RegB
-mov dl, [reg_di]
-invoke INST_OUT, RegBC, dl
+mov x_d8l, [reg_di]
+invoke INST_OUT, RegBC, x_d8l
 dec WORD PTR RegHL
-mov reg_tmp8, dl
+mov reg_tmp8, x_d8l
 mov x_cx, OFFSET reg_tmp8
 SetIOBlockFlagsOUT x_cx
 SET_WZ_FROM_VALUE_16 RegBC
@@ -1225,7 +1225,7 @@ inst_DJNZ ENDP
 Noemu PROC
 
 ; parameters 
-; p: WORD -> cx
+; p: WORD -> x_c16
 ret
 
 Noemu ENDP
@@ -1233,7 +1233,7 @@ Noemu ENDP
 Undoc PROC
 
 ; parameters 
-; p: WORD -> cx
+; p: WORD -> x_c16
 ret
 
 Undoc ENDP

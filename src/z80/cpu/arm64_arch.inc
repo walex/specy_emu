@@ -1,0 +1,13 @@
+IFDEF X0
+
+reg_si TEXTEQU <X11>
+reg_di TEXTEQU <X12>
+x_ax   TEXTEQU <X9>
+x_bx   TEXTEQU <X10>
+x_cx   TEXTEQU <X0>
+x_dx   TEXTEQU <X1>
+x_bp   TEXTEQU <SP>
+PTR_DATA_TYPE TEXTEQU <dd>
+PTR_SIZE TEXTEQU <4>
+
+ENDIF

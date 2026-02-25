@@ -32,9 +32,9 @@ relative_addressing_mode PROC
 GET_REG_PC
 add x_cx, x_ax
 FETCH8 x_cx
-movsx x_dx, al
+movsx x_dx, x_a8l
 INC_REG_PC ; PC+1 
-ADD_REG_PC dx ;PC + e
+ADD_REG_PC x_d16 ;PC + e
 ret
 
 relative_addressing_mode ENDP
@@ -57,16 +57,16 @@ indexed_addressing_mode PROC
 
 ; parameters
 ; memPtr:PTR BYTE -> x_cx
-; Reg:WORD -> dx
+; Reg:WORD -> x_d16
 
 mov reg_di,x_cx
 xor reg_si,reg_si
-mov si,dx
+mov si,x_d16
 GET_REG_PC
 add x_cx, x_ax
 FETCH8 x_cx
-movsx x_ax,al
-add si,ax
+movsx x_ax,x_a8l
+add si,x_a16
 add reg_di,reg_si
 INC_REG_PC
 ret
@@ -77,11 +77,11 @@ register_indirect_addressing_mode PROC
 
 ; parameters
 ; memPtr:PTR BYTE -> x_cx
-; Reg:WORD -> dx
+; Reg:WORD -> x_d16
 
 
 xor reg_di,reg_di
-mov di,dx
+mov di,x_d16
 add reg_di,x_cx
 ret 
 

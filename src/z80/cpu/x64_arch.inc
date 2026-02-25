@@ -5,5 +5,22 @@ x_bx   TEXTEQU <rbx>
 x_cx   TEXTEQU <rcx>
 x_dx   TEXTEQU <rdx>
 x_bp   TEXTEQU <rbp>
+x_a32 TEXTEQU <eax>
+x_b32 TEXTEQU <ebx>
+x_c32 TEXTEQU <ecx>
+x_d32 TEXTEQU <edx>
+x_a16 TEXTEQU <ax>
+x_b16 TEXTEQU <bx>
+x_c16 TEXTEQU <cx>
+x_d16 TEXTEQU <dx>
+x_a8h TEXTEQU <ah>
+x_b8h TEXTEQU <bh>
+x_c8h TEXTEQU <ch>
+x_d8h TEXTEQU <dh>
+x_a8l TEXTEQU <al>
+x_b8l TEXTEQU <bl>
+x_c8l TEXTEQU <cl>
+x_d8l TEXTEQU <dl>
+
 PTR_DATA_TYPE TEXTEQU <dq>	
 PTR_SIZE TEXTEQU <8> 

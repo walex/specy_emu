@@ -138,8 +138,8 @@ void system_memory_end() {
 	
 }
 
-uint8_t* system_memory_get_pointer() {
-	return system_rom_pointer;
+uint8_t* system_memory_get_pointer(uint64_t offset) {
+	return system_rom_pointer + offset;
 }
 
 uint16_t system_memory_get_system_var_value_16(uint16_t system_var_id) {

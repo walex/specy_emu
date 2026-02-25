@@ -1,11 +1,8 @@
 #ifndef _TAPE_AUDIO_H_
 #define _TAPE_AUDIO_H_
 
+#include "tap_loader.h"
 #include <stdint.h>
-
-const uint8_t TAP_HEADER_TYPE = 0;
-const uint8_t TAP_DATA_BLOCK = 0xFF;
-const uint32_t TAP_HEADER_BLOCK_SIZE = 19;
 
 void tape_audio_reset();
 void tape_add_pulse(uint64_t& t, uint32_t duration, uint8_t& level);

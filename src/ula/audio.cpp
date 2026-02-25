@@ -48,13 +48,14 @@ void audio_render_cb(uint8_t* buffer_out, int len) {
 
 void audio_init() {
 
-    
+	static std::atomic<bool> initialized{ false };
     static std::thread t = std::thread([]() {
         constexpr size_t buffsiz = BUFFER_SAMPLES * 0.1;
         int16_t buffer16[buffsiz];
         circular_buffer_init(BUFFER_SAMPLES);
         audio_render_init((uint32_t)SAMPLE_RATE, nullptr);
-        while (true) {
+		initialized.store(true);
+        while (initialized.load()) {
             for (int i = 0; i < buffsiz; i++)
                 buffer16[i] = (int16_t)(tv_saturate(circular_buffer_pop_sample()) * 32767.0f);
 			audio_render_play((uint8_t*)buffer16, buffsiz * 2);    
@@ -62,6 +63,8 @@ void audio_init() {
         }
 		});
     t.detach();
+    while (!initialized.load())
+		std::this_thread::yield();
 }
 
 // Shutdown audio system

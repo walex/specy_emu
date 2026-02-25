@@ -90,14 +90,14 @@ ifndef INVOKE_INC
 			endif
 		elseif (opattr(arg)) and 00000010b	;memory location
 			if type arg eq 8
-				mov rax, arg
-				mov [rsp+offset2], rax
+				mov x_ax, arg
+				mov [rsp+offset2], x_ax
 			elseif type arg eq 4
-				mov eax, arg
-				mov [rsp+offset2], eax
+				mov x_a32, arg
+				mov [rsp+offset2], x_a32
 			elseif (type arg eq 2) or (type arg eq 1)
-				movzx eax, arg
-				mov [rsp+offset2], eax
+				movzx x_a32, arg
+				mov [rsp+offset2], x_a32
 			else
 	%			.err <The size of argument strpos must be 1, 2, 4 or 8 bytes>
 				exitm
@@ -106,8 +106,8 @@ ifndef INVOKE_INC
 			if (arg ge -2147483648) and (arg le 2147483647)
 				mov dword ptr [rsp+offset2], arg
 			else
-				mov rax, arg
-				mov [rsp+offset2], rax
+				mov x_ax, arg
+				mov [rsp+offset2], x_ax
 			endif
 		else
 	%		.err <The type of argument strpos is unknown>
@@ -129,25 +129,25 @@ ifndef INVOKE_INC
 			if type arg eq 8
 				push arg
 			elseif type arg eq 4
-				mov eax, arg
-				push rax
+				mov x_a32, arg
+				push x_ax
 			elseif (type arg eq 2) or (type arg eq 1)
-				movzx eax, arg
-				push rax
+				movzx x_a32, arg
+				push x_ax
 			else
 	%			.err <The size of argument strpos must be 1, 2, 4 or 8 bytes>
 				exitm
 			endif
 		elseif (opattr(arg)) and 00000010b	;memory location
 			if type arg eq 8
-				mov rax, arg
-				push rax
+				mov x_ax, arg
+				push x_ax
 			elseif type arg eq 4
-				mov eax, arg
-				push rax
+				mov x_a32, arg
+				push x_ax
 			elseif (type arg eq 2) or (type arg eq 1)
-				movzx eax, arg
-				push rax
+				movzx x_a32, arg
+				push x_ax
 			else
 	%			.err <The size of argument strpos must be 1, 2, 4 or 8 bytes>
 				exitm
@@ -156,8 +156,8 @@ ifndef INVOKE_INC
 			if (arg ge -2147483648) and (arg le 2147483647)
 				push arg
 			else
-				mov rax, arg
-				push rax
+				mov x_ax, arg
+				push x_ax
 			endif
 		else
 	%		.err <The type of argument strpos is unknown>
@@ -186,10 +186,10 @@ ifndef INVOKE_INC
 			exitm
 		endif
 		ifnb <arg1>
-			MOVARG2REG 1, 0, arg1, rcx, ecx, cx, cl
+			MOVARG2REG 1, 0, arg1, x_cx, x_c32, x_c16, x_c8l
 		endif
 		ifnb <arg2>
-			MOVARG2REG 2, 0, arg2, rdx, edx, dx, dl
+			MOVARG2REG 2, 0, arg2, x_dx, x_d32, x_d16, x_d8l
 		endif
 		ifnb <arg3>
 			MOVARG2REG 3, 0, arg3, r8, r8d, r8w, r8b
@@ -213,10 +213,10 @@ ifndef INVOKE_INC
 			exitm
 		endif
 		ifnb <arg1>
-			MOVARG2REG 1, 1, arg1, rcx, ecx, cx, cl
+			MOVARG2REG 1, 1, arg1, x_cx, x_c32, x_c16, x_c8l
 		endif
 		ifnb <arg2>
-			MOVARG2REG 2, 1, arg2, rdx, edx, dx, dl
+			MOVARG2REG 2, 1, arg2, x_dx, x_d32, x_d16, x_d8l
 		endif
 		ifnb <arg3>
 			MOVARG2REG 3, 1, arg3, r8, r8d, r8w, r8b
@@ -240,10 +240,10 @@ ifndef INVOKE_INC
 			exitm
 		endif
 		ifnb <arg1>
-			MOVARG2REG 1, 0, arg1, rcx, ecx, cx, cl
+			MOVARG2REG 1, 0, arg1, x_cx, x_c32, x_c16, x_c8l
 		endif
 		ifnb <arg2>
-			MOVARG2REG 2, 0, arg2, rdx, edx, dx, dl
+			MOVARG2REG 2, 0, arg2, x_dx, x_d32, x_d16, x_d8l
 		endif
 		ifnb <arg3>
 			MOVARG2REG 3, 0, arg3, r8, r8d, r8w, r8b
@@ -259,7 +259,7 @@ ifndef INVOKE_INC
 				nargs = nargs + 1
 			endm
 			if nargs mod 2
-				push rax
+				push x_ax
 			endif
 	%		for arg, rargs
 				PUSHARG counter + 5, arg
@@ -285,10 +285,10 @@ ifndef INVOKE_INC
 			exitm
 		endif
 		ifnb <arg1>
-			MOVARG2REG 1, 1, arg1, rcx, ecx, cx, cl
+			MOVARG2REG 1, 1, arg1, x_cx, x_c32, x_c16, x_c8l
 		endif
 		ifnb <arg2>
-			MOVARG2REG 2, 1, arg2, rdx, edx, dx, dl
+			MOVARG2REG 2, 1, arg2, x_dx, x_d32, x_d16, x_d8l
 		endif
 		ifnb <arg3>
 			MOVARG2REG 3, 1, arg3, r8, r8d, r8w, r8b
@@ -304,7 +304,7 @@ ifndef INVOKE_INC
 				nargs = nargs + 1
 			endm
 			if nargs mod 2
-				push rax
+				push x_ax
 			endif
 	%		for arg, rargs
 				PUSHARG counter + 5, arg

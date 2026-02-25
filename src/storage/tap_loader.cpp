@@ -29,7 +29,7 @@ tap_info_head* tap_load_from_file(const char* filename) {
 			perror("error reading header block info");
 			break;
 		}
-		if (header_block_info[0] != TAP_HEADER_TYPE) {
+		if (header_block_info[0] != TAP_HEADER_BLOCK) {
 			
 			perror("expected header block");
 			break;

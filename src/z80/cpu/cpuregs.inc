@@ -198,10 +198,10 @@ data_bus_8 db 0
 
 GetRegPC PROC
 	; params
-	; regs memPtr:PTR WORD -> rcx
-	; regs value:PTR WORD -> rdx
+	; regs memPtr:PTR WORD -> x_cx
+	; regs value:PTR WORD -> x_dx
 	GET_REG_PC
-	sub ax, cx
-	mov WORD PTR [rdx], ax
+	sub x_a16, x_c16
+	mov WORD PTR [x_dx], x_a16
 	ret
 GetRegPC ENDP

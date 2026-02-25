@@ -1,9 +1,9 @@
 #include "tape_audio.h"
 #include "audio_render.h"
 #include "z80.h" // TODO: replace for cpu.h
-#include "tap_loader.h"
 #include <vector>
 #include <string>
+#include "system_memory.h"
 
 static constexpr uint32_t PILOT_PULSE_T = 2168;
 static constexpr uint32_t SYNC1_T = 667;
@@ -64,8 +64,9 @@ uint8_t tape_audio_next_pulse(uint64_t cycles) {
 
 		// TODO: support multi charge tape loading
 		// end tape
-		if (tape_pulse_index >= tape_pulses.size())
+		if (tape_pulse_index >= tape_pulses.size()) {
 			tape_active = false;
+		}
 	}
 	return current_ear;
 }
