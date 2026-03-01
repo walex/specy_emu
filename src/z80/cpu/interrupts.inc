@@ -221,3 +221,13 @@ interrupts_set_im PROC
 
 interrupts_set_im ENDP
 
+interrupts_get_im PROC
+
+  ; parameters
+  ; mode:BYTE -> x_c8l
+
+  xor x_a16, x_a16
+  mov x_a8l, IMF
+  ret
+
+interrupts_get_im ENDP

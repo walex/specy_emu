@@ -1,12 +1,11 @@
 #include "audio_render.h"
 #include <SDL3/SDL.h>
-#include <algorithm>
 
 static SDL_AudioStream* audio_stream;
 static audio_render_callback user_callback = nullptr;
 static uint8_t buffer[1024];
 
-void audio_cb(void* userdata, SDL_AudioStream* stream, int additional_amount, int total_amount) {
+void audio_cb(void* userdata, SDL_AudioStream* stream, int additional_amount, int /*total_amount*/) {
 	
 	if (user_callback) {
 		user_callback((uint8_t*)userdata, additional_amount);
@@ -42,9 +41,9 @@ void audio_render_end() {
 	}
 }
 
-void audio_render_play(uint8_t* buffer, size_t buffer_size) {
+void audio_render_play(uint8_t* buff, size_t buffer_size) {
 
-	SDL_PutAudioStreamData(audio_stream, buffer, buffer_size);
+	SDL_PutAudioStreamData(audio_stream, buff, (int)buffer_size);
 }
 
 void audio_render_load_wav(const char* filename, uint8_t** out_buffer, size_t* out_size) {
@@ -61,6 +60,6 @@ void audio_render_load_wav(const char* filename, uint8_t** out_buffer, size_t* o
 	*out_size = wav_length;
 }
 
-void audio_render_free_wav(uint8_t* buffer) {
-	SDL_free(buffer);
+void audio_render_free_wav(uint8_t* buff) {
+	SDL_free(buff);
 }

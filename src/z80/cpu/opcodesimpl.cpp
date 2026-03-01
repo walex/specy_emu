@@ -8,7 +8,7 @@ constexpr uint16_t PAGING_CONTROL_PORT = 0x7FFD;
 constexpr uint16_t PORT_FE = 0xFE;
 
 extern "C" void ula_read_port(uint16_t addr, uint8_t* value);
-extern "C" void ula_write_port_FE(uint16_t addr, uint8_t value);
+extern "C" void ula_write_port_FE(uint8_t value);
 extern "C" void memory_paging_bank_switch(uint8_t value);
 extern "C" uint8_t* system_memory_get_pointer();
 
@@ -25,7 +25,7 @@ extern "C" void inst_OUT_Impl(uint16_t addr, uint8_t value) {
 
         switch (addr & 0x00FF) {
         case PORT_FE:
-            ula_write_port_FE(addr, value);
+            ula_write_port_FE(value);
             break;
         default:
             break;

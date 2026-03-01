@@ -5,5 +5,5 @@
 #include <map>
 
 uint8_t keyboard_get_map_addr(uint8_t addr);
-void keyboard_tick(uint64_t delta_cycles);
+const bool* keyboard_tick(uint64_t delta_cycles);
 #endif

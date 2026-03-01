@@ -1,6 +1,5 @@
 #include "circular_buffer.h"
 #include <atomic>
-#include <stdio.h>
 #include <thread>
 
 static float *audio_buffer;
@@ -47,6 +46,8 @@ float circular_buffer_pop_sample() {
     while (buffer_count.load() < buffer_size * 0.7)
         std::this_thread::yield();
     size_t r = buffer_read.load(std::memory_order_relaxed);
+    if (buffer_size <= 0)
+        return 0.0f;
     buffer_read.store((r + 1) % buffer_size,
         std::memory_order_release);
     buffer_count--;

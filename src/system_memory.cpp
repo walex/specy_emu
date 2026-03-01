@@ -9,22 +9,10 @@
 #include <filesystem>
 
 // intercept calls functions
-#define SPECTRUM_48K_ROM_FILE  "spec_48.rom"
-#define SPECTRUM_128K_ROM_FILE "spec_128.rom"
-#define TK95_48K_ROM_FILE "TK95.Spanish.rom"
-#define TK90X_48K_ROM_FILE "TK90X.v1.Spanish.rom"
-#define TK90X_48K_ROM_V3_FILE "TK90X_v3EN.rom"
 static constexpr uint16_t LD_BYTES = 0x0556;
-static constexpr uint16_t LD_EDGE_1 = 0x05E7;
-static constexpr size_t ROM_NAME_SIZE = 32;
-static constexpr size_t ROM_48K_SIZE = 16 * 1024;
-static constexpr size_t ROM_16K_SIZE = 16 * 1024;
-static constexpr size_t ROM_128K_SIZE = 16 * 1024;
-static constexpr size_t RAM_48K_SIZE = 48 * 1024;
-static constexpr size_t RAM_128K_SIZE = 128 * 1024;
 
 struct machine_info {
-	char rom_name[ROM_NAME_SIZE];
+	const char* rom_name;
 	size_t rom_size;
 	size_t ram_size;
 };
@@ -93,8 +81,6 @@ uint8_t* system_memory_create_128k_rom(const char* base_path, machine_info& mach
 	return mem;
 }
 
-
-
 uint8_t* system_memory_create(uint32_t machine_id, const char* base_path) {
 
 	auto it = machines.find(machine_id);
@@ -117,8 +103,8 @@ void system_memory_free() {
 		memory_paging_end();
 }
 
-void system_memory_on_rom_call_LD_EDGE_1() {
-	ula_on_load_edge_1();
+void system_memory_on_rom_call_LD_BYTES() {
+	ula_on_port_load_bytes();
 }
 
 int system_memory_init(uint32_t machine_id, const char* base_path) {
@@ -128,14 +114,12 @@ int system_memory_init(uint32_t machine_id, const char* base_path) {
 		return -1;
 	}
 	
-	cpu_call_opcode_interceptor(LD_EDGE_1, system_memory_on_rom_call_LD_EDGE_1);
+	cpu_call_opcode_interceptor(LD_BYTES, system_memory_on_rom_call_LD_BYTES);
 	return 0;
 }
 
 void system_memory_end() {
-
-	system_memory_free();
-	
+	system_memory_free();	
 }
 
 uint8_t* system_memory_get_pointer(uint64_t offset) {

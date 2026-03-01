@@ -2,7 +2,6 @@
 #include "tape_audio.h"
 #include <stdio.h>
 #include <memory.h>
-#include <vector>
 
 tap_info_head* tap_load_from_file(const char* filename) {
 
@@ -121,13 +120,23 @@ void tap_free(tap_info_head* tape) {
 
 void tap_file_to_bytes(const char* filename, uint8_t** buffer_out, size_t* size_out) {
 
+	size_t file_size = *size_out = 0;
 	FILE* f = nullptr;
 	fopen_s(&f, filename, "rb");
 	if (!f) return;
 	fseek(f, 0, SEEK_END);
-	*size_out = (size_t)ftell(f);
-	fseek(f, 0, SEEK_SET);
-	*buffer_out = new uint8_t[*size_out];
-	fread(*buffer_out, *size_out, 1, f);
+	file_size = (size_t)ftell(f);
+	if (file_size > 0) {
+		fseek(f, 0, SEEK_SET);
+		uint8_t* mem = new uint8_t[file_size];
+		if (fread(mem, 1, file_size, f) == file_size) {
+			*size_out = file_size;
+			*buffer_out = mem;
+		}
+		else {
+			perror("error reading tap file to bytes");
+			delete[] mem;
+		}
+	}
 	fclose(f);
 }

@@ -7192,74 +7192,82 @@ Z80StepEnd:
 cpu_z80_step ENDP
 
 cpu_get_register_AF PROC
-	mov x_ax,OFFSET RegAF
+	mov x_a16,RegAF
 	ret
 cpu_get_register_AF ENDP
 
 cpu_get_register_AF_ PROC
-	mov x_ax,OFFSET RegAF_ESP
+	mov x_a16,RegAF_ESP
 	ret
 cpu_get_register_AF_ ENDP
 
 cpu_get_register_BC PROC
-	mov x_ax,OFFSET RegBC
+	mov x_a16,RegBC
 	ret
 cpu_get_register_BC ENDP
 
 cpu_get_register_BC_ PROC
-	mov x_ax,OFFSET RegBC_ESP
+	mov x_a16,RegBC_ESP
 	ret
 cpu_get_register_BC_ ENDP
 
 cpu_get_register_DE PROC
-	mov x_ax,OFFSET RegDE
+	mov x_a16,RegDE
 	ret
 cpu_get_register_DE ENDP
 
 cpu_get_register_DE_ PROC
-	mov x_ax,OFFSET RegDE_ESP
+	mov x_a16,RegDE_ESP
 	ret
 cpu_get_register_DE_ ENDP
 
 cpu_get_register_HL PROC
-	mov x_ax,OFFSET RegHL
+	mov x_a16,RegHL
 	ret
 cpu_get_register_HL ENDP
 
 cpu_get_register_HL_ PROC
-	mov x_ax,OFFSET RegHL_ESP
+	mov x_a16,RegHL_ESP
 	ret
 cpu_get_register_HL_ ENDP
 
 cpu_get_register_IX PROC
-	mov x_ax,OFFSET RegIX
+	mov x_a16,RegIX
 	ret
 cpu_get_register_IX ENDP
 
 cpu_get_register_IY PROC
-	mov x_ax,OFFSET RegIY
+	mov x_a16,RegIY
 	ret
 cpu_get_register_IY ENDP
 
 cpu_get_register_SP PROC
-	mov x_ax,OFFSET RegSP
+	mov x_a16,RegSP
 	ret
 cpu_get_register_SP ENDP
 
 cpu_get_register_PC PROC
-	mov x_ax,OFFSET RegPC
+	mov x_a16,RegPC
 	ret
 cpu_get_register_PC ENDP
 
 cpu_get_register_I PROC
-	mov x_ax,OFFSET RegI
+	xor x_a16,x_a16
+	mov x_a8l,RegI
 	ret
 cpu_get_register_I ENDP
 
 cpu_get_register_R PROC
-	mov x_ax,OFFSET RegR
+	xor x_a16,x_a16
+	mov x_a8l,RegR
 	ret
 cpu_get_register_R ENDP
+
+cpu_get_register_IFF2 PROC
+	xor x_a16,x_a16
+	mov x_a8l,IFF2
+	ret
+cpu_get_register_IFF2 ENDP
 
 cpu_set_register_AF PROC
 	mov RegAF,x_c16
@@ -7331,4 +7339,8 @@ cpu_set_register_PC PROC
 	ret
 cpu_set_register_PC ENDP
 
+cpu_set_register_IFF2 PROC
+	mov IFF2,x_c8l
+	ret
+cpu_set_register_IFF2 ENDP
 END

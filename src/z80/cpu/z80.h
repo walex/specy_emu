@@ -19,7 +19,8 @@ constexpr uint32_t CPU_REGISTER_IY = 9;
 constexpr uint32_t CPU_REGISTER_SP = 10;
 constexpr uint32_t CPU_REGISTER_I = 11;
 constexpr uint32_t CPU_REGISTER_R = 12;
-constexpr uint32_t CPU_REGISTER_PC = 13;
+constexpr uint32_t CPU_REGISTER_IFF2 = 13;
+constexpr uint32_t CPU_REGISTER_PC = 14;
 
 typedef void(*clock_call_interceptor_handler)();
 
@@ -28,7 +29,6 @@ extern "C" {
 #endif
 	void cpu_z80_init(uint8_t* memPtr, uint8_t force_retn=0);
 	void cpu_z80_step();
-	void GetRegPC(uint64_t memPtr, uint16_t* value);
 	void cpu_set_wait_state(uint64_t cycles);
 	void cpu_unset_wait_state();
 	bool cpu_get_wait_state();
@@ -37,10 +37,12 @@ extern "C" {
 	void cpu_set_cycles(uint64_t cycles);
 	void cpu_call_opcode_interceptor(uint16_t addr, clock_call_interceptor_handler handler);
 	void cpu_call_opcode_notify(uint16_t addr);
-	uint16_t cpu_get_pc(uint64_t base_addr);
 	void cpu_set_register16(uint8_t reg_id, uint16_t value);
 	void cpu_set_register8(uint8_t reg_id, uint8_t value);
 	void cpu_set_interrupt_mode(uint8_t mode);
+	uint16_t cpu_get_register16(uint8_t reg_id);
+	uint8_t cpu_get_register8(uint8_t reg_id);
+	uint8_t cpu_get_interrupt_mode();
 
 #ifdef __cplusplus
 	}

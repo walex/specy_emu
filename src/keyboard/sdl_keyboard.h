@@ -62,6 +62,8 @@
 #define HOST_KEY_UP SDL_SCANCODE_UP
 #define HOST_KEY_DOWN SDL_SCANCODE_DOWN
 
+#define HOST_KEY_F1 SDL_SCANCODE_F1
+
 inline const bool* keyboard_get_state() {
 	return SDL_GetKeyboardState(nullptr);
 }

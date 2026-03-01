@@ -2,6 +2,7 @@
 #include "system_memory.h"
 #include "sdl_keyboard.h"
 #include <vector>
+#include <map>
 
 std::map<uint8_t, uint8_t> keyboard_map = {
 {0xFE, 0},
@@ -143,21 +144,19 @@ uint8_t keyboard_get_map_addr(uint8_t addr) {
     return ~(keyboard_map[addr]);
 }
 
-void keyboard_tick(uint64_t delta_cycles) {
+const bool* keyboard_tick(uint64_t /*delta_cycles*/) {
     
 	const bool* keys = keyboard_get_state();
-    int exit = 0;
+    bool key_pressed = false;
     for (auto& [i, value] : key_mapping_direct) {
-		bool key_pressed = keys[i];
-        if (key_pressed == true) {
+		key_pressed = keys[i];
+        if (key_pressed == true)
             keyboard_map[value.pos] |= (uint8_t)(1 << value.shift);
-            exit++;
-        }
         else
             keyboard_map[value.pos] &= (uint8_t)~(1 << value.shift);
     }
-    if (exit)
-        return;
+    if (key_pressed)
+        return nullptr;
 	int editor_mode = system_memory_get_system_var_value_8(SPECY_48K_SYS_VAR_MODE);
     for (auto& [i, km] : key_mapping_extra) {
         if (keys[i] == true) {
@@ -166,7 +165,7 @@ void keyboard_tick(uint64_t delta_cycles) {
                 KeyMapping rs = ZX_KEYCODE_RSHIFT;
                 keyboard_map[ls.pos] |= (uint8_t)(1 << ls.shift);
                 keyboard_map[rs.pos] |= (uint8_t)(1 << rs.shift);
-                return;
+                return nullptr;
             }
 
             if (km.shift_mode == true 
@@ -178,7 +177,8 @@ void keyboard_tick(uint64_t delta_cycles) {
                 for (const auto& value : km.key_mapping)
                     keyboard_map[value.pos] |= (uint8_t)(1 << value.shift);
             }
-            return;
+            return nullptr;
         }
     }
+    return keys;
 }

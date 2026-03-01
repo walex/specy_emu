@@ -34,91 +34,68 @@
 #include "memory_paging.h"
 #include "tape_audio.h"
 #include "sna_loader.h"
-#include <filesystem>
-#include <thread>
+#include "system_menu.h"
+#include "dirs.h"
 
-#ifdef _WIN32
-#include <Windows.h>
+static bool force_retn = false;
 
-std::filesystem::path get_executable_directory() {
+void specy_emu_evaluate_keys(const bool* keys) {
 
-	char exePath[MAX_PATH];
-	// Get the full path of the current executable
-	if (GetModuleFileNameA(NULL, exePath, MAX_PATH) != 0) {
-		// Use C++17 filesystem library to get the parent directory
-		std::filesystem::path path_obj(exePath);
-		return path_obj.parent_path();
-	}
-	perror("Failed to get executable path.");
-	return std::filesystem::path();
+	system_menu_evaluate_keyboard_state(keys);
 }
 
-#else
+void specy_load_file(const char* path) {
 
-#include <unistd.h>
-#include <limits.h>
-std::filesystem::path get_executable_directory() {
-	char exePath[PATH_MAX];
-	// Get the full path of the current executable
-	ssize_t count = readlink("/proc/self/exe", exePath, PATH_MAX);
-	if (count != -1) {
-		exePath[count] = '\0'; // Null-terminate the string
-		// Use C++17 filesystem library to get the parent directory
-		std::filesystem::path path_obj(exePath);
-		return path_obj.parent_path();
+	std::string extension = std::filesystem::path(path).extension().string();
+	std::transform(extension.begin(), extension.end(), extension.begin(),
+		[](char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); });
+
+	if (extension == ".sna") {
+		force_retn = sna_load_48k(path, system_memory_get_pointer(0x4000));
+		return;
 	}
-	perror("Failed to get executable path.");
-	return std::filesystem::path();
+
+	if (extension == ".tap"
+		|| extension == ".wav"
+		) {
+		tape_audio_from_file(path);
+		return;
+	}
 }
 
-#endif
+int main(int /*argc*/, char* /*argv[]*/) {
+	
+	// init menu
+	system_menu_set_callback(SYSTEM_MENU_OPEN_FILE_DIALOG, [](void* params) {
+		specy_load_file((const char*)params); }
+	);
 
-#define Z80_TEST
-int main(int argc, char* argv[]) {
-
+	// init system memory
 	auto roms_dir = get_executable_directory();
 	roms_dir = roms_dir.append("roms");
-	if (system_memory_init(SPECTRUM_128K_SYSTEM, roms_dir.string().c_str())) {
+	if (system_memory_init(SPECTRUM_48K_SYSTEM, roms_dir.string().c_str())) {
 		perror("rom init failed");
 		return -1;
 	}
-	ula_init(system_memory_get_pointer());
 
-#ifndef Z80_TEST
-	if (argc > 1) {
-		// load audio file from command line
-		tape_audio_from_file(argv[1]);
-		printf("Starting Z80 CPU emulation... file %s\n", argv[1]);
-	}
-	else {
-		printf("Starting Z80 CPU emulation...\n");
-	}
-#else
-	//tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\tests\\zexall.tap");
-	tape_audio_from_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\working\\EXOLON.TAP");
-	//sna_load_48k("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\automania.sna", system_memory_get_pointer(0x4000));
-	
-#endif
+	// init ULA
+	Ula_Callbacks ula_callbacks{
+		.ulaKeyboardKeysCallback = specy_emu_evaluate_keys
+	};
+	ula_init(system_memory_get_pointer(), &ula_callbacks);
 
-	std::thread th([&]() {
-		const size_t mem_size = 16 * 1024;
-		std::this_thread::sleep_for(std::chrono::seconds(5));
-		uint8_t* mem = new uint8_t[BANK_SIZE];
-		if (mem == nullptr) {
-			perror("48k RAM memory error");
-			return nullptr;
-		}
-		memset(mem, 0, mem_size);
-		system_memory_load_rom(mem, roms_dir.string().c_str(), "TK95.Spanish.rom");
-		memory_paging_copy_mem_to_bank(mem, BANK_ROM_1_INDEX, BANK_SIZE);
-		delete[] mem;
-		});
-
-	uint8_t force_retn = 0;
+	// init z80 cpu
 	cpu_z80_init(system_memory_get_pointer(), force_retn);
-	while (true)
-		cpu_z80_step();	
-	system_memory_end();
+	
+	// run z80 cpu
+	while (ula_is_running())
+		cpu_z80_step();
 
+	// release ula resources
+	ula_end();
+
+	// release memory resources
+	system_memory_end();
+	
 	return 0;
 }

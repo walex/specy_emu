@@ -4,15 +4,23 @@
 #include "clk_master.h"
 #include <stdint.h>
 
-void ula_init(uint8_t* system_memory);
+using UlaKeyboardKeysCallback = void(*)(const bool* keys);
+struct Ula_Callbacks {
+	
+	UlaKeyboardKeysCallback ulaKeyboardKeysCallback;
+};
+
+void ula_init(uint8_t* system_memory, Ula_Callbacks* callbacks = nullptr);
+bool ula_is_running();
+void ula_end();
 void ula_assert_INT_line();
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 	void ula_read_port(uint16_t addr, uint8_t* value);
-	void ula_write_port_FE(uint16_t addr, uint8_t value);
-	void ula_on_load_edge_1();
+	void ula_write_port_FE(uint8_t value);
+	void ula_on_port_load_bytes();
 #ifdef __cplusplus
 }
 #endif

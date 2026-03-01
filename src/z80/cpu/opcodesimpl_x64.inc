@@ -1134,7 +1134,7 @@ inst_OUT PROC
 ; port:WORD -> x_c16
 ; value:BYTE -> x_d8l
 
-CALL_C_FUNC inst_OUT_Impl, x_c16, x_d8l
+CALL_C_FUNC inst_OUT_Impl
 ret
 
 inst_OUT ENDP

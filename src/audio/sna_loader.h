@@ -20,11 +20,24 @@
    ------------------------------------------------------------------------
    Total: 49179 bytes
 */
-struct sna_header_48k {
+
+
+#define SNA_RAM_SIZE_48K 0xC000
+
+#if defined(_MSC_VER)
+#pragma pack(push, 1)
+#define PACKED
+#elif defined(__GNUC__) || defined(__clang__)
+#define PACKED __attribute__((packed))
+#else
+#define PACKED
+#endif
+
+struct PACKED sna_header_48k {
 	uint8_t I;
 	uint16_t HL_, DE_, BC_, AF_;
 	uint16_t HL, DE, BC, IY, IX;
-	uint8_t interrupt;
+	uint8_t IFF2;
 	uint8_t R;
 	uint16_t AF, SP;
 	uint8_t int_mode;
@@ -33,10 +46,15 @@ struct sna_header_48k {
 
 struct sna_48k {
 	sna_header_48k header;
-	uint8_t ram[0xC000];
+	uint8_t ram[SNA_RAM_SIZE_48K];
 };
 
-void sna_load_48k(const char* filename, uint8_t* ram_mem);
+#if defined(_MSC_VER)
+#pragma pack(pop)
+#endif
+
+int sna_load_48k(const char* filename, uint8_t* ram_mem);
+void sna_save_48k(const char* filename, uint8_t* ram_mem);
 
 /*
    128k

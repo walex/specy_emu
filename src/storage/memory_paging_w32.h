@@ -67,7 +67,7 @@ inline void* memory_page_create(const size_t max_banks, const size_t size, const
         nullptr,
         PAGE_READWRITE,
         0,
-        mem_size,
+        (DWORD)mem_size,
         nullptr);
     if (mem_handle == nullptr) {
         PRINT_W32_ERROR();

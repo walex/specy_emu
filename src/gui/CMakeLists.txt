@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.10)
+
+file(GLOB GUI_SOURCES "*.asm" "*.cpp" "*.c")
+file(GLOB GUI_HEADERS "*.inc" "*.h" "*.hpp")
+
+set(GUI_INCLUDE_DIRS ${CMAKE_CURRENT_SOURCE_DIR} PARENT_SCOPE)
+set(GUI_SOURCES ${GUI_SOURCES} PARENT_SCOPE)
+set(GUI_HEADERS ${GUI_HEADERS} PARENT_SCOPE)

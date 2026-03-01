@@ -1,9 +1,9 @@
 #include "tape_audio.h"
 #include "audio_render.h"
 #include "z80.h" // TODO: replace for cpu.h
+#include "system_memory.h"
 #include <vector>
 #include <string>
-#include "system_memory.h"
 
 static constexpr uint32_t PILOT_PULSE_T = 2168;
 static constexpr uint32_t SYNC1_T = 667;
@@ -32,14 +32,15 @@ void tape_audio_reset() {
 	tape_pulse_index = 0;
 	current_ear = 0;
 	tape_active = false;
+	sync_cycles = 0;
 }
 
-static void tape_add_pause(uint32_t& t) {
+void tape_add_pause(uint32_t& t) {
 	t += PAUSE_T;
 	tape_pulses.push_back({ t, 0 }); // EAR down during pause
 }
 
-static void tape_add_pulse(uint64_t& t, uint32_t duration, uint8_t& level) {
+void tape_add_pulse(uint64_t& t, uint32_t duration, uint8_t& level) {
 	t += duration;
 	tape_pulses.push_back({ t, level });
 	level ^= 1;
@@ -48,7 +49,7 @@ static void tape_add_pulse(uint64_t& t, uint32_t duration, uint8_t& level) {
 uint8_t tape_audio_next_pulse(uint64_t cycles) {
 
 	if (!tape_active)
-		return 0;
+		return 0xFF;
 
 	sync_cycles += cycles;
 
@@ -62,87 +63,75 @@ uint8_t tape_audio_next_pulse(uint64_t cycles) {
 			tape_pulse_index++;
 		}
 
-		// TODO: support multi charge tape loading
 		// end tape
 		if (tape_pulse_index >= tape_pulses.size()) {
 			tape_active = false;
+			current_ear = 0xFF;
 		}
 	}
+
 	return current_ear;
 }
 
 void tape_audio_set_bytes(uint8_t* data, size_t size) {
-
-	uint8_t* data_ptr = data;
-
+	uint8_t* data_end = data + size;
 	uint64_t cycles = 0;
+	uint8_t level = 1;
 
 	tape_audio_reset();
 
-	uint8_t level = 0;
-
-	uint16_t data_len;
-	uint8_t* data_end = (uint8_t*)(data + size);
-	while (data < data_end) {
-
+	while (data + 2 <= data_end) {
 		uint16_t block_size = data[0] | (data[1] << 8);
-
-		// pass 2 bytes block length
 		data += 2;
 
-		if (data[0] == 0) {
-			// header block
-			data_len = data[12] | (data[13] << 8);
+		if (data + block_size > data_end) break;
 
-			// Pilot
-			for (int i = 0; i < PILOT_HEADER; i++)
-				tape_add_pulse(cycles, PILOT_PULSE_T, level);
+		uint8_t flag = data[0];
+		bool is_header = (flag == 0x00);
 
-			// Sync
-			tape_add_pulse(cycles, SYNC1_T, level);
-			tape_add_pulse(cycles, SYNC2_T, level);
+		// Pilot tone
+		int pilot_count = is_header ? PILOT_HEADER : PILOT_DATA;
+		for (int i = 0; i < pilot_count; i++)
+			tape_add_pulse(cycles, PILOT_PULSE_T, level);
 
-			for (int i = 0; i < block_size; i++) {
-				uint8_t byte = data[i];
-				for (int b = 7; b >= 0; b--) {
-					uint32_t d = (byte & (1 << b)) ? BIT1_T : BIT0_T;
-					tape_add_pulse(cycles, d, level);
-					tape_add_pulse(cycles, d, level);
-				}
+		// Sync pulses
+		tape_add_pulse(cycles, SYNC1_T, level);
+		tape_add_pulse(cycles, SYNC2_T, level);
+
+		// Data bits
+		for (uint16_t i = 0; i < block_size; i++) {
+			uint8_t byte = data[i];
+			for (int b = 7; b >= 0; b--) {
+				uint32_t duration = (byte & (1 << b)) ? BIT1_T : BIT0_T;
+				tape_add_pulse(cycles, duration, level);
+				tape_add_pulse(cycles, duration, level);
 			}
 		}
-		else {
-			data_len = block_size - 2;
-			// Pilot
-			for (int i = 0; i < PILOT_DATA; i++)
-				tape_add_pulse(cycles, PILOT_PULSE_T, level);
 
-			// Sync
-			tape_add_pulse(cycles, SYNC1_T, level);
-			tape_add_pulse(cycles, SYNC2_T, level);
-
-			for (int i = 0; i < data_len + 2; i++) {
-				uint8_t byte = data[i];
-				for (int b = 7; b >= 0; b--) {
-					uint32_t d = (byte & (1 << b)) ? BIT1_T : BIT0_T;
-					tape_add_pulse(cycles, d, level);
-					tape_add_pulse(cycles, d, level);
-				}
-			}			
-		}
 		data += block_size;
+
+		// Pause between blocks (critical!)
+		// Force EAR to 0 at start of pause if it's not already
+		if (level != 0) {
+			tape_pulses.push_back({ cycles, 0 });
+			level = 0;
+		}
+		// Maintain EAR at 0 during pause
+		cycles += PAUSE_T;
+		tape_pulses.push_back({ cycles, 0 });
 	}
 
-	tape_add_pause((uint32_t&)cycles);
 	current_ear = 0;
 	tape_active = true;
+}
 
-	delete[] data_ptr;
+bool tape_audio_is_active() {
+	return tape_active;
 }
 
 void tape_audio_sync() {
 
-	sync_cycles = tape_pulses[tape_pulse_index].end_cycle;
+	sync_cycles = 0;
 }
 
 void tape_audio_load_wav(const char* filename) {
@@ -184,7 +173,12 @@ void tape_audio_load_tap(const char* filename) {
 	uint8_t* tap_buffer;
 	size_t tap_size;
 	tap_file_to_bytes(filename, &tap_buffer, &tap_size);
+	if (tap_size == 0) {
+		printf("Error loading TAP file: %s\n", filename);
+		return;
+	}
 	tape_audio_set_bytes(tap_buffer, tap_size);
+	delete[] tap_buffer;
 }
 
 void tape_audio_from_file(const char* filename) {

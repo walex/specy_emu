@@ -1,6 +1,5 @@
 #include "clk_master.h"
 #include <chrono>
-#include <thread>
 #include <map>
 
 struct clock_master {
@@ -30,6 +29,11 @@ clock_master_handle clk_master_create(const char* name, double frequency_hz) {
 	return (void*)cm;
 }
 
+void clk_master_destroy(clock_master_handle cm) {
+
+	delete (clock_master*)cm;
+}
+
 clock_master_handle clk_master_get(const char* name) {
 
 	for (const auto& [key, value] : clock_masters) {
@@ -38,11 +42,6 @@ clock_master_handle clk_master_get(const char* name) {
 		}
 	}
 	return nullptr;
-}
-
-void clk_master_destroy(clock_master_handle cm) {
-
-    delete (clock_master*)cm;
 }
 
 void clk_master_tick(clock_master_handle cmh, uint64_t total_cycles) {

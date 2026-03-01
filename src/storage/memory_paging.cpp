@@ -2,8 +2,6 @@
 #define WINDOWS_PLATFORM
 #include "memory_paging_w32.h" 
 #include "system_memory.h"
-#include <map>
-#include <vector>
 
 constexpr uint8_t PAGING_RAM_BANK_MASK = 0x07; // Bits 0-2 for RAM bank selection
 constexpr uint8_t PAGING_SCREEN_MASK = 0x08; // Bit 3 for screen selection

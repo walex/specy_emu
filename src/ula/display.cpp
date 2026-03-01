@@ -5,39 +5,39 @@
 #include "system_memory.h"
 #include "video_render.h"
 #include "tempo.h"
-#include <mutex>
 #include <thread>
-#include <chrono>
 #include <semaphore>
 
 static std::thread display_thread;
-static std::atomic<int> display_running{ 0 };
+static std::atomic<bool> display_thread_running{ false };
 static std::atomic<uint32_t> border_color{ 0 };
 static uint8_t* system_memory_ptr = nullptr;
 static uint32_t display_buffer[kDisplayResolutionX * kDisplayResolutionY];
 static std::atomic<uint64_t> cycle_in_line = 0;
 static std::counting_semaphore<1> line_drawn_semaphore(0);
-
 void display_thread_proc();
 
 void display_init(uint8_t* system_memory) {
 
-	if (display_running.load() != 0)
+	if (display_thread_running.load())
 		return;
 
 	system_memory_ptr = system_memory;
 	display_thread = std::thread(display_thread_proc);
-	while (display_running.load() == 0)
-		std::this_thread::sleep_for(std::chrono::microseconds(1));
+	while (!display_thread_running.load())
+		std::this_thread::yield();
+}
+
+bool display_is_running() {
+	return display_thread_running.load();
 }
 
 void display_end() {
 
-	if (display_running.load() != 0) {
-		display_running = 0;
-		if (display_thread.joinable())
-			display_thread.join();
-	}
+	if (display_thread_running.load())
+		display_thread_running.store(false);
+	if (display_thread.joinable())
+		display_thread.join();
 	
 }
 
@@ -51,7 +51,6 @@ void display_draw(int y) {
 	uint8_t byte, attrib;
 	uint16_t frame_count = system_memory_get_system_var_value_16(SPECY_48K_SYS_VAR_FRAMES);
 
-	int buffer_height = (kDisplayResolutionY - kDisplayBufferResolutionY) / 2;
 	int buffer_width = (kDisplayResolutionX - kDisplayBufferResolutionX) / 2;
 	static size_t state_index = 0;
 	// Fill top and bottom borders
@@ -125,23 +124,23 @@ void display_thread_proc() {
 	constexpr int kWindowHeight = 768;
 	video_render_init(display_buffer, kDisplayResolutionX, kDisplayResolutionY,
 		kWindowWidth, kWindowHeight);
-	display_running++;
-	while (true) {		
-
-		if (display_running.load() == 0)
-			break;
+	display_thread_running.store(true);
+	while (display_thread_running.load()) {
 
 		MEASURE_ELAPSED_TIME("display scan time:", 100,
 		line_drawn_semaphore.acquire();
-		video_render_draw();
+		if (video_render_process() == false)
+			display_thread_running.store(false);
 			)		
 	}
 	video_render_end();
 }
 
 
-void display_set_border_color(uint8_t color) {
-	border_color = KVideoColorPalleteHILO[color & 0x7][OPAQUE_MODE];;
+void display_set_border_color(uint32_t color) {
+	border_color.store(KVideoColorPalleteHILO[color & 0x7][OPAQUE_MODE]);
 }
 
-
+uint32_t display_get_border_color() {
+	return border_color.load();
+}
