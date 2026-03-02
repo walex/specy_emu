@@ -21,6 +21,14 @@ void circular_buffer_end() {
     buffer_size = 0;
 }
 
+void circular_buffer_clear() {
+    buffer_write.store(0, std::memory_order_relaxed);
+    buffer_read.store(0, std::memory_order_relaxed);
+    buffer_count.store(0, std::memory_order_relaxed);
+    if (audio_buffer)
+        memset(audio_buffer, 0, sizeof(float) * buffer_size);
+}
+
 // Internal function to push a sample into the circular buffer
 void circular_buffer_push_sample(float level) {
 

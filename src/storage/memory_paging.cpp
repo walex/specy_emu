@@ -1,5 +1,4 @@
 #include "memory_paging.h"
-#define WINDOWS_PLATFORM
 #include "memory_paging_w32.h" 
 #include "system_memory.h"
 

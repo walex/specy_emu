@@ -11,6 +11,7 @@ static size_t display_buffer_width = 0;
 static size_t display_buffer_height = 0;
 static size_t window_size_width = 0;
 static size_t window_size_height = 0;
+static uint64_t window_id = 0;
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void** /*appstate*/, int /*argc*/, char* /*argv[]*/ )
@@ -26,6 +27,9 @@ SDL_AppResult SDL_AppInit(void** /*appstate*/, int /*argc*/, char* /*argv[]*/ )
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
+
+    window_id = (uint64_t)SDL_GetWindowID(window);
+
     SDL_SetRenderLogicalPresentation(renderer, (int)window_size_width, (int)window_size_height, SDL_LOGICAL_PRESENTATION_STRETCH);
 
     texture = SDL_CreateTexture(renderer, SDL_PIXELFORMAT_XRGB8888, SDL_TEXTUREACCESS_STREAMING, (int)display_buffer_width, (int)display_buffer_height);
@@ -99,3 +103,10 @@ void video_render_end() {
 
     SDL_AppQuit(nullptr, SDL_APP_SUCCESS);
 }
+
+#ifdef WINDOWS_PLATFORM
+#include <Windows.h>
+uint64_t video_render_get_window_id() {
+    return (uint64_t)FindWindowA(nullptr, "spectrum render");
+}
+#endif

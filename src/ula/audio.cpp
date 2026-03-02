@@ -21,6 +21,17 @@ static std::atomic<float> current_level(0.0);
 // audio thread
 static std::thread audio_thread;
 static std::atomic<bool> audio_thread_running{ false };
+using audio_push_sample_ptr = void(*)(float);
+
+void audio_push_sample(float sample) {
+    circular_buffer_push_sample(sample);
+}
+
+void audio_push_sample_none(float sample) {
+
+}
+
+static audio_push_sample_ptr audio_push_sample_func = audio_push_sample;
 
 inline float tv_saturate(float x) {
     // Saturación suave, simula transistor barato de TV
@@ -89,7 +100,17 @@ void audio_tick(uint64_t delta_tstates) {
     while (accum >= CYCLES_PER_SAMPLE) {
         auto level = current_level.load(std::memory_order_relaxed);
         accum -= CYCLES_PER_SAMPLE;
-        circular_buffer_push_sample(level);
+        audio_push_sample_func(level);
     }
     tstate_accum = accum;
+}
+
+void audio_enable(bool enable) {
+
+    if (enable)
+        audio_push_sample_func = audio_push_sample;
+    else
+        audio_push_sample_func = audio_push_sample_none;
+    memset(&current_level, 0, sizeof(current_level));
+    circular_buffer_clear();
 }

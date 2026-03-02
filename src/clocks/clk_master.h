@@ -18,6 +18,7 @@ extern "C" {
 	uint64_t clk_master_get_cycles(clock_master_handle cmh);
 	void clk_master_tick(clock_master_handle cmh, uint64_t cycles);
 	void clk_master_subscribe_sync_callback(clock_master_handle cmh, clock_master_clicks_callback_function cb);
+	void clk_master_switch_mode(bool cpu_speed_mode);
 #ifdef __cplusplus
 }
 #endif

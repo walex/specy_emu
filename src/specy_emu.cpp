@@ -67,7 +67,8 @@ int main(int /*argc*/, char* /*argv[]*/) {
 	
 	// init menu
 	system_menu_set_callback(SYSTEM_MENU_OPEN_FILE_DIALOG, [](void* params) {
-		specy_load_file((const char*)params); }
+		specy_load_file((const char*)params);
+		}
 	);
 
 	// init system memory

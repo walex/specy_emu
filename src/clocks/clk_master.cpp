@@ -13,6 +13,45 @@ struct clock_master {
 };
 
 static std::map<const char*, clock_master_handle> clock_masters;
+static bool cpu_speed_mode = false;
+using clock_sync_func_impl_ptr = void(*)(clock_master_handle, uint64_t, uint64_t, uint64_t&);
+
+void non_clock_sync_func(clock_master_handle, uint64_t, uint64_t, uint64_t&) {}
+void clock_sync_func(clock_master_handle cmh, uint64_t total_cycles, uint64_t sync_cycles, uint64_t& last_total_cycles) {
+
+	clock_master* cm = (clock_master*)cmh;
+	uint64_t delta_cycles = total_cycles - cm->cycles;
+	if (cm->sync_cycles == 0)
+		cm->clock = std::chrono::high_resolution_clock::now();
+	cm->sync_cycles += delta_cycles;
+	if (cm->sync_cycles >= sync_cycles) {
+		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
+		double elapsed_cpu_time = sync_cycles / (cm->frequency / 1000000.0);  // microseconds
+		auto target_time = cm->clock + std::chrono::microseconds((int64_t)elapsed_cpu_time);
+		// Sleep until target time (smooth pacing)
+		if (now < target_time) {
+			const uint64_t delta_t = std::chrono::duration_cast<std::chrono::microseconds>(target_time - now).count();
+			if (delta_t > 0) {
+				uint64_t delta_c = (total_cycles - last_total_cycles) / delta_t;
+				while (now < target_time) {
+					last_total_cycles += delta_c;
+					if (last_total_cycles < total_cycles) {
+						clk_master_tick(cmh, (uint64_t)last_total_cycles);
+					}
+					now = std::chrono::high_resolution_clock::now();
+				}
+			}
+			cm->clock = target_time;
+		}
+		else {
+			// Running behind - don't sleep, but update clock
+			cm->clock = now;
+		}
+		cm->sync_cycles -= sync_cycles;
+	}
+}
+
+clock_sync_func_impl_ptr clock_sync_func_impl = clock_sync_func;
 
 clock_master_handle clk_master_create(const char* name, double frequency_hz) {
 
@@ -56,37 +95,7 @@ void clk_master_tick(clock_master_handle cmh, uint64_t total_cycles) {
 void clk_master_sync(clock_master_handle cmh, uint64_t total_cycles, uint64_t sync_cycles) {
 
 	static uint64_t last_total_cycles = 0;
-#ifdef CPU_CLOCK_SYNC
-	clock_master* cm = (clock_master*)cmh;	
-	uint64_t delta_cycles = total_cycles - cm->cycles;
-	if (cm->sync_cycles == 0)
-		cm->clock = std::chrono::high_resolution_clock::now();	
-	cm->sync_cycles += delta_cycles;
-	if (cm->sync_cycles >= sync_cycles) {
-		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-		double elapsed_cpu_time = sync_cycles / (cm->frequency / 1000000.0);  // microseconds
-		auto target_time = cm->clock + std::chrono::microseconds((int64_t)elapsed_cpu_time);
-		// Sleep until target time (smooth pacing)
-		if (now < target_time) {
-			const uint64_t delta_t = std::chrono::duration_cast<std::chrono::microseconds>(target_time-now).count();
-			if (delta_t > 0) {
-				uint64_t delta_c = (total_cycles - last_total_cycles) / delta_t;
-				while (now < target_time) {
-					last_total_cycles += delta_c;
-					if (last_total_cycles < total_cycles) {
-						clk_master_tick(cmh, (uint64_t)last_total_cycles);
-					}
-					now = std::chrono::high_resolution_clock::now();
-				}				
-			}			
-			cm->clock = target_time;
-		} else {
-			// Running behind - don't sleep, but update clock
-			cm->clock = now;
-		}		
-		cm->sync_cycles -= sync_cycles;
-	}	
-#endif
+	clock_sync_func_impl(cmh, total_cycles, sync_cycles, last_total_cycles);
 	clk_master_tick(cmh, total_cycles);
 	last_total_cycles = total_cycles;
 }
@@ -104,4 +113,12 @@ uint64_t clk_master_get_cycles(clock_master_handle cmh) {
 void clk_master_subscribe_sync_callback(clock_master_handle cmh, clock_master_clicks_callback_function cb) {
 		
 	((clock_master*)cmh)->callbacks.push_back(cb);
+}
+
+void clk_master_switch_mode(bool cpu_speed_mode) {
+
+	if (cpu_speed_mode)
+		clock_sync_func_impl = non_clock_sync_func;
+	else
+		clock_sync_func_impl = clock_sync_func;
 }
