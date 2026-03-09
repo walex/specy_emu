@@ -1,6 +1,8 @@
 #ifndef _DISPLAY_CONSTS_H_
 #define _DISPLAY_CONSTS_H_
 
+#include "platform.h"
+
 static const int kScanConvert[192] = {
    0,8,16,24,32,40,48,56,
    1,9,17,25,33,41,49,57,

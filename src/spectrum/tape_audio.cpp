@@ -1,9 +1,8 @@
 #include "tape_audio.h"
 #include "audio_render.h"
-#include "z80.h" // TODO: replace for cpu.h
+#include "z80.h"
 #include "system_memory.h"
-#include <vector>
-#include <string>
+#include "tap_loader.h"
 
 static constexpr uint32_t PILOT_PULSE_T = 2168;
 static constexpr uint32_t SYNC1_T = 667;

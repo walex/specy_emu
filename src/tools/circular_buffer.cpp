@@ -1,6 +1,4 @@
 #include "circular_buffer.h"
-#include <atomic>
-#include <thread>
 
 static float *audio_buffer;
 static size_t buffer_size{ 0 };

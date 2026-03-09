@@ -2,11 +2,6 @@
 #include "z80.h"
 #include "ula.h"
 #include "memory_paging.h"
-#include <stdio.h>
-#include <stdlib.h>
-#include <memory.h>
-#include <map>
-#include <filesystem>
 
 // intercept calls functions
 static constexpr uint16_t LD_BYTES = 0x0556;
@@ -108,6 +103,9 @@ void system_memory_on_rom_call_LD_BYTES() {
 }
 
 int system_memory_init(uint32_t machine_id, const char* base_path) {
+
+	if (machine_id == UNKNOWN_SYSTEM)
+		machine_id = SPECTRUM_48K_SYSTEM;
 	system_rom_pointer = system_memory_create(machine_id, base_path);
 	if (!system_rom_pointer) {
 		perror("cannot load rom file");
@@ -115,11 +113,16 @@ int system_memory_init(uint32_t machine_id, const char* base_path) {
 	}
 	
 	cpu_call_opcode_interceptor(LD_BYTES, system_memory_on_rom_call_LD_BYTES);
+	system_machine_id = machine_id;
 	return 0;
 }
 
 void system_memory_end() {
 	system_memory_free();	
+}
+
+uint32_t system_memory_get_machine_id() {
+	return system_machine_id;
 }
 
 uint8_t* system_memory_get_pointer(uint64_t offset) {

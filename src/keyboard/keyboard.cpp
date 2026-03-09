@@ -1,19 +1,5 @@
 #include "keyboard.h"
 #include "system_memory.h"
-#include "sdl_keyboard.h"
-#include <vector>
-#include <map>
-
-std::map<uint8_t, uint8_t> keyboard_map = {
-{0xFE, 0},
-{0xFD, 0},
-{0xFB, 0},
-{0xF7, 0},
-{0xEF, 0},
-{0xDF, 0},
-{0xBF, 0},
-{0x7F, 0}
-};
 
 #define ZX_KEYCODE_LSHIFT { 0xFE,0 }
 #define ZX_KEYCODE_RSHIFT { 0x7F,1 }
@@ -137,48 +123,81 @@ std::map<int, KeyMappingExt> key_mapping_extra = {
     {HOST_KEY_DOWN, {{{ZX_KEYCODE_6, ZX_KEYCODE_LSHIFT}}}}
 };
 
-uint8_t keyboard_get_map_addr(uint8_t addr) {
-    if (keyboard_map.find(addr) == keyboard_map.end()) {
-        return 0xFF;
-	}
-    return ~(keyboard_map[addr]);
+static UlaKeyboardKeysCallback keyboard_keys_callback = nullptr;
+static uint8_t forced_edit_mode_addr = -1;
+
+void keyboard_init(UlaKeyboardKeysCallback cb) {
+    keyboard_keys_callback = cb;
 }
 
-const bool* keyboard_tick(uint64_t /*delta_cycles*/) {
-    
-	const bool* keys = keyboard_get_state();
-    bool key_pressed = false;
-    for (auto& [i, value] : key_mapping_direct) {
-		key_pressed = keys[i];
-        if (key_pressed == true)
-            keyboard_map[value.pos] |= (uint8_t)(1 << value.shift);
-        else
-            keyboard_map[value.pos] &= (uint8_t)~(1 << value.shift);
-    }
-    if (key_pressed)
-        return nullptr;
-	int editor_mode = system_memory_get_system_var_value_8(SPECY_48K_SYS_VAR_MODE);
-    for (auto& [i, km] : key_mapping_extra) {
-        if (keys[i] == true) {
-            if (km.editor_mode != editor_mode && km.editor_mode == EDITOR_MODE_E) {
-                KeyMapping ls = ZX_KEYCODE_LSHIFT;
-                KeyMapping rs = ZX_KEYCODE_RSHIFT;
-                keyboard_map[ls.pos] |= (uint8_t)(1 << ls.shift);
-                keyboard_map[rs.pos] |= (uint8_t)(1 << rs.shift);
-                return nullptr;
-            }
+void keyboard_end() {
 
-            if (km.shift_mode == true 
-                && (keys[SDL_SCANCODE_LSHIFT] == true
-                    || keys[SDL_SCANCODE_RSHIFT] == true)) {
-				for (const auto& value : km.shift_key_mapping)
-                    keyboard_map[value.pos] |= (uint8_t)(1 << value.shift);
-            } else {
-                for (const auto& value : km.key_mapping)
-                    keyboard_map[value.pos] |= (uint8_t)(1 << value.shift);
-            }
-            return nullptr;
+}
+
+void keyboard_update_map(const bool* keys, uint8_t key, uint8_t& value) {
+    
+    value = 0;
+    for (auto& [i, k] : key_mapping_direct) {
+        if (keys[i] == true && k.pos == key) {
+            value |= (uint8_t)(1 << k.shift);
         }
     }
-    return keys;
+}
+
+void keyboard_update_map_extra(const bool* keys, uint8_t key, uint8_t& value) {
+
+    value = 0;
+    for (auto& [i, k] : key_mapping_extra) {
+        if (keys[i] == true) {
+			if (k.editor_mode == EDITOR_MODE_E) {
+                int editor_mode = system_memory_get_system_var_value_8(SPECY_48K_SYS_VAR_MODE);
+                if (k.editor_mode != editor_mode) {
+                    system_memory_set_system_var_value_8(SPECY_48K_SYS_VAR_MODE, EDITOR_MODE_E);
+                    forced_edit_mode_addr = key;
+                }
+            }
+            bool sm =
+                (k.shift_mode == true
+                    && (keys[SDL_SCANCODE_LSHIFT] == true
+                        || keys[SDL_SCANCODE_RSHIFT] == true));
+		    auto& km = sm ? k.shift_key_mapping : k.key_mapping;
+            for (auto& vk : km) {
+                if (vk.pos == key) {
+                    value |= (uint8_t)(1 << vk.shift);
+				}
+            }
+            break;
+        }
+    }
+}
+
+uint8_t keyboard_get_map_addr(uint8_t addr) {
+    
+    const bool* keys = keyboard_get_state();
+    
+    // process keyboard callbacks
+    if (keyboard_keys_callback) {
+        if (keyboard_keys_callback(keys)) {
+            // reset keyboard
+            keyboard_reset();
+        }
+    }
+
+	// if edit mode was forced and we finished to scan all keyboard lines then reset edit mode
+    if (forced_edit_mode_addr == addr) {
+        system_memory_set_system_var_value_8(SPECY_48K_SYS_VAR_MODE, EDITOR_MODE_CKL);
+        forced_edit_mode_addr = -1;
+    }    
+
+	// read pc keyboard that maps directs to zx keyboard 
+    uint8_t mapped_value;
+    keyboard_update_map(keys, addr, mapped_value);
+    if (mapped_value == 0) {
+        // read pc keyboard shortcuts that are not directly mapped to the zx keyboard
+        keyboard_update_map_extra(keys, addr, mapped_value);
+    }
+    return ~mapped_value;
+}
+
+void keyboard_tick(uint64_t /*delta_cycles*/) {
 }

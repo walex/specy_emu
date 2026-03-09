@@ -1,6 +1,4 @@
 #include "clk_master.h"
-#include <chrono>
-#include <map>
 
 struct clock_master {
 
@@ -115,8 +113,9 @@ void clk_master_subscribe_sync_callback(clock_master_handle cmh, clock_master_cl
 	((clock_master*)cmh)->callbacks.push_back(cb);
 }
 
-void clk_master_switch_mode(bool cpu_speed_mode) {
+void clk_master_switch_mode(bool mode) {
 
+	cpu_speed_mode = mode;
 	if (cpu_speed_mode)
 		clock_sync_func_impl = non_clock_sync_func;
 	else

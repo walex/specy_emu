@@ -1,7 +1,7 @@
 #ifndef _TAP_LOADER_H_
 #define _TAP_LOADER_H_
 
-#include <stdint.h>
+#include "platform.h"
 
 constexpr uint8_t TAP_HEADER_BLOCK = 0;
 constexpr uint8_t TAP_DATA_BLOCK = 0xFF;

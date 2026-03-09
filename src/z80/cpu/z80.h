@@ -43,7 +43,6 @@ extern "C" {
 	uint16_t cpu_get_register16(uint8_t reg_id);
 	uint8_t cpu_get_register8(uint8_t reg_id);
 	uint8_t cpu_get_interrupt_mode();
-
 #ifdef __cplusplus
 	}
 #else

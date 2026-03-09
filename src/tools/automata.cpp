@@ -46,6 +46,11 @@ void automata_measure_port_accel(uint64_t delta_tstates, uint64_t total_states)
 	pt.period.store(period_avg);
 	pt.acceleration.store(accel_avg);
 	pt.total_states.store(total_states);
+	static auto now = std::chrono::steady_clock::now();
+	if (std::chrono::steady_clock::now() - now > std::chrono::seconds(1)) {
+		now = std::chrono::steady_clock::now();
+		printf("accel_avgperiod: %d, accel: %d\n", (int)period_avg, (int)accel_avg);
+	}
 }
 
 bool automata_port_acceleration_decrease(PortTiming& t, double x, double y) {

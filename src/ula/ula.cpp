@@ -2,27 +2,24 @@
 #include "tape_audio.h"
 #include "z80.h"
 #include "system_memory.h"
-#include "keyboard.h"
 #include "display.h"
 #include "audio.h"
 #include "tempo.h"
+#include "clk_master.h"
+#include "automata.h"
 
 static clock_master_handle master_clock;
 static std::atomic<bool> audio_playing = false;
-static Ula_Callbacks callbacks;
 
 void ula_on_cpu_cycles(uint64_t total_cycles);
 
 void ula_init(uint8_t* system_memory, Ula_Callbacks* cb) {
 
-	if (cb) {
-		::callbacks = *cb;
-	}
-
 	master_clock = clk_master_create("cpu_sync_clock", Z80_CPU_FREQ_HZ);
 	clk_master_subscribe_sync_callback(master_clock, ula_on_cpu_cycles);
 	display_init(system_memory);
 	audio_init();
+	keyboard_init(cb ? cb->ulaKeyboardKeysCallback : nullptr);
 }
 
 bool ula_is_running() {
@@ -31,6 +28,7 @@ bool ula_is_running() {
 
 void ula_end() {
 
+	keyboard_end();
 	display_end();
 	audio_end();
 	clk_master_destroy(master_clock);
@@ -52,18 +50,7 @@ void ula_on_cpu_cycles(uint64_t total_cycles) {
 	uint64_t delta_cycles = total_cycles - last_cycles;
 	audio_tick(delta_cycles);
 	display_tick(delta_cycles);
-
-	int_cycles += delta_cycles;
-	if (int_cycles >= kULASyncCycles)
-	{
-		MEASURE_ELAPSED_TIME("int assert time:", 200,
-			int_cycles -= kULASyncCycles;
-			const bool* keys = keyboard_tick(delta_cycles);
-			if (keys && callbacks.ulaKeyboardKeysCallback)
-				callbacks.ulaKeyboardKeysCallback(keys);
-		);
-	}
-
+	keyboard_tick(delta_cycles);
 	last_cycles = total_cycles;
 }
 
@@ -116,7 +103,7 @@ void ula_read_port(uint16_t addr, uint8_t* value) {
 		*value = (kbd & 0xBF);
 
 		// measure port 0xFE request rate
-		//automata_measure_port_accel(delta_tstates, clock_cycle);
+		// automata_measure_port_accel(delta_tstates, clock_cycle);
 
 		// get audio pulses
 		if (currently_playing) {
@@ -130,7 +117,6 @@ void ula_read_port(uint16_t addr, uint8_t* value) {
 				audio_playing.store(false);
 			}
 		}
-
 
 		return;
 	}
@@ -152,4 +138,21 @@ void ula_write_port_FE(uint8_t value) {
 void ula_assert_INT_line() {
 
 	interrupts_request_mi_c(0xFF);
+}
+
+bool ula_has_snow_effect() {
+
+	uint8_t I = cpu_get_register8(CPU_REGISTER_I);
+	
+	if (I >= 0x40 && I <= 0x7F) {
+		return true;
+	}
+
+	if (system_memory_get_machine_id() == SPECTRUM_128K_SYSTEM) {
+
+		if (I >= 0xC0 && I <= 0xFF) {
+			return true;
+		}
+	}
+	return false;
 }

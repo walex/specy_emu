@@ -35,26 +35,25 @@
 #include "tape_audio.h"
 #include "sna_loader.h"
 #include "system_menu.h"
-#include "dirs.h"
+#include "file_system.h"
 
-static bool force_retn = false;
+bool specy_emu_evaluate_keys(const bool* keys) {
 
-void specy_emu_evaluate_keys(const bool* keys) {
-
-	system_menu_evaluate_keyboard_state(keys);
+	return system_menu_evaluate_keyboard_state(keys);
 }
 
-void specy_load_file(const char* path) {
+void specy_load_file(const char* path, int& is_image_file) {
 
 	std::string extension = std::filesystem::path(path).extension().string();
 	std::transform(extension.begin(), extension.end(), extension.begin(),
 		[](char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); });
 
 	if (extension == ".sna") {
-		force_retn = sna_load_48k(path, system_memory_get_pointer(0x4000));
+		is_image_file = sna_loader_load_48k(path, system_memory_get_pointer(0x4000));
 		return;
 	}
 
+	is_image_file = false;
 	if (extension == ".tap"
 		|| extension == ".wav"
 		) {
@@ -63,18 +62,39 @@ void specy_load_file(const char* path) {
 	}
 }
 
+void specy_save_file(const char* path) {
+
+	std::string extension = std::filesystem::path(path).extension().string();
+	std::transform(extension.begin(), extension.end(), extension.begin(),
+		[](char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); });
+
+	if (extension == ".sna") {
+		sna_loader_save_48k(path, system_memory_get_pointer(0x4000));
+		return;
+	}
+
+	printf("unsupported file format for saving: %s\n", extension.c_str());
+}
+
 int main(int /*argc*/, char* /*argv[]*/) {
 	
+	uint32_t machineId = SPECTRUM_48K_SYSTEM;
+	static int is_image_file = false;
+
 	// init menu
-	system_menu_set_callback(SYSTEM_MENU_OPEN_FILE_DIALOG, [](void* params) {
-		specy_load_file((const char*)params);
+	system_menu_set_callback(SYSTEM_MENU_COMMAND_OPEN_FILE, [](void* params) {
+		specy_load_file((const char*)params, is_image_file);
+		}
+	);
+	system_menu_set_callback(SYSTEM_MENU_COMMAND_SAVE_FILE, [](void* params) {
+		specy_save_file((const char*)params);
 		}
 	);
 
 	// init system memory
 	auto roms_dir = get_executable_directory();
 	roms_dir = roms_dir.append("roms");
-	if (system_memory_init(SPECTRUM_48K_SYSTEM, roms_dir.string().c_str())) {
+	if (system_memory_init(machineId, roms_dir.string().c_str())) {
 		perror("rom init failed");
 		return -1;
 	}
@@ -85,9 +105,12 @@ int main(int /*argc*/, char* /*argv[]*/) {
 	};
 	ula_init(system_memory_get_pointer(), &ula_callbacks);
 
-	// init z80 cpu
-	cpu_z80_init(system_memory_get_pointer(), force_retn);
+	specy_load_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\exolon.sna", is_image_file);
+	//specy_load_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\Renegade (1987)(Ocean Software).tap", is_image_file);
 	
+	// init z80 cpu
+	cpu_z80_init(system_memory_get_pointer(), (uint8_t)is_image_file);
+
 	// run z80 cpu
 	while (ula_is_running())
 		cpu_z80_step();

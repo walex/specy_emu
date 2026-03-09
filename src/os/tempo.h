@@ -1,7 +1,7 @@
 #ifndef __TIME_H__
 #define __TIME_H__
 
-#include <chrono>
+#include "platform.h"
 
 #ifdef ENABLE_TEMPO
 

@@ -3,12 +3,11 @@
 #ifndef __MEMORY_PAGE_W32__
 #define __MEMORY_PAGE_W32__
 
-#include <Windows.h>
-#include <stdio.h>
-#include <vector>
-#include <map>
+#include "platform.h"
 
+#if defined(_MSC_VER)
 #pragma comment(lib, "onecore.lib")
+#endif
 
 constexpr size_t BANK_ALIGNED_SIZE = 64 * 1024;
 static HANDLE mem_handle = nullptr;

@@ -1,6 +1,7 @@
 #ifndef _SDL_KEYBOARD_H_
 #define _SDL_KEYBOARD_H_
 
+#include "platform.h"
 #include <SDL3/SDL.h>
 
 #define HOST_KEY_LCONTROL SDL_SCANCODE_LCTRL
@@ -64,8 +65,13 @@
 
 #define HOST_KEY_F1 SDL_SCANCODE_F1
 #define HOST_KEY_F2 SDL_SCANCODE_F2
+#define HOST_KEY_F3 SDL_SCANCODE_F3
 
-inline const bool* keyboard_get_state() {
-	return SDL_GetKeyboardState(nullptr);
+inline const bool* keyboard_get_state(int* numKeys = nullptr) {
+	return SDL_GetKeyboardState(numKeys);
+}
+
+inline void keyboard_reset() {
+	SDL_ResetKeyboard();
 }
 #endif

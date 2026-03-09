@@ -1,7 +1,7 @@
 #ifndef __SPECY_MEMORY_H__
 #define __SPECY_MEMORY_H__
 
-#include <stdint.h>
+#include "platform.h"
 
 constexpr uint32_t BANK_ROM_0_INDEX = 8;
 constexpr uint32_t BANK_ROM_1_INDEX = 9;

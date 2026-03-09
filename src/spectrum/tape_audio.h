@@ -1,8 +1,7 @@
 #ifndef _TAPE_AUDIO_H_
 #define _TAPE_AUDIO_H_
 
-#include "tap_loader.h"
-#include <stdint.h>
+#include "platform.h"
 
 void tape_audio_reset();
 void tape_add_pulse(uint64_t& t, uint32_t duration, uint8_t& level);

@@ -1,7 +1,7 @@
 #ifndef _SNA_LOADER_H_
 #define _SNA_LOADER_H_
 
-#include <stdint.h>
+#include "platform.h"
 
 /*
 
@@ -53,8 +53,8 @@ struct sna_48k {
 #pragma pack(pop)
 #endif
 
-int sna_load_48k(const char* filename, uint8_t* ram_mem);
-void sna_save_48k(const char* filename, uint8_t* ram_mem);
+int sna_loader_load_48k(const char* filename, uint8_t* ram_mem);
+void sna_loader_save_48k(const char* filename, uint8_t* ram_mem);
 
 /*
    128k

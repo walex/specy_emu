@@ -101,7 +101,7 @@ bool cpu_get_wait_state() {
 void cpu_sync(uint8_t cycles) {
     
     static clock_master_handle cpu_sync_clock = clk_master_get("cpu_sync_clock");
-    static constexpr double CPU_SYNC_RATE_HZ = 250;
+    static constexpr double CPU_SYNC_RATE_HZ = 125;
     static constexpr uint64_t FRAME_CYCLES = (uint64_t)(Z80_CPU_FREQ_HZ / CPU_SYNC_RATE_HZ);
     clk_cycles += (uint64_t)cycles;
     clk_master_sync(cpu_sync_clock, clk_cycles, FRAME_CYCLES);

@@ -1,18 +1,10 @@
 .data
 
 EXTERNDEF count_interrupt_calls_c:PROC
+inst_RST PROTO
+inst_PUSH PROTO
 
 IFF_DELAY db 0
-
-.code
-
-inst_RST PROTO
-inst_PUSH PROTO
-
-.data
-
-inst_RST PROTO
-inst_PUSH PROTO
 
 .code
 
@@ -85,12 +77,13 @@ xor x_ax, x_ax
 mov x_a8h, RegI
 mov x_a8l, data_bus_8
 
-;[memptr] = LOW
-;[memptr+1] = HIGH
 pop x_cx
 
+;[memptr] = LOW
+;[memptr+1] = HIGH
 add x_cx, x_ax
 FETCH16 x_cx
+
 SET_REG_PC x_a16
 
 ret

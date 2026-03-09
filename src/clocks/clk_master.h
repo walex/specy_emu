@@ -1,8 +1,8 @@
 #ifndef _CLK_MASTER_H_
 #define _CLK_MASTER_H_
 
-#include <stdint.h>
-#include <functional>
+#include "platform.h"
+
 typedef void*  clock_master_handle;
 using clock_master_clicks_callback_function = std::function<void(uint64_t)>;
 

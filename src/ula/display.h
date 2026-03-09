@@ -1,7 +1,7 @@
 #ifndef _DISPLAY_HPP_
 #define _DISPLAY_HPP_
 
-#include <stdint.h>
+#include "platform.h"
 
 void display_init(uint8_t* system_memory);
 void display_end();

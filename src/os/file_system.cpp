@@ -1,7 +1,6 @@
-#include "dirs.h"
+#include "file_system.h"
 
-#ifdef _WIN32
-#include <Windows.h>
+#ifdef WINDOWS_PLATFORM
 
 std::filesystem::path get_executable_directory() {
 

@@ -1,9 +1,8 @@
 #include "sna_loader.h"
 #include "z80.h"
 #include "display.h"
-#include <memory>
 
-int sna_load_48k(const char* filename, uint8_t* ram_mem) {
+int sna_loader_load_48k(const char* filename, uint8_t* ram_mem) {
 	
 	sna_48k sna;
 	FILE* file = nullptr;
@@ -37,7 +36,7 @@ int sna_load_48k(const char* filename, uint8_t* ram_mem) {
 	return 1;
 }
 
-void sna_save_48k(const char* filename, uint8_t* ram_mem) {
+void sna_loader_save_48k(const char* filename, uint8_t* ram_mem) {
 
 	sna_48k sna;
 	FILE* file = nullptr;

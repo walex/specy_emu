@@ -1,7 +1,5 @@
 #include "tap_loader.h"
 #include "tape_audio.h"
-#include <stdio.h>
-#include <memory.h>
 
 tap_info_head* tap_load_from_file(const char* filename) {
 

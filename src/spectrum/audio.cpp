@@ -4,8 +4,6 @@
 #include "display.h"
 #include "clk_master.h"
 #include "z80.h"
-#include <thread>
-#include <atomic>
 
 // Sample rate
 constexpr double SAMPLE_RATE = 44100.0;
@@ -27,7 +25,7 @@ void audio_push_sample(float sample) {
     circular_buffer_push_sample(sample);
 }
 
-void audio_push_sample_none(float sample) {
+void audio_push_sample_none(float) {
 
 }
 

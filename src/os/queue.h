@@ -1,11 +1,6 @@
 #pragma once
 
-#include <queue>
-#include <semaphore>
-#include <mutex>
-#include <chrono>
-#include <thread>
-#include <functional>
+#include "platform.h"
 
 namespace stdext {
 	template <typename T, int maxElements = std::numeric_limits<int>::max()>

@@ -1,7 +1,7 @@
 #ifndef _SPECY_MEM_H_
 #define _SPECY_MEM_H_
 
-#include <stdint.h>
+#include "platform.h"
 
 constexpr uint32_t UNKNOWN_SYSTEM = 0xFFFFFFFF;
 constexpr uint32_t TK90X_SYSTEM = 0;
@@ -35,4 +35,5 @@ size_t system_memory_load_rom(uint8_t* mem, const char* base_path, const char* r
 uint8_t system_memory_get_system_var_value_8(uint16_t system_var_id);
 uint16_t system_memory_get_system_var_value_16(uint16_t system_var_id);
 void system_memory_set_system_var_value_8(uint16_t system_var_id, uint8_t value);
+uint32_t system_memory_get_machine_id();
 #endif

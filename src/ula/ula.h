@@ -1,10 +1,9 @@
 #ifndef _ULA_HPP_
 #define _ULA_HPP_
 
-#include "clk_master.h"
-#include <stdint.h>
+#include "platform.h"
+#include "keyboard.h"
 
-using UlaKeyboardKeysCallback = void(*)(const bool* keys);
 struct Ula_Callbacks {
 	
 	UlaKeyboardKeysCallback ulaKeyboardKeysCallback;
@@ -14,6 +13,7 @@ void ula_init(uint8_t* system_memory, Ula_Callbacks* callbacks = nullptr);
 bool ula_is_running();
 void ula_end();
 void ula_assert_INT_line();
+bool ula_has_snow_effect();
 
 #ifdef __cplusplus
 extern "C" {

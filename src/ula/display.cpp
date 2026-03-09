@@ -5,8 +5,6 @@
 #include "system_memory.h"
 #include "video_render.h"
 #include "tempo.h"
-#include <thread>
-#include <semaphore>
 
 static std::thread display_thread;
 static std::atomic<bool> display_thread_running{ false };
@@ -41,11 +39,32 @@ void display_end() {
 	
 }
 
+__inline void display_get_byte_attrib(uint8_t* mem_video, uint8_t* mem_atrib_video, int x, int y, uint8_t& byte, uint8_t& attrib) {
+
+	int mem_index = (kScanConvert[y] << 5) + x;
+	int attrib_idx = (y >> 3) * 32 + x;
+	if (ula_has_snow_effect()) {
+		uint16_t r = cpu_get_register8(CPU_REGISTER_R) & 0x7F;
+		uint16_t base_mem_dir = (uint16_t)(0x4000 + mem_index);
+		base_mem_dir = (uint16_t)(base_mem_dir & 0xFF80);
+		base_mem_dir = (uint16_t)(base_mem_dir | r);
+		byte = *((uint8_t*)(system_memory_ptr + base_mem_dir));
+		uint16_t base_attrib_dir = (uint16_t)(0x5800 + attrib_idx);
+		base_attrib_dir = (uint16_t)(base_attrib_dir & 0xFF80);
+		base_attrib_dir = (uint16_t)(base_attrib_dir | r);
+		attrib = *((uint8_t*)(system_memory_ptr + base_attrib_dir));
+	}
+	else {
+		byte = mem_video[mem_index];
+		attrib = mem_atrib_video[attrib_idx];
+	}
+}
+
 void display_draw(int y) {
 
 	uint8_t* mem_atrib_video = system_memory_ptr + 0x5800;
 	uint8_t* mem_video = system_memory_ptr + 0x4000;
-
+	
 	int x;
 	uint32_t ink, paper, flash, bright;
 	uint8_t byte, attrib;
@@ -68,21 +87,13 @@ void display_draw(int y) {
 		int screen_y = y - kHighBorderSizeY;
 		for (int byte_x = 0; byte_x < 32; byte_x++) {
 			int buffer_x = byte_x * 8 + (kDisplayResolutionX - kDisplayBufferResolutionX) / 2;
-
-			int mem_index = (kScanConvert[screen_y] << 5) + byte_x;
-			//cpu_lock();
-			byte = mem_video[mem_index];
-			attrib = mem_atrib_video[(screen_y >> 3) * 32 + byte_x];
-			//cpu_unlock();
-
+			display_get_byte_attrib(mem_video, mem_atrib_video, byte_x, screen_y, byte, attrib);
 			flash = attrib & 0x80;
 			bright = attrib & 0x40;
 			ink = KVideoColorPalleteHILO[attrib & 0x07][bright ? BRIGHT_MODE : OPAQUE_MODE];
 			paper = KVideoColorPalleteHILO[(attrib >> 3) & 0x07][bright ? BRIGHT_MODE : OPAQUE_MODE];
-
 			if (flash && (frame_count & FLASH_FASE_FRAMES))
 				std::swap(ink, paper);
-
 			// Draw 8 pixels for this byte
 			for (int bit = 0; bit < 8; bit++) {
 				display_buffer[y * kDisplayResolutionX + buffer_x + bit] =
