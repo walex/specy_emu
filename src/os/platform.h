@@ -283,5 +283,8 @@ namespace std {
 #endif
 
 #define LOG_D(format, ...) LD(__PRETTY_FUNCTION__, format, __VA_ARGS__)
+
+void MsgBox(void* parent_window, const char* title, const char* message);
+
 #endif
 

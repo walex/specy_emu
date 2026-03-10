@@ -124,7 +124,7 @@ std::map<int, KeyMappingExt> key_mapping_extra = {
 };
 
 static UlaKeyboardKeysCallback keyboard_keys_callback = nullptr;
-static uint8_t forced_edit_mode_addr = -1;
+static uint16_t forced_edit_mode_addr = 0xFFFF;
 
 void keyboard_init(UlaKeyboardKeysCallback cb) {
     keyboard_keys_callback = cb;
@@ -184,9 +184,9 @@ uint8_t keyboard_get_map_addr(uint8_t addr) {
     }
 
 	// if edit mode was forced and we finished to scan all keyboard lines then reset edit mode
-    if (forced_edit_mode_addr == addr) {
+    if (forced_edit_mode_addr == (uint16_t)addr) {
         system_memory_set_system_var_value_8(SPECY_48K_SYS_VAR_MODE, EDITOR_MODE_CKL);
-        forced_edit_mode_addr = -1;
+        forced_edit_mode_addr = 0xFFFF;
     }    
 
 	// read pc keyboard that maps directs to zx keyboard 

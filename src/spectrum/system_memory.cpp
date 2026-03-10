@@ -99,7 +99,7 @@ void system_memory_free() {
 }
 
 void system_memory_on_rom_call_LD_BYTES() {
-	ula_on_port_load_bytes();
+	ula_on_tape_load_block();
 }
 
 int system_memory_init(uint32_t machine_id, const char* base_path) {

@@ -20,7 +20,7 @@ extern "C" {
 #endif
 	void ula_read_port(uint16_t addr, uint8_t* value);
 	void ula_write_port_FE(uint8_t value);
-	void ula_on_port_load_bytes();
+	void ula_on_tape_load_block();
 #ifdef __cplusplus
 }
 #endif

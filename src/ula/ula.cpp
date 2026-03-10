@@ -9,7 +9,6 @@
 #include "automata.h"
 
 static clock_master_handle master_clock;
-static std::atomic<bool> audio_playing = false;
 
 void ula_on_cpu_cycles(uint64_t total_cycles);
 
@@ -34,12 +33,9 @@ void ula_end() {
 	clk_master_destroy(master_clock);
 }
 
-void ula_on_port_load_bytes() {
+void ula_on_tape_load_block() {
 
-	if (tape_audio_is_active() && audio_playing.load() == false) {
-		tape_audio_sync();
-		audio_playing.store(true);
-	}
+	tape_audio_sync();
 }
 
 void ula_on_cpu_cycles(uint64_t total_cycles) {
@@ -54,37 +50,65 @@ void ula_on_cpu_cycles(uint64_t total_cycles) {
 	last_cycles = total_cycles;
 }
 
+bool ula_port_is_waiting_for_tone(uint64_t delta_tstates) {
+
+	constexpr int TONE_CHECK_MAX_TIMES = 5;
+	constexpr uint64_t TONE_CHECK_MIN_RANGE = 70;
+	constexpr uint64_t TONE_CHECK_MAX_RANGE = 75;
+	constexpr uint64_t TONE_CHECK_CYCLE_INTERVAL = Z80_CPU_FREQ_HZ / 10;
+	static uint64_t port_calls = 0;
+	static uint64_t port_calls_cycles_acum = 0;
+	static int tone_check_times = 0;
+
+	bool result = false;
+	port_calls_cycles_acum += delta_tstates;
+	port_calls++;
+	if (port_calls_cycles_acum >= TONE_CHECK_CYCLE_INTERVAL) {
+
+		uint64_t delta = TONE_CHECK_CYCLE_INTERVAL / port_calls;
+		if (delta > TONE_CHECK_MIN_RANGE && delta < TONE_CHECK_MAX_RANGE)
+			tone_check_times++;
+		else
+			tone_check_times = 0;
+		if (tone_check_times == TONE_CHECK_MAX_TIMES) {
+			tone_check_times = 0;
+			result = true;
+		}
+		port_calls_cycles_acum = 0;
+		port_calls = 0;
+	}
+	return result;
+}
+
 void ula_read_port(uint16_t addr, uint8_t* value) {
 
 	static uint64_t last_clock = 0;
 	static bool prev_audio_playing = false;
-	static bool tape_sync_done = false;
 	const uint16_t port = addr & 0x00FF;	
 
 	if (port == 0xFE) {
 
-		MEASURE_ELAPSED_TIME("keyboard scan time:", 200, ;)
 		// timing
 		auto clock_cycle = cpu_get_cycles();
 
-		// Initialize last_clock on very first read
-		if (last_clock == 0) {
-			last_clock = clock_cycle;
-		}
+		uint64_t delta_tstates = clock_cycle - last_clock;
+		last_clock = clock_cycle;
 
 		// Track tape playing state
-		bool currently_playing = audio_playing.load();
-
+		bool currently_playing = tape_audio_is_active();
+		if (currently_playing == false && tape_audio_eof() == false) {
+			currently_playing = ula_port_is_waiting_for_tone(delta_tstates);
+			if (currently_playing) {
+				printf("Detected tape tone via timing analysis\n");
+				tape_audio_playback(true);
+			}
+		}
 		// Reset timing when tape starts playing and this is the first port read
 		if (currently_playing && !prev_audio_playing) {
 			last_clock = clock_cycle;
-			tape_sync_done = false;
 		}
 
-		prev_audio_playing = currently_playing;
-
-		uint64_t delta_tstates = clock_cycle - last_clock;
-		last_clock = clock_cycle;
+		prev_audio_playing = currently_playing;		
 
 		// Clamp huge deltas that occur during major ROM processing
 		// Normal byte processing: 2000-5000 T-states (allow this)
@@ -102,9 +126,6 @@ void ula_read_port(uint16_t addr, uint8_t* value) {
 		// exclude bit 6 ear
 		*value = (kbd & 0xBF);
 
-		// measure port 0xFE request rate
-		// automata_measure_port_accel(delta_tstates, clock_cycle);
-
 		// get audio pulses
 		if (currently_playing) {
 			uint8_t next_pulse = tape_audio_next_pulse(delta_tstates);
@@ -114,7 +135,7 @@ void ula_read_port(uint16_t addr, uint8_t* value) {
 				*value |= next_pulse;
 			}
 			else {
-				audio_playing.store(false);
+				tape_audio_sync();
 			}
 		}
 

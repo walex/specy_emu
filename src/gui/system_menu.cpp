@@ -3,40 +3,11 @@
 #include "video_render.h"
 #include "clk_master.h"
 #include "audio.h"
+#include "tape_audio.h"
 #include "sna_loader.h"
 #include <SDL3/SDL_dialog.h>
 
 std::map<uint32_t, SystemMenuCallback> menu_callbacks;
-
-#ifdef WINDOWS_PLATFORM
-#include <Windows.h>
-#include <thread>
-
-#define SET_FOCUS(title) { \
-std::thread([&]() { \
-HWND hwnd = FindWindowA(nullptr, title); \
-if (hwnd) \
-	BringWindowToTop(hwnd); \
-}).detach(); \
-}
-
-#define SHOW_MESSAGE_BOX(title, text) { \
-	std::thread t([&]() { \
-		MessageBoxA(nullptr, text, title, MB_OK); \
-		}); \
-	while (true) { \
-		HWND hwnd = FindWindowA(nullptr, title); \
-		if (hwnd) { \
-			SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE); \
-			break; \
-		} \
-	} \
-	t.join(); \
-} 
-
-
-
-#endif
 
 static std::counting_semaphore<1> dialog_semaphore(0);
 
@@ -51,9 +22,9 @@ void system_menu_switch_cpu_mode() {
 	cpu_speed_mode = !cpu_speed_mode;
 	audio_enable(!cpu_speed_mode);
 	clk_master_switch_mode(cpu_speed_mode);
-	SHOW_MESSAGE_BOX("specy emu",
+	video_render_show_message("specy emu",
 		cpu_speed_mode ? "Cpu speed mode is on" : "Cpu speed mode is off");
-	SET_FOCUS("spectrum render");	
+	video_render_set_focus();
 }
 
 void system_menu_open_file_dialog(uint32_t cmd_id) {
@@ -67,7 +38,7 @@ void system_menu_open_file_dialog(uint32_t cmd_id) {
 				menu_callbacks[cb_cmd_id]((void*)*filelist);
 			}		
 		}
-		SET_FOCUS("spectrum render");
+		video_render_set_focus();
 		dialog_semaphore.release();
 	}, (void*)(uint64_t)cmd_id, nullptr, nullptr, 0, nullptr, false);
 	dialog_semaphore.acquire();
@@ -84,32 +55,49 @@ void system_menu_save_file_dialog(uint32_t cmd_id) {
 				menu_callbacks[cb_cmd_id]((void*)*filelist);
 			}
 		}
-		SET_FOCUS("spectrum render");
+		video_render_set_focus();
 		dialog_semaphore.release();
 	}, (void*)(uint64_t)cmd_id, nullptr, nullptr, 0, nullptr);
 	dialog_semaphore.acquire();
+}
+
+void system_menu_play_stop() {
+
+	static bool playin_tape = false;
+	playin_tape = !playin_tape;
+	tape_audio_playback(playin_tape);
+	bool playing = tape_audio_is_active();
+	video_render_show_message("specy emu",
+		playing ? "Tape playing" : "Tape stopped");
+	video_render_set_focus();
+	
 }
 
 bool system_menu_evaluate_keyboard_state(const bool* keys) {
 
 	int key_index = -1;
 
-	if (keys[HOST_KEY_F1])
-		key_index = HOST_KEY_F1;
-	else if (keys[HOST_KEY_F2])
-		key_index = HOST_KEY_F2;
-	else if (keys[HOST_KEY_F3])
-		key_index = HOST_KEY_F3; 
+	if (keys[HOST_KEY_CMD_1])
+		key_index = HOST_KEY_CMD_1;
+	else if (keys[HOST_KEY_CMD_2])
+		key_index = HOST_KEY_CMD_2;
+	else if (keys[HOST_KEY_CMD_3])
+		key_index = HOST_KEY_CMD_3; 
+	else if (keys[HOST_KEY_CMD_4])
+		key_index = HOST_KEY_CMD_4;
 
 	switch (key_index) {
-		case HOST_KEY_F1:
+		case HOST_KEY_CMD_1:
 			system_menu_open_file_dialog(SYSTEM_MENU_COMMAND_OPEN_FILE);
 			break;
-		case HOST_KEY_F2:
+		case HOST_KEY_CMD_2:
 			system_menu_switch_cpu_mode();
 			break;
-		case HOST_KEY_F3:
+		case HOST_KEY_CMD_3:
 			system_menu_save_file_dialog(SYSTEM_MENU_COMMAND_SAVE_FILE);
+			break;
+		case HOST_KEY_CMD_4:
+			system_menu_play_stop();
 			break;
 		}
 	return key_index != -1;

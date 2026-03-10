@@ -3,15 +3,16 @@
 #include <SDL3/SDL.h>
 
  /* We will use this renderer to draw into this window every frame. */
-static SDL_Window* window = NULL;
-static SDL_Renderer* renderer = NULL;
-static SDL_Texture* texture = NULL;
+static SDL_Window* window = nullptr;
+static SDL_Renderer* renderer = nullptr;
+static SDL_Texture* texture = nullptr;
 static uint32_t* display_buffer_ptr = nullptr;
 static size_t display_buffer_width = 0;
 static size_t display_buffer_height = 0;
 static size_t window_size_width = 0;
 static size_t window_size_height = 0;
 static uint64_t window_id = 0;
+const char* MAIN_WINDOW_NAME = "Specy Emulator";
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void** /*appstate*/, int /*argc*/, char* /*argv[]*/ )
@@ -23,7 +24,7 @@ SDL_AppResult SDL_AppInit(void** /*appstate*/, int /*argc*/, char* /*argv[]*/ )
         return SDL_APP_FAILURE;
     }
 
-    if (!SDL_CreateWindowAndRenderer("spectrum render", (int)window_size_width, (int)window_size_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
+    if (!SDL_CreateWindowAndRenderer(MAIN_WINDOW_NAME, (int)window_size_width, (int)window_size_height, SDL_WINDOW_RESIZABLE, &window, &renderer)) {
         SDL_Log("Couldn't create window/renderer: %s", SDL_GetError());
         return SDL_APP_FAILURE;
     }
@@ -104,9 +105,19 @@ void video_render_end() {
     SDL_AppQuit(nullptr, SDL_APP_SUCCESS);
 }
 
-#ifdef WINDOWS_PLATFORM
-#include <Windows.h>
 uint64_t video_render_get_window_id() {
-    return (uint64_t)FindWindowA(nullptr, "spectrum render");
+    return (uint64_t)window_id;
 }
-#endif
+
+void* video_render_get_window() {
+    return (void*)window;
+}
+
+void video_render_set_focus() {
+    SDL_RaiseWindow(window);
+}
+
+void video_render_show_message(const char* title, const char* message) {
+    
+    //MsgBox(nullptr, message, title);
+}

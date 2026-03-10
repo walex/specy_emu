@@ -105,7 +105,7 @@ int main(int /*argc*/, char* /*argv[]*/) {
 	};
 	ula_init(system_memory_get_pointer(), &ula_callbacks);
 
-	specy_load_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\exolon.sna", is_image_file);
+	//specy_load_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\exolon.sna", is_image_file);
 	//specy_load_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\Renegade (1987)(Ocean Software).tap", is_image_file);
 	
 	// init z80 cpu

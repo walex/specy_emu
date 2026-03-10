@@ -46,18 +46,20 @@ void audio_render_play(uint8_t* buff, size_t buffer_size) {
 	SDL_PutAudioStreamData(audio_stream, buff, (int)buffer_size);
 }
 
-void audio_render_load_wav(const char* filename, uint8_t** out_buffer, size_t* out_size) {
+void audio_render_load_wav(const char* filename, uint8_t** out_buffer, size_t& out_size, int& freq) {
 	SDL_AudioSpec wav_spec;
 	uint8_t* wav_buffer;
 	uint32_t wav_length;
 	if (SDL_LoadWAV(filename, &wav_spec, &wav_buffer, &wav_length) == NULL) {
 		SDL_Log("Couldn't load WAV file: %s", SDL_GetError());
 		*out_buffer = nullptr;
-		*out_size = 0;
+		out_size = 0;
+		freq = 0;
 		return;
 	}
 	*out_buffer = wav_buffer;
-	*out_size = wav_length;
+	out_size = wav_length;
+	freq = wav_spec.freq;
 }
 
 void audio_render_free_wav(uint8_t* buff) {
