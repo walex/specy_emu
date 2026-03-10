@@ -5,17 +5,8 @@
 #ifdef WINDOWS_PLATFORM
 
 void MsgBox(void* parant_window, const char* title, const char* message) {
-    std::thread t([&]() {
-        MessageBoxA((HWND)parant_window, message, title, MB_OK);
-        });
-    while (true) {
-        HWND hwnd = FindWindowA(nullptr, title);
-        if (hwnd) {
-            SetWindowPos(hwnd, HWND_TOPMOST, 0, 0, 0, 0, SWP_NOMOVE | SWP_NOSIZE);
-            break;
-        }
-    }
-    t.join();
+
+    MessageBoxA(nullptr, message, title, MB_OK);
 }
 
 #endif

@@ -13,6 +13,19 @@ static size_t window_size_width = 0;
 static size_t window_size_height = 0;
 static uint64_t window_id = 0;
 const char* MAIN_WINDOW_NAME = "Specy Emulator";
+constexpr Uint32 SDL_EVENT_MESSAGE_BOX = SDL_EVENT_USER + 1;
+constexpr Uint32 SDL_EVENT_OPEN_FILE_DIALOG = SDL_EVENT_USER + 2;
+constexpr Uint32 SDL_EVENT_SAVE_FILE_DIALOG = SDL_EVENT_USER + 3;
+
+#define ON_DIALOG_OK() { \
+    auto callback_ptr = static_cast<file_dialog_func_ptr*>(userdata); \
+    if (callback_ptr) { \
+        if (*callback_ptr) { \
+            (*callback_ptr)(filelist); \
+        } \
+        delete callback_ptr; \
+    } \
+}
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void** /*appstate*/, int /*argc*/, char* /*argv[]*/ )
@@ -82,6 +95,28 @@ bool video_render_process() {
     while (SDL_PollEvent(&event)) {
         if (event.type == SDL_EVENT_QUIT) {
             return false;
+        } else if (event.type == SDL_EVENT_MESSAGE_BOX) {
+            
+            SDL_ShowSimpleMessageBox(SDL_MESSAGEBOX_INFORMATION, (const char*)event.user.data1, (const char*)event.user.data2, window);
+            delete[] (char*)event.user.data1;
+            delete[] (char*)event.user.data2;
+        }
+        else if (event.type == SDL_EVENT_OPEN_FILE_DIALOG) {
+
+            SDL_ShowOpenFileDialog(
+                [](void* userdata, const char* const* filelist, int /*filter*/) {
+
+                    ON_DIALOG_OK();
+                },
+                event.user.data1, nullptr, nullptr, 0, nullptr, false);
+        }
+        else if (event.type == SDL_EVENT_SAVE_FILE_DIALOG) {
+                       
+            SDL_ShowSaveFileDialog([](void* userdata, const char* const* filelist, int /*filter*/) {
+
+                    ON_DIALOG_OK();
+                },
+                event.user.data1, nullptr, nullptr, 0, nullptr);
         }
     }
 
@@ -113,11 +148,33 @@ void* video_render_get_window() {
     return (void*)window;
 }
 
-void video_render_set_focus() {
-    SDL_RaiseWindow(window);
-}
-
 void video_render_show_message(const char* title, const char* message) {
     
-    //MsgBox(nullptr, message, title);
+    SDL_Event evt;
+    evt.type = SDL_EVENT_MESSAGE_BOX;
+    evt.user.data1 = new char[strlen(title) + 1];
+    evt.user.data2 = new char[strlen(message) + 1];
+	strcpy((char*)evt.user.data1, title);
+    strcpy((char*)evt.user.data2, message);
+	SDL_PushEvent(&evt);
+}
+
+void video_render_open_file_dialog(file_dialog_func_ptr callback) {
+
+    SDL_Event evt;
+    evt.type = SDL_EVENT_OPEN_FILE_DIALOG;
+    // allocate a copy of the std::function on the heap and pass its pointer through userdata
+    evt.user.data1 = static_cast<void*>(new file_dialog_func_ptr(callback));
+    evt.user.data2 = nullptr;
+    SDL_PushEvent(&evt);
+}
+
+void video_render_save_file_dialog(file_dialog_func_ptr callback) {
+
+    SDL_Event evt;
+    evt.type = SDL_EVENT_SAVE_FILE_DIALOG;
+    // allocate a copy of the std::function on the heap and pass its pointer through userdata
+    evt.user.data1 = static_cast<void*>(new file_dialog_func_ptr(callback));
+    evt.user.data2 = nullptr;
+    SDL_PushEvent(&evt);
 }

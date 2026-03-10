@@ -112,8 +112,10 @@ int main(int /*argc*/, char* /*argv[]*/) {
 	cpu_z80_init(system_memory_get_pointer(), (uint8_t)is_image_file);
 
 	// run z80 cpu
-	while (ula_is_running())
+	while (ula_is_running()) {
+		system_menu_update();
 		cpu_z80_step();
+	}
 
 	// release ula resources
 	ula_end();
