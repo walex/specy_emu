@@ -78,15 +78,15 @@ void specy_save_file(const char* path) {
 
 int main(int /*argc*/, char* /*argv[]*/) {
 	
-	uint32_t machineId = SPECTRUM_48K_SYSTEM;
+	uint32_t machineId = kSystemSinclairSpectrum48;
 	static int is_image_file = false;
 
 	// init menu
-	system_menu_set_callback(SYSTEM_MENU_COMMAND_OPEN_FILE, [](void* params) {
+	system_menu_set_callback(kSysMenuOpenFileCallback, [](void* params) {
 		specy_load_file((const char*)params, is_image_file);
 		}
 	);
-	system_menu_set_callback(SYSTEM_MENU_COMMAND_SAVE_FILE, [](void* params) {
+	system_menu_set_callback(kSysMenuSaveFileCallback, [](void* params) {
 		specy_save_file((const char*)params);
 		}
 	);
@@ -109,7 +109,7 @@ int main(int /*argc*/, char* /*argv[]*/) {
 	//specy_load_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\Renegade (1987)(Ocean Software).tap", is_image_file);
 	
 	// init z80 cpu
-	cpu_z80_init(system_memory_get_pointer(), (uint8_t)is_image_file);
+	cpu_init(system_memory_get_pointer(), (uint8_t)is_image_file);
 
 	// run z80 cpu
 	while (ula_is_running()) {

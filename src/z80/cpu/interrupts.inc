@@ -1,19 +1,11 @@
 .data
 
-EXTERNDEF count_interrupt_calls_c:PROC
 inst_RST PROTO
 inst_PUSH PROTO
 
 IFF_DELAY db 0
 
 .code
-
-count_interrupt_calls PROC
-
-CALL_C_FUNC count_interrupt_calls_c
-ret
-
-count_interrupt_calls ENDP
 
 interrupts_enable_request PROC
 mov IFF_DELAY, 1

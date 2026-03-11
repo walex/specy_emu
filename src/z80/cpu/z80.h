@@ -2,41 +2,39 @@
 
 #define _Z80_H_
 
-#include <stdint.h>
+#include "interrupts.h"
 
-constexpr double Z80_CPU_FREQ_MHZ = 3.5;
-constexpr uint64_t Z80_CPU_FREQ_HZ = (uint64_t)(Z80_CPU_FREQ_MHZ * 1000000);
-constexpr uint32_t CPU_REGISTER_AF = 0;
-constexpr uint32_t CPU_REGISTER_AF_ = 1;
-constexpr uint32_t CPU_REGISTER_BC = 2;
-constexpr uint32_t CPU_REGISTER_BC_ = 3;
-constexpr uint32_t CPU_REGISTER_DE = 4;
-constexpr uint32_t CPU_REGISTER_DE_ = 5;
-constexpr uint32_t CPU_REGISTER_HL = 6;
-constexpr uint32_t CPU_REGISTER_HL_ = 7;
-constexpr uint32_t CPU_REGISTER_IX = 8;
-constexpr uint32_t CPU_REGISTER_IY = 9;
-constexpr uint32_t CPU_REGISTER_SP = 10;
-constexpr uint32_t CPU_REGISTER_I = 11;
-constexpr uint32_t CPU_REGISTER_R = 12;
-constexpr uint32_t CPU_REGISTER_IFF2 = 13;
-constexpr uint32_t CPU_REGISTER_PC = 14;
+#define Z80_CPU_FREQ_MHZ 3.5
+#define Z80_CPU_FREQ_HZ (uint64_t)(Z80_CPU_FREQ_MHZ * 1000000)
+#define CPU_REGISTER_AF 0
+#define CPU_REGISTER_AF_ 1
+#define CPU_REGISTER_BC  2
+#define CPU_REGISTER_BC_ 3
+#define CPU_REGISTER_DE  4
+#define CPU_REGISTER_DE_ 5
+#define CPU_REGISTER_HL 6
+#define CPU_REGISTER_HL_ 7
+#define CPU_REGISTER_IX 8
+#define CPU_REGISTER_IY 9
+#define CPU_REGISTER_SP 10
+#define CPU_REGISTER_I 11
+#define CPU_REGISTER_R 12
+#define CPU_REGISTER_IFF2 13
+#define CPU_REGISTER_PC 14
 
 typedef void(*clock_call_interceptor_handler)();
 
 #ifdef __cplusplus
 extern "C" {
 #endif
-	void cpu_z80_init(uint8_t* memPtr, uint8_t force_retn=0);
-	void cpu_z80_step();
+	void cpu_init(uint8_t* memPtr, uint8_t force_retn);
+	extern void cpu_z80_step();
 	void cpu_set_wait_state(uint64_t cycles);
-	void cpu_unset_wait_state();
-	bool cpu_get_wait_state();
 	void cpu_sync(uint8_t cycles);
 	uint64_t cpu_get_cycles();
 	void cpu_set_cycles(uint64_t cycles);
-	void cpu_call_opcode_interceptor(uint16_t addr, clock_call_interceptor_handler handler);
-	void cpu_call_opcode_notify(uint16_t addr);
+	void cpu_set_call_interceptor(uint16_t addr, clock_call_interceptor_handler handler);
+	void cpu_on_call_interceptor(uint16_t addr);
 	void cpu_set_register16(uint8_t reg_id, uint16_t value);
 	void cpu_set_register8(uint8_t reg_id, uint8_t value);
 	void cpu_set_interrupt_mode(uint8_t mode);
@@ -45,9 +43,6 @@ extern "C" {
 	uint8_t cpu_get_interrupt_mode();
 #ifdef __cplusplus
 	}
-#else
 #endif
-
-#include "interrupts.h"
 
 #endif

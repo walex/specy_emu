@@ -2,6 +2,14 @@
 #include "keyboard.h"
 #include <SDL3/SDL.h>
 
+#define MAIN_WINDOW_NAME "Specy Emulator"
+
+enum SDL_EventTypeExt {
+SDL_EVENT_MESSAGE_BOX = SDL_EVENT_USER + 1,
+SDL_EVENT_OPEN_FILE_DIALOG = SDL_EVENT_USER + 2,
+SDL_EVENT_SAVE_FILE_DIALOG = SDL_EVENT_USER + 3
+};
+
  /* We will use this renderer to draw into this window every frame. */
 static SDL_Window* window = nullptr;
 static SDL_Renderer* renderer = nullptr;
@@ -12,10 +20,6 @@ static size_t display_buffer_height = 0;
 static size_t window_size_width = 0;
 static size_t window_size_height = 0;
 static uint64_t window_id = 0;
-const char* MAIN_WINDOW_NAME = "Specy Emulator";
-constexpr Uint32 SDL_EVENT_MESSAGE_BOX = SDL_EVENT_USER + 1;
-constexpr Uint32 SDL_EVENT_OPEN_FILE_DIALOG = SDL_EVENT_USER + 2;
-constexpr Uint32 SDL_EVENT_SAVE_FILE_DIALOG = SDL_EVENT_USER + 3;
 
 #define ON_DIALOG_OK() { \
     auto callback_ptr = static_cast<file_dialog_func_ptr*>(userdata); \
@@ -150,12 +154,14 @@ void* video_render_get_window() {
 
 void video_render_show_message(const char* title, const char* message) {
     
+    const size_t len_title = strlen(title) + 1;
+    const size_t len_message = strlen(message) + 1;
     SDL_Event evt;
     evt.type = SDL_EVENT_MESSAGE_BOX;
-    evt.user.data1 = new char[strlen(title) + 1];
-    evt.user.data2 = new char[strlen(message) + 1];
-	strcpy((char*)evt.user.data1, title);
-    strcpy((char*)evt.user.data2, message);
+    evt.user.data1 = new char[len_title];
+    evt.user.data2 = new char[len_message];
+	strcpy_s((char*)evt.user.data1, len_title, title);
+    strcpy_s((char*)evt.user.data2, len_message, message);
 	SDL_PushEvent(&evt);
 }
 

@@ -150,9 +150,9 @@ void keyboard_update_map_extra(const bool* keys, uint8_t key, uint8_t& value) {
     for (auto& [i, k] : key_mapping_extra) {
         if (keys[i] == true) {
 			if (k.editor_mode == EDITOR_MODE_E) {
-                int editor_mode = system_memory_get_system_var_value_8(SPECY_48K_SYS_VAR_MODE);
+                int editor_mode = system_memory_get_system_var_value_8(kSysVarFrameCursorMode);
                 if (k.editor_mode != editor_mode) {
-                    system_memory_set_system_var_value_8(SPECY_48K_SYS_VAR_MODE, EDITOR_MODE_E);
+                    system_memory_set_system_var_value_8(kSysVarFrameCursorMode, EDITOR_MODE_E);
                     forced_edit_mode_addr = key;
                 }
             }
@@ -185,7 +185,7 @@ uint8_t keyboard_get_map_addr(uint8_t addr) {
 
 	// if edit mode was forced and we finished to scan all keyboard lines then reset edit mode
     if (forced_edit_mode_addr == (uint16_t)addr) {
-        system_memory_set_system_var_value_8(SPECY_48K_SYS_VAR_MODE, EDITOR_MODE_CKL);
+        system_memory_set_system_var_value_8(kSysVarFrameCursorMode, EDITOR_MODE_CKL);
         forced_edit_mode_addr = 0xFFFF;
     }    
 

@@ -68,7 +68,7 @@ void display_draw(int y) {
 	int x;
 	uint32_t ink, paper, flash, bright;
 	uint8_t byte, attrib;
-	uint16_t frame_count = system_memory_get_system_var_value_16(SPECY_48K_SYS_VAR_FRAMES);
+	uint16_t frame_count = system_memory_get_system_var_value_16(kSysVarFrameCount);
 
 	int buffer_width = (kDisplayResolutionX - kDisplayBufferResolutionX) / 2;
 	static size_t state_index = 0;
@@ -81,8 +81,8 @@ void display_draw(int y) {
 		// left border
 		for (x = 0; x < buffer_width; x++)
 			display_buffer[y * kDisplayResolutionX + x] = border_color.load();
-		cpu_set_wait_state(DELAY_PATTERN_48k[state_index]);
-		state_index = (state_index + 1) % DELAY_PATTERN_48k_SIZE;
+		cpu_set_wait_state(kContainedMemory48DelayPattern[state_index]);
+		state_index = (state_index + 1) % kContainedMemory48DelayPatternSize;
 		// center of the screen
 		int screen_y = y - kHighBorderSizeY;
 		for (int byte_x = 0; byte_x < 32; byte_x++) {
@@ -90,9 +90,9 @@ void display_draw(int y) {
 			display_get_byte_attrib(mem_video, mem_atrib_video, byte_x, screen_y, byte, attrib);
 			flash = attrib & 0x80;
 			bright = attrib & 0x40;
-			ink = KVideoColorPalleteHILO[attrib & 0x07][bright ? BRIGHT_MODE : OPAQUE_MODE];
-			paper = KVideoColorPalleteHILO[(attrib >> 3) & 0x07][bright ? BRIGHT_MODE : OPAQUE_MODE];
-			if (flash && (frame_count & FLASH_FASE_FRAMES))
+			ink = KVideoColorPalleteHILO[attrib & 0x07][bright ? kBrightMode : kOpaqueMode];
+			paper = KVideoColorPalleteHILO[(attrib >> 3) & 0x07][bright ? kBrightMode : kOpaqueMode];
+			if (flash && (frame_count & kFlashFaseFrame))
 				std::swap(ink, paper);
 			// Draw 8 pixels for this byte
 			for (int bit = 0; bit < 8; bit++) {
@@ -100,7 +100,6 @@ void display_draw(int y) {
 					(byte & (0x80 >> bit)) ? ink : paper;
 			}
 		}
-		cpu_unset_wait_state();
 		// right border
 		for (x = buffer_width + kDisplayBufferResolutionX; x < kDisplayResolutionX; x++)
 			display_buffer[y * kDisplayResolutionX + x] = border_color.load();
@@ -115,9 +114,9 @@ void display_tick(uint64_t delta_cycles) {
 	if (y == 0) {
 		ula_assert_INT_line();
 	}
-	if (cycle_in_line >= HSYNC_CYCLES) {
-		cycle_in_frame += HSYNC_CYCLES;
-		cycle_in_line -= HSYNC_CYCLES;
+	if (cycle_in_line >= kHsyncCycles) {
+		cycle_in_frame += kHsyncCycles;
+		cycle_in_line -= kHsyncCycles;
 		display_draw(y++);
 		if (y == kDisplayResolutionY) {
 			MEASURE_ELAPSED_TIME("display ready time:", 200,
@@ -149,7 +148,7 @@ void display_thread_proc() {
 
 
 void display_set_border_color(uint32_t color) {
-	border_color.store(KVideoColorPalleteHILO[color & 0x7][OPAQUE_MODE]);
+	border_color.store(KVideoColorPalleteHILO[color & 0x7][kOpaqueMode]);
 }
 
 uint32_t display_get_border_color() {

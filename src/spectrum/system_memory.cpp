@@ -4,7 +4,7 @@
 #include "memory_paging.h"
 
 // intercept calls functions
-static constexpr uint16_t LD_BYTES = 0x0556;
+#define LD_BYTES 0x0556
 
 struct machine_info {
 	const char* rom_name;
@@ -13,15 +13,15 @@ struct machine_info {
 };
 
 std::map<uint32_t, machine_info> machines = {
-	{SPECTRUM_48K_SYSTEM, {SPECTRUM_48K_ROM_FILE, ROM_48K_SIZE, RAM_48K_SIZE}},
-	{SPECTRUM_128K_SYSTEM, {SPECTRUM_128K_ROM_FILE, ROM_128K_SIZE, RAM_128K_SIZE}},
-	{TK95_SYSTEM, {TK95_48K_ROM_FILE, ROM_48K_SIZE, RAM_48K_SIZE}},
-	{TK90X_SYSTEM, {TK90X_48K_ROM_V3_FILE, ROM_48K_SIZE, RAM_48K_SIZE}}
+	{kSystemSinclairSpectrum48, {SPECTRUM_48K_ROM_FILE, kROMSize, kRAMSize48}},
+	{kSystemSinclairSpectrum128, {SPECTRUM_128K_ROM_FILE, kROMSize, kRAMSize128}},
+	{kSystemTK95, {TK95_48K_ROM_FILE, kROMSize, kRAMSize48}},
+	{kSystemTK90X, {TK90X_48K_ROM_V3_FILE, kROMSize, kRAMSize48}}
 
 };
 
 static uint8_t* system_rom_pointer = nullptr;
-static int32_t system_machine_id = UNKNOWN_SYSTEM;
+static int32_t system_machine_id = kSystemUnknown;
 
 size_t system_memory_load_rom(uint8_t* mem, const char* base_path, const char* rom_name) {
 
@@ -71,7 +71,7 @@ uint8_t* system_memory_create_128k_rom(const char* base_path, machine_info& mach
 	if (!rom_size) {
 		return nullptr;
 	}
-	memory_paging_copy_mem_to_bank(rom_48k, BANK_ROM_1_INDEX, BANK_SIZE);
+	memory_paging_copy_mem_to_bank(rom_48k, kBankROMIndex1, kBankSize);
 	delete[] rom_48k;
 	return mem;
 }
@@ -83,7 +83,7 @@ uint8_t* system_memory_create(uint32_t machine_id, const char* base_path) {
 	size_t mem_size = machine_info.rom_size + machine_info.ram_size;
 	uint8_t* mem = nullptr;
 	switch (machine_id) {
-	case SPECTRUM_128K_SYSTEM:
+	case kSystemSinclairSpectrum128:
 		mem = system_memory_create_128k_rom(base_path, machine_info, mem_size);
 		break;
 	default:
@@ -104,15 +104,15 @@ void system_memory_on_rom_call_LD_BYTES() {
 
 int system_memory_init(uint32_t machine_id, const char* base_path) {
 
-	if (machine_id == UNKNOWN_SYSTEM)
-		machine_id = SPECTRUM_48K_SYSTEM;
+	if (machine_id == kSystemUnknown)
+		machine_id = kSystemSinclairSpectrum48;
 	system_rom_pointer = system_memory_create(machine_id, base_path);
 	if (!system_rom_pointer) {
 		perror("cannot load rom file");
 		return -1;
 	}
 	
-	cpu_call_opcode_interceptor(LD_BYTES, system_memory_on_rom_call_LD_BYTES);
+	cpu_set_call_interceptor(LD_BYTES, system_memory_on_rom_call_LD_BYTES);
 	system_machine_id = machine_id;
 	return 0;
 }

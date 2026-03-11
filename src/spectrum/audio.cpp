@@ -6,12 +6,12 @@
 #include "z80.h"
 
 // Sample rate
-constexpr double SAMPLE_RATE = 44100.0;
+constexpr double kAudioSampleRate = 44100.0;
 // Number of Z80 cycles per audio sample (keep as double for precision)
-constexpr double CYCLES_PER_SAMPLE = (double)Z80_CPU_FREQ_HZ / SAMPLE_RATE;
+constexpr double kAudioSamplesCyclesCount = (double)Z80_CPU_FREQ_HZ / kAudioSampleRate;
 
 // Increased buffer to ~100ms to handle timing variations from yield()
-constexpr size_t BUFFER_SAMPLES = (size_t)(SAMPLE_RATE*0.1);
+constexpr size_t kAudioSamplesBuffer = (size_t)(kAudioSampleRate*0.1);
 
 // Audio state variables
 static std::atomic<float> current_level(0.0);
@@ -44,10 +44,10 @@ void audio_render_cb(uint8_t* buffer_out, int len) {
 }
 
 void audio_thread_proc() {
-    constexpr size_t buffsiz = (size_t)(BUFFER_SAMPLES * 0.1);
+    constexpr size_t buffsiz = (size_t)(kAudioSamplesBuffer * 0.1);
     int16_t buffer16[buffsiz];
-    circular_buffer_init(BUFFER_SAMPLES);
-    audio_render_init((uint32_t)SAMPLE_RATE, nullptr);
+    circular_buffer_init(kAudioSamplesBuffer);
+    audio_render_init((uint32_t)kAudioSampleRate, nullptr);
     audio_thread_running.store(true);
     while (audio_thread_running.load()) {
         for (int i = 0; i < buffsiz; i++)
@@ -95,9 +95,9 @@ void audio_tick(uint64_t delta_tstates) {
     static double tstate_accum = 0.0;
     double accum = tstate_accum;
     accum += (double)delta_tstates;
-    while (accum >= CYCLES_PER_SAMPLE) {
+    while (accum >= kAudioSamplesCyclesCount) {
         auto level = current_level.load(std::memory_order_relaxed);
-        accum -= CYCLES_PER_SAMPLE;
+        accum -= kAudioSamplesCyclesCount;
         audio_push_sample_func(level);
     }
     tstate_accum = accum;

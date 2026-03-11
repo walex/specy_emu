@@ -5,7 +5,7 @@ EXTERNDEF inst_IN_Impl:PROC
 EXTERNDEF inst_DAA_C:PROC
 EXTERNDEF acumulate_opcode_cycles_c:PROC
 EXTERNDEF acumulate_opcode_cycles_zero_c:PROC
-EXTERNDEF cpu_call_opcode_notify:PROC
+EXTERNDEF cpu_on_call_interceptor:PROC
 
 .code
 
@@ -1002,7 +1002,7 @@ dec x_bx
 STORE8 x_bx, x_a8l
 SET_REG_PC x_d16
 mov x_c16, x_d16
-CALL_C_FUNC cpu_call_opcode_notify
+CALL_C_FUNC cpu_on_call_interceptor
 SET_WZ_FROM_VALUE_16 x_d16
 ret
 

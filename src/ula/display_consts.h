@@ -47,18 +47,20 @@ constexpr int kDisplayBufferResolutionX = 256;
 constexpr int kDisplayBufferResolutionY = 192;
 constexpr int kHighBorderSizeY = 64;
 constexpr int kLowBorderSizeY = 56;
-constexpr int kDisplayResolutionX = 448; // 352 <<---  
+constexpr int kDisplayResolutionX = 448; 
 constexpr int kDisplayResolutionY = kDisplayBufferResolutionY + kHighBorderSizeY + kLowBorderSizeY;
-constexpr int BRIGHT_MODE = 0;
-constexpr int OPAQUE_MODE = 1;
+constexpr int kCRTResolutionX = 320;
+constexpr int kCRTDisplayResolutionY = 240;
+constexpr int kBrightMode = 0;
+constexpr int kOpaqueMode = 1;
 
-constexpr int FLASH_FASE_FRAMES = 32;
-constexpr double DISPLAY_REFRESH_RATE_HZ = 50.0;
-constexpr double DISPLAY_REFRESH_RATE_SECS = 1 / DISPLAY_REFRESH_RATE_HZ;
-constexpr uint64_t DISPLAY_REFRESH_RATE_MILLISECS = (uint64_t)(DISPLAY_REFRESH_RATE_SECS * 1000);
+constexpr int kFlashFaseFrame = 32;
+constexpr double kPALRefreshRateHZ = 50.0;
+constexpr double kDisplayRefreshRateSecs = 1 / kPALRefreshRateHZ;
+constexpr uint64_t kDisplayRefreshRateMillisecs = (uint64_t)(kDisplayRefreshRateSecs * 1000);
 
-constexpr uint64_t HSYNC_CYCLES = 224;
-constexpr uint64_t VSYNC_CYCLES = kDisplayResolutionY * HSYNC_CYCLES; // 312 lines * 224 cycles per line
+constexpr uint64_t kHsyncCycles = 224;
+constexpr uint64_t kVsyncCycles = kDisplayResolutionY * kHsyncCycles; // 312 lines * 224 cycles per line
 
 
 #endif

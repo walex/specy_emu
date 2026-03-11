@@ -4,14 +4,15 @@
 #include "system_memory.h"
 #include "tap_loader.h"
 
-static constexpr uint32_t PILOT_PULSE_T = 2168;
-static constexpr uint32_t SYNC1_T = 667;
-static constexpr uint32_t SYNC2_T = 735;
-static constexpr uint32_t BIT0_T = 855;
-static constexpr uint32_t BIT1_T = 1710;
-constexpr uint32_t PAUSE_T = 3500000; // 1 sec
-constexpr uint32_t PILOT_HEADER = 8063;
-constexpr uint32_t PILOT_DATA = 3223;
+#define PILOT_PULSE_T 2168
+#define SYNC1_T 667
+#define SYNC2_T 735
+#define BIT0_T 855
+#define BIT1_T 1710
+#define PAUSE_T 3500000 // 1 sec
+#define PILOT_HEADER 8063
+#define PILOT_DATA 3223
+
 static uint64_t sync_cycles = 0;
 
 struct TapePulse {

@@ -69,7 +69,6 @@ void ula_read_port(uint16_t addr, uint8_t* value) {
 		if (currently_playing == false && tape_audio_eof() == false) {
 			currently_playing = automata_port_is_waiting_for_tone(delta_tstates);
 			if (currently_playing) {
-				printf("Detected tape tone via timing analysis\n");
 				tape_audio_playback(true);
 			}
 		}
@@ -139,7 +138,7 @@ bool ula_has_snow_effect() {
 		return true;
 	}
 
-	if (system_memory_get_machine_id() == SPECTRUM_128K_SYSTEM) {
+	if (system_memory_get_machine_id() == kSystemSinclairSpectrum128) {
 
 		if (I >= 0xC0 && I <= 0xFF) {
 			return true;

@@ -1,23 +1,20 @@
 #include "z80.h"
-#include "clk_master.h"
 #include <stdint.h>
-#include <chrono>
-#include <thread>
 
-constexpr uint16_t PAGING_CONTROL_PORT = 0x7FFD;
-constexpr uint16_t PORT_FE = 0xFE;
+#define PAGING_CONTROL_PORT 0x7FFD
+#define PORT_FE 0xFE
 
-extern "C" void ula_read_port(uint16_t addr, uint8_t* value);
-extern "C" void ula_write_port_FE(uint8_t value);
-extern "C" void memory_paging_bank_switch(uint8_t value);
-extern "C" uint8_t* system_memory_get_pointer();
+void ula_read_port(uint16_t addr, uint8_t* value);
+void ula_write_port_FE(uint8_t value);
+void memory_paging_bank_switch(uint8_t value);
+uint8_t* system_memory_get_pointer();
 
-extern "C" void  inst_IN_Impl(uint16_t addr, uint8_t* value) {
+void  inst_IN_Impl(uint16_t addr, uint8_t* value) {
 	
     ula_read_port(addr, value);
 }
 
-extern "C" void inst_OUT_Impl(uint16_t addr, uint8_t value) {
+void inst_OUT_Impl(uint16_t addr, uint8_t value) {
 
     if (addr == PAGING_CONTROL_PORT) {
         memory_paging_bank_switch(value);
@@ -33,7 +30,7 @@ extern "C" void inst_OUT_Impl(uint16_t addr, uint8_t value) {
     }
 }
 
-extern "C" uint8_t parity(uint8_t c) {
+uint8_t parity(uint8_t c) {
     int count = 0;
 
     // Count the number of set bits (1s)
@@ -46,7 +43,7 @@ extern "C" uint8_t parity(uint8_t c) {
     return (uint8_t)!(count % 2);
 }
 
-extern "C" void inst_DAA_C(uint8_t* reg_a, uint8_t* reg_f)
+void inst_DAA_C(uint8_t* reg_a, uint8_t* reg_f)
 {
     int t;
 
@@ -104,12 +101,12 @@ extern "C" void inst_DAA_C(uint8_t* reg_a, uint8_t* reg_f)
 
 }
 
-extern "C" void acumulate_opcode_cycles_c(uint8_t cycles) {
+void acumulate_opcode_cycles_c(uint8_t cycles) {
     
     cpu_sync(cycles);
 }
 
-extern "C" void acumulate_opcode_cycles_zero_c(uint8_t cycles0, uint8_t cycles1, uint16_t value) {
+void acumulate_opcode_cycles_zero_c(uint8_t cycles0, uint8_t cycles1, uint16_t value) {
 
     if (value == 0) {
         cpu_sync(cycles0);
@@ -117,17 +114,4 @@ extern "C" void acumulate_opcode_cycles_zero_c(uint8_t cycles0, uint8_t cycles1,
     else {
         cpu_sync(cycles1);
 	}
-}
-
-extern "C" void count_interrupt_calls_c() {
-    
-    static uint64_t calls = 0;
-	static auto start = std::chrono::high_resolution_clock::now();
-    calls++;
-    auto end = std::chrono::high_resolution_clock::now();
-	if (std::chrono::duration_cast<std::chrono::seconds>(end - start).count() >= 1) {
-        printf("Interrupt calls per second: %llu\n", calls);
-        calls = 0;
-        start = end;
-    }
 }

@@ -8,7 +8,7 @@ tap_info_head* tap_load_from_file(const char* filename) {
 	fopen_s(&f, filename, "rb");
 	if (!f) return nullptr;
 	tap_info_head* list_head = new tap_info_head();
-	uint8_t header_block_info[TAP_HEADER_BLOCK_SIZE];
+	uint8_t header_block_info[kTapHeaderBlockSize];
 	while (!feof(f)) {
 
 		// header block
@@ -18,7 +18,7 @@ tap_info_head* tap_load_from_file(const char* filename) {
 			break;
 		}
 
-		if (len != TAP_HEADER_BLOCK_SIZE) {
+		if (len != kTapHeaderBlockSize) {
 			perror("invalid header block size");
 			break;
 		}
@@ -26,7 +26,7 @@ tap_info_head* tap_load_from_file(const char* filename) {
 			perror("error reading header block info");
 			break;
 		}
-		if (header_block_info[0] != TAP_HEADER_BLOCK) {
+		if (header_block_info[0] != kTapHeaderBlockId) {
 			
 			perror("expected header block");
 			break;
@@ -55,7 +55,7 @@ tap_info_head* tap_load_from_file(const char* filename) {
 			perror("error reading data type flag");
 			break;
 		}
-		if (data_type_flag != TAP_DATA_BLOCK) {
+		if (data_type_flag != kTapDataBlockId) {
 			perror("expected data block");
 			break;
 		}

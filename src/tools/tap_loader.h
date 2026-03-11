@@ -3,13 +3,13 @@
 
 #include "platform.h"
 
-constexpr uint8_t TAP_HEADER_BLOCK = 0;
-constexpr uint8_t TAP_DATA_BLOCK = 0xFF;
-constexpr uint32_t TAP_HEADER_BLOCK_SIZE = 19;
-constexpr uint8_t TAP_DATA_BLOCK_TYPE_BASIC = 0;
-constexpr uint8_t TAP_DATA_BLOCK_TYPE_NUMERIC_ARRAY = 1;
-constexpr uint8_t TAP_DATA_BLOCK_TYPE_CHARACTER_ARRAY = 2;
-constexpr uint8_t TAP_DATA_BLOCK_TYPE_CODE = 3;
+constexpr uint8_t kTapHeaderBlockId = 0;
+constexpr uint8_t kTapDataBlockId = 0xFF;
+constexpr uint32_t kTapHeaderBlockSize = 19;
+constexpr uint8_t kTapDataBlockTypeProgramBasic = 0;
+constexpr uint8_t kTapDataBlockTypeNumericArray = 1;
+constexpr uint8_t kTapDataBlockTypeCharacterArray = 2;
+constexpr uint8_t kTapDataBlockTypeCode = 3;
 
 struct tap_header {
 

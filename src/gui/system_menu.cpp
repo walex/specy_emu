@@ -34,7 +34,7 @@ void system_menu_open_file_dialog() {
 	video_render_open_file_dialog([](const char* const* filelist) {
 		if (*filelist) {
 			SDL_Log("Full path to selected file: '%s'", *filelist);
-			INVOKE_MENU_CALLBACK(SYSTEM_MENU_COMMAND_OPEN_FILE, *filelist);
+			INVOKE_MENU_CALLBACK(kSysMenuOpenFileCallback, *filelist);
 		}
 		});
 }
@@ -44,7 +44,7 @@ void system_menu_save_file_dialog() {
 	video_render_save_file_dialog([](const char* const* filelist) {
 		if (*filelist) {
 			SDL_Log("Full path to selected file: '%s'", *filelist);
-			INVOKE_MENU_CALLBACK(SYSTEM_MENU_COMMAND_SAVE_FILE , *filelist);
+			INVOKE_MENU_CALLBACK(kSysMenuSaveFileCallback , *filelist);
 		}
 		});
 }

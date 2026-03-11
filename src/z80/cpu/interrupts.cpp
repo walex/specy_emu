@@ -1,6 +1,5 @@
 #include "interrupts.h"
 #include "z80.h"
-#include <stdint.h>
 
 #ifdef __cplusplus
 extern "C" {

@@ -9,7 +9,7 @@
 #pragma comment(lib, "onecore.lib")
 #endif
 
-constexpr size_t BANK_ALIGNED_SIZE = 64 * 1024;
+constexpr size_t kBankMemoryAligment = 64 * 1024;
 static HANDLE mem_handle = nullptr;
 static void* placeholder_page = nullptr;
 static std::map<uint16_t, void*> memory_views;
@@ -59,7 +59,7 @@ inline void* memory_page_create(const size_t max_banks, const size_t size, const
 
     bank_size = size;
     size_t block_count = base_addr.size();
-    size_t mem_size = max_banks * BANK_ALIGNED_SIZE;
+    size_t mem_size = max_banks * kBankMemoryAligment;
 
     mem_handle = CreateFileMapping(
         INVALID_HANDLE_VALUE,
@@ -74,7 +74,7 @@ inline void* memory_page_create(const size_t max_banks, const size_t size, const
     }
 
     // Allocate placeholder for 64KB visible address space (0x0000-0xFFFF)
-    placeholder_page = memory_page_alloc_placeholder(BANK_ALIGNED_SIZE);
+    placeholder_page = memory_page_alloc_placeholder(kBankMemoryAligment);
     if (placeholder_page == nullptr) {
         PRINT_W32_ERROR();
         return nullptr;
@@ -96,7 +96,7 @@ inline void* memory_page_create(const size_t max_banks, const size_t size, const
     // Map each region to its corresponding bank in the file mapping
     for (size_t i = 0; i < block_count; i++) {
         void* target = (void*)((ULONG_PTR)placeholder_page + base_addr[i]);
-        ULONG64 offset = base_bank_index[i] * BANK_ALIGNED_SIZE;
+        ULONG64 offset = base_bank_index[i] * kBankMemoryAligment;
 
         void* result = MapViewOfFile3(
             mem_handle,
@@ -136,7 +136,7 @@ inline void memory_page_free() {
 inline void* memory_page_remap(void* base_address, uint16_t virtual_offset, uint32_t new_bank_index)
 {
     void* target = (void*)((ULONG_PTR)base_address + virtual_offset);
-    ULONG64 file_offset = new_bank_index * BANK_ALIGNED_SIZE;
+    ULONG64 file_offset = new_bank_index * kBankMemoryAligment;
 
     // Step 1: Unmap the current view at this virtual address
     if (!UnmapViewOfFile2(GetCurrentProcess(), target, MEM_PRESERVE_PLACEHOLDER)) {
@@ -175,7 +175,7 @@ inline void memory_paging_copy_mem_to_bank_w32(uint8_t* mem, uint32_t bank_id, s
     HANDLE file_handle = memory_page_get_handle();
 
     // Map bank directly at a different virtual address
-    uint64_t bank_offset = bank_id * (uint64_t)BANK_ALIGNED_SIZE;
+    uint64_t bank_offset = bank_id * (uint64_t)kBankMemoryAligment;
     uint8_t* direct_bank = (uint8_t*)MapViewOfFile(
         file_handle,
         FILE_MAP_ALL_ACCESS,

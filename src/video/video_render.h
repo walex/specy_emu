@@ -14,4 +14,5 @@ void* video_render_get_window();
 void video_render_show_message(const char* title, const char* message);
 void video_render_open_file_dialog(file_dialog_func_ptr callback);
 void video_render_save_file_dialog(file_dialog_func_ptr callback);
+
 #endif
