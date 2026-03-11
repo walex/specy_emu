@@ -1,13 +1,5 @@
 #include "z80.h"
-#include <stdint.h>
-
-#define PAGING_CONTROL_PORT 0x7FFD
-#define PORT_FE 0xFE
-
-void ula_read_port(uint16_t addr, uint8_t* value);
-void ula_write_port_FE(uint8_t value);
-void memory_paging_bank_switch(uint8_t value);
-uint8_t* system_memory_get_pointer();
+#include "ula.h"
 
 void  inst_IN_Impl(uint16_t addr, uint8_t* value) {
 	
@@ -16,18 +8,7 @@ void  inst_IN_Impl(uint16_t addr, uint8_t* value) {
 
 void inst_OUT_Impl(uint16_t addr, uint8_t value) {
 
-    if (addr == PAGING_CONTROL_PORT) {
-        memory_paging_bank_switch(value);
-    } else {
-
-        switch (addr & 0x00FF) {
-        case PORT_FE:
-            ula_write_port_FE(value);
-            break;
-        default:
-            break;
-        }
-    }
+    ula_write_port(addr, value);
 }
 
 uint8_t parity(uint8_t c) {

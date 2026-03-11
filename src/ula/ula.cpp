@@ -2,6 +2,7 @@
 #include "tape_audio.h"
 #include "z80.h"
 #include "system_memory.h"
+#include "memory_paging.h"
 #include "display.h"
 #include "audio.h"
 #include "tempo.h"
@@ -9,6 +10,8 @@
 #include "automata.h"
 
 static clock_master_handle master_clock;
+constexpr uint16_t PAGING_CONTROL_PORT = 0x7FFD;
+constexpr uint16_t  PORT_FE = 0xFE;
 
 void ula_on_cpu_cycles(uint64_t total_cycles);
 
@@ -123,6 +126,23 @@ void ula_write_port_FE(uint8_t value) {
 	display_set_border_color(value & 0x7);
 	audio_set_level(value & 0x18);
 
+}
+
+void ula_write_port(uint16_t addr, uint8_t value) {
+
+	if (addr == PAGING_CONTROL_PORT) {
+		memory_paging_bank_switch(value);
+	}
+	else {
+
+		switch (addr & 0x00FF) {
+		case PORT_FE:
+			ula_write_port_FE(value);
+			break;
+		default:
+			break;
+		}
+	}
 }
 
 void ula_assert_INT_line() {
