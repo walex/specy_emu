@@ -552,6 +552,14 @@ SET_REG_PC MACRO value16
 mov RegPC, value16
 ENDM
 
+ProcessNextOpcodeFromPC MACRO opcode, JumpTable
+	xor x_ax, x_ax
+	mov x_a16, opcode
+	mov x_cx,OFFSET JumpTable   ; Load the base address of the jump table into RBP
+	mov x_bx,[x_cx + x_ax*PTR_SIZE]      ; Load the function address from the table
+	jmp x_bx
+ENDM
+
 ProcessNextOpcode MACRO JumpTable
 	xor x_ax, x_ax
 	xor x_cx, x_cx

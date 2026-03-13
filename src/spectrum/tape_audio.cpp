@@ -20,8 +20,8 @@ struct TapePulse {
 	uint8_t  ear_level;   // 0 o 1
 };
 
-struct tape_block {
-	tape_block(bool is_continuous = false) {
+struct TapePulsesBlock {
+	TapePulsesBlock(bool is_continuous = false) {
 		pulses.reserve(1024 * 1024);
 		tape_pulse_index = 0;
 		start_cycle = 0;
@@ -37,11 +37,14 @@ struct tape_block {
 	bool is_continuous = false;
 };
 
-static std::list<tape_block*> tape_block_list;
-static tape_block* next_block = nullptr;
+// puslse mode
+static std::list<TapePulsesBlock*> tape_block_list;
+static TapePulsesBlock* next_block = nullptr;
 uint8_t current_ear = 0;
 bool tape_active = false;
 
+// info mode
+static tap_info_head* tap_info_header = nullptr;
 
 void tape_audio_reset() {
 	current_ear = 0;
@@ -95,13 +98,13 @@ void tape_audio_set_bytes(uint8_t* data, size_t size) {
 	tape_audio_reset();
 	
 	while (data + 2 <= data_end) {
-		uint16_t block_size = data[0] | (data[1] << 8);
+		uint16_t block_size = (uint16_t)(data[0] | (data[1] << 8));
 		data += 2;
 
 		if (data + block_size > data_end) break;
 
-		tape_block_list.push_back(new tape_block());
-		tape_block& block = *tape_block_list.back();
+		tape_block_list.push_back(new TapePulsesBlock());
+		TapePulsesBlock& block = *tape_block_list.back();
 		block.start_cycle = cycles;
 		block.sync_cycles = cycles;
 		uint8_t flag = data[0];
@@ -180,7 +183,7 @@ void tape_audio_load_wav(const char* filename) {
 		const uint32_t CYCLES_PER_SAMPLE = Z80_CPU_FREQ_HZ / freq;
 		int16_t* samples = (int16_t*)wav_buffer;
 		size_t sample_count = wav_size / sizeof(int16_t);
-		tape_block* tb = new tape_block(true);
+		TapePulsesBlock* tb = new TapePulsesBlock(true);
 		tape_block_list.push_back(tb);
 		for (size_t i = 0; i < sample_count; i++) {
 			int16_t sample = samples[i];
@@ -199,7 +202,7 @@ void tape_audio_load_wav(const char* filename) {
 	
 }
 
-void tape_audio_load_tap(const char* filename) {
+void tape_audio_load_tap_raw(const char* filename) {
 
 	uint8_t* tap_buffer;
 	size_t tap_size;
@@ -212,11 +215,48 @@ void tape_audio_load_tap(const char* filename) {
 	delete[] tap_buffer;
 }
 
+static tap_info* aux = nullptr;
+void tape_audio_next_data_block() {
+
+	static tap_info* info = nullptr;
+	if (!tap_info_header || !tap_info_header->node)
+		return;
+	if (!info)
+		info = aux = tap_info_header->node;
+	else if (aux->next)
+		aux = aux->next;
+}
+
+uint8_t* tape_audio_get_header_block_raw(size_t& size) {
+	
+	size = 0;
+	if (!aux)
+		return nullptr;
+	size = sizeof(aux->header);
+	return (uint8_t*)&aux->header;
+}
+
+uint8_t* tape_audio_get_data_block_raw(size_t& size) {
+
+	size = 0;
+	if (!aux)
+		return nullptr;
+	size = aux->size;
+	return (uint8_t*)&aux->data;
+}
+
+void tape_audio_load_tap_info(const char* filename) {
+
+	tap_free(tap_info_header);
+	tap_info_header = tap_load_from_file(filename);
+	tape_audio_next_data_block();
+}
+
 void tape_audio_from_file(const char* filename) {
 	std::string file_str(filename);
 	std::string ext = file_str.substr(file_str.find_last_of(".") + 1);
 	if (ext == "tap" || ext == "TAP") {
-		tape_audio_load_tap(filename);
+		tape_audio_load_tap_raw(filename);
 	}
 	else if (ext == "wav" || ext == "WAV") {
 		tape_audio_load_wav(filename);

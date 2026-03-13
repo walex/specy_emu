@@ -17,6 +17,7 @@ void ula_end();
 void ula_assert_INT_line();
 bool ula_has_snow_effect();
 void ula_on_tape_load_block();
+void ula_on_tape_load_block_from_info();
 
 constexpr uint64_t kULASyncCycles = 69888;
 constexpr uint64_t kContainedMemory48LowAddr = 0x4000;

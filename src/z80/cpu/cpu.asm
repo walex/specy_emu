@@ -6,7 +6,8 @@
 
 BYTE_PTR TYPEDEF PTR BYTE
 memPtr BYTE_PTR 0
-forceRETN db 0
+onInitForceRETN db 0
+onStepForceNextOpcode dw 0FFFFh
 
 include x64_arch.inc
 include invoke.inc
@@ -25,7 +26,7 @@ cpu_z80_init PROC
 ; force retn: BYTE -> x_d8l
 
 mov memPtr,x_cx
-mov forceRETN,x_d8l
+mov onInitForceRETN,x_d8l
 invoke interrupts_set_im,0
 ret
 
@@ -40,8 +41,8 @@ include opcodesdef.inc
 .code
 
 Z80Init:
-   cmp forceRETN,1
-	mov forceRETN,0
+   cmp onInitForceRETN,1
+	mov onInitForceRETN,0
 	jz OpED45
 	mov x_a8l,reg_f_ant
 	mov x_a8h,RegF
@@ -60,6 +61,12 @@ AfterRegQ:
 	cmp HALT,1
 	jz Z80Halt
 	IncRegR
+	cmp onStepForceNextOpcode, 0FFFFh
+	jz NextOpcode
+	mov x_c16, onStepForceNextOpcode
+	mov onStepForceNextOpcode, 0FFFFh
+	ProcessNextOpcodeFromPC x_c16, _TOp1B
+NextOpcode:
 	ProcessNextOpcode _TOp1B
 Op00:
    ; NOP cycles: 4
@@ -7343,4 +7350,10 @@ cpu_set_register_IFF2 PROC
 	mov IFF2,x_c8l
 	ret
 cpu_set_register_IFF2 ENDP
+
+cpu_force_next_opcode PROC
+	mov onStepForceNextOpcode, cx
+	ret
+cpu_force_next_opcode ENDP
+
 END

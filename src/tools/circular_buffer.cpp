@@ -49,7 +49,8 @@ void circular_buffer_push_sample(float level) {
 
 float circular_buffer_pop_sample() {
 
-    while (buffer_count.load() < buffer_size * 0.7)
+    const size_t buffer_size_min = (buffer_size * 7) / 10;
+    while (buffer_count.load() < buffer_size_min)
         std::this_thread::yield();
     size_t r = buffer_read.load(std::memory_order_relaxed);
     if (buffer_size <= 0)

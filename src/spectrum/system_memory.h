@@ -16,8 +16,10 @@ constexpr uint32_t kSystemTK95 = 1;
 constexpr uint32_t kSystemSinclairSpectrum48 = 2;
 constexpr uint32_t kSystemSinclairSpectrum128 = 3;
 
-constexpr uint16_t kSysVarFrameCount = 0x5C78;
-constexpr uint16_t kSysVarFrameCursorMode = 0x5C41;
+constexpr uint16_t kFRAMES = 0x5C78;
+constexpr uint16_t kMODE = 0x5C41;
+constexpr uint16_t kPROG = 0x5C53;
+constexpr uint16_t kLD_BYTES = 0x0556;
 
 constexpr size_t kROMSize = 16 * 1024;
 constexpr size_t kRAMSize48 = 48 * 1024;

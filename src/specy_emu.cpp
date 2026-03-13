@@ -58,6 +58,7 @@ void specy_load_file(const char* path, int& is_image_file) {
 		|| extension == ".wav"
 		) {
 		tape_audio_from_file(path);
+		//tape_audio_load_tap_info(path);
 		return;
 	}
 }

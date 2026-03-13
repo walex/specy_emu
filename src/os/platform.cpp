@@ -25,12 +25,17 @@ std::string GetCurrentThreadID() {
 
 void SetCurrentThreadName(const std::string& name) {
 
-#ifdef ANDROID_PLATFORM
+#ifndef WINDOWS_PLATFORM
     // 16 byte limit for the thread name, including null terminator.
     prctl(PR_SET_NAME, (unsigned long)name.substr(0, 15).c_str(), 0, 0, 0);
 #else
 
-    name;
+    // SetThreadDescription takes a wide character string (PCWSTR)
+    std::wstring wname(std::begin(name), std::end(name));
+    HRESULT hr = SetThreadDescription(GetCurrentThread(), wname.c_str());
+    if (FAILED(hr)) {
+        std::wcerr << L"Failed to set thread name: " << hr << std::endl;
+    }
 #endif
 }
 

@@ -19,22 +19,22 @@ void cpu_set_register_IFF2(uint16_t);
 void cpu_set_register_PC(uint16_t);
 void interrupts_set_im(uint8_t);
 
-uint16_t cpu_get_register_AF();
-uint16_t cpu_get_register_AF_();
-uint16_t cpu_get_register_BC();
-uint16_t cpu_get_register_BC_();
-uint16_t cpu_get_register_DE();
-uint16_t cpu_get_register_DE_();
-uint16_t cpu_get_register_HL();
-uint16_t cpu_get_register_HL_();
-uint16_t cpu_get_register_IX();
-uint16_t cpu_get_register_IY();
-uint16_t cpu_get_register_SP();
-uint16_t cpu_get_register_I();
-uint16_t cpu_get_register_R();
-uint16_t cpu_get_register_IFF2();
-uint16_t cpu_get_register_PC();
-uint16_t interrupts_get_im();
+uint16_t cpu_get_register_AF(void);
+uint16_t cpu_get_register_AF_(void);
+uint16_t cpu_get_register_BC(void);
+uint16_t cpu_get_register_BC_(void);
+uint16_t cpu_get_register_DE(void);
+uint16_t cpu_get_register_DE_(void);
+uint16_t cpu_get_register_HL(void);
+uint16_t cpu_get_register_HL_(void);
+uint16_t cpu_get_register_IX(void);
+uint16_t cpu_get_register_IY(void);
+uint16_t cpu_get_register_SP(void);
+uint16_t cpu_get_register_I(void);
+uint16_t cpu_get_register_R(void);
+uint16_t cpu_get_register_IFF2(void);
+uint16_t cpu_get_register_PC(void);
+uint16_t interrupts_get_im(void);
 
 #define MAX_INTERCEPTOR_HANDLERS    256
 typedef struct _call_interceptor_data {
@@ -62,7 +62,7 @@ cid->handler = handler; \
 }
 
 typedef void (*register_setter_function)(uint16_t);
-typedef uint16_t(*register_getter_function)();
+typedef uint16_t(*register_getter_function)(void);
 
 static call_interceptor_data call_interceptors[MAX_INTERCEPTOR_HANDLERS];
 static int call_interceptors_size = 0;
@@ -79,7 +79,7 @@ void cpu_init(uint8_t* memPtr, uint8_t force_retn) {
     register_setters[CPU_REGISTER_DE] = cpu_set_register_DE;
     register_setters[CPU_REGISTER_DE_] = cpu_set_register_DE_;
     register_setters[CPU_REGISTER_HL] = cpu_set_register_HL;
-    register_setters[CPU_REGISTER_HL] = cpu_set_register_HL_;
+    register_setters[CPU_REGISTER_HL_] = cpu_set_register_HL_;
     register_setters[CPU_REGISTER_IX] = cpu_set_register_IX; 
     register_setters[CPU_REGISTER_IY] = cpu_set_register_IY;
     register_setters[CPU_REGISTER_SP] = cpu_set_register_SP;
@@ -121,7 +121,7 @@ void cpu_sync(uint8_t cycles) {
     clk_master_sync(cpu_sync_clock, clk_cycles, FRAME_CYCLES);
 }
 
-uint64_t cpu_get_cycles() {
+uint64_t cpu_get_cycles(void) {
     return clk_cycles;
 }
 
@@ -158,6 +158,6 @@ void cpu_set_interrupt_mode(uint8_t mode) {
     interrupts_set_im(mode);
 }
 
-uint8_t cpu_get_interrupt_mode() {
+uint8_t cpu_get_interrupt_mode(void) {
     return (uint8_t)interrupts_get_im();
 }

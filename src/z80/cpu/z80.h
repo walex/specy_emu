@@ -22,16 +22,19 @@
 #define CPU_REGISTER_IFF2 13
 #define CPU_REGISTER_PC 14
 
-typedef void(*clock_call_interceptor_handler)();
+#define RET_OPCODE 0x00C9
+
+typedef void(*clock_call_interceptor_handler)(void);
 
 #ifdef __cplusplus
 extern "C" {
 #endif
 	void cpu_init(uint8_t* memPtr, uint8_t force_retn);
-	extern void cpu_z80_step();
+	extern void cpu_z80_step(void);
+	extern void cpu_force_next_opcode(uint16_t opcode);
 	void cpu_set_wait_state(uint64_t cycles);
 	void cpu_sync(uint8_t cycles);
-	uint64_t cpu_get_cycles();
+	uint64_t cpu_get_cycles(void);
 	void cpu_set_cycles(uint64_t cycles);
 	void cpu_set_call_interceptor(uint16_t addr, clock_call_interceptor_handler handler);
 	void cpu_on_call_interceptor(uint16_t addr);
@@ -40,7 +43,7 @@ extern "C" {
 	void cpu_set_interrupt_mode(uint8_t mode);
 	uint16_t cpu_get_register16(uint8_t reg_id);
 	uint8_t cpu_get_register8(uint8_t reg_id);
-	uint8_t cpu_get_interrupt_mode();
+	uint8_t cpu_get_interrupt_mode(void);
 #ifdef __cplusplus
 	}
 #endif

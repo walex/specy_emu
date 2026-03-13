@@ -27,7 +27,7 @@ int sna_loader_load_48k(const char* filename, uint8_t* ram_mem) {
 	cpu_set_register16(CPU_REGISTER_BC, sna.header.BC);
 	cpu_set_register16(CPU_REGISTER_IY, sna.header.IY);
 	cpu_set_register16(CPU_REGISTER_IX, sna.header.IX);
-	cpu_set_register8(CPU_REGISTER_IFF2, (uint8_t)(sna.header.IFF2 & 0x4) >> 2);
+	cpu_set_register8(CPU_REGISTER_IFF2, (uint8_t)((sna.header.IFF2 & 0x4) >> 2));
 	cpu_set_register8(CPU_REGISTER_R, sna.header.R);
 	cpu_set_register16(CPU_REGISTER_AF, sna.header.AF);
 	cpu_set_register16(CPU_REGISTER_SP, sna.header.SP);

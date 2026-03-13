@@ -9,9 +9,9 @@
 #include "clk_master.h"
 #include "automata.h"
 
+constexpr uint16_t kPagingControlPort = 0x7FFD;
+constexpr uint16_t kPortFE = 0xFE;
 static clock_master_handle master_clock;
-constexpr uint16_t PAGING_CONTROL_PORT = 0x7FFD;
-constexpr uint16_t  PORT_FE = 0xFE;
 
 void ula_on_cpu_cycles(uint64_t total_cycles);
 
@@ -36,6 +36,41 @@ void ula_end() {
 	clk_master_destroy(master_clock);
 }
 
+void ula_on_tape_load_block_from_info() {
+	
+	uint16_t pc = cpu_get_register16(CPU_REGISTER_PC);
+	uint16_t af = cpu_get_register16(CPU_REGISTER_AF); // a
+	uint16_t ix = cpu_get_register16(CPU_REGISTER_IX); // copy addr
+	uint16_t de = cpu_get_register16(CPU_REGISTER_DE); // copy size
+	uint16_t hl = cpu_get_register16(CPU_REGISTER_HL); // a
+	uint8_t a = (uint8_t)(af >> 8); // a == 0 header, a == 0xFF data
+
+	uint8_t* data = nullptr;
+	size_t size;
+	
+	if (a == 0) {
+		data = tape_audio_get_header_block_raw(size);
+		
+	}
+	else if (a == 0xFF) {
+		data = tape_audio_get_data_block_raw(size);
+		tape_audio_next_data_block();		
+	}
+	if (!data) {
+		printf("Error getting %s block", a ? "data" : "header");
+		return;
+	}
+	if (size != de) {
+		printf("Error incorrect block size in:%u tape:%u", de, (uint16_t)(size));
+		return;
+	}
+	memcpy(system_memory_get_pointer(ix), data, size);
+
+	af |= 1;
+	cpu_set_register16(CPU_REGISTER_AF,af);
+	cpu_force_next_opcode(RET_OPCODE);	
+}
+
 void ula_on_tape_load_block() {
 
 	tape_audio_sync();
@@ -53,64 +88,73 @@ void ula_on_cpu_cycles(uint64_t total_cycles) {
 	last_cycles = total_cycles;
 }
 
-void ula_read_port(uint16_t addr, uint8_t* value) {
+void ula_read_tape(uint64_t clock_cycle, uint8_t* value) {
 
 	static uint64_t last_clock = 0;
 	static bool prev_audio_playing = false;
-	const uint16_t port = addr & 0x00FF;	
 
-	if (port == 0xFE) {
+	uint64_t delta_tstates = clock_cycle - last_clock;
+	last_clock = clock_cycle;
 
-		// timing
-		auto clock_cycle = cpu_get_cycles();
-
-		uint64_t delta_tstates = clock_cycle - last_clock;
-		last_clock = clock_cycle;
-
-		// Track tape playing state
-		bool currently_playing = tape_audio_is_active();
-		if (currently_playing == false && tape_audio_eof() == false) {
-			currently_playing = automata_port_is_waiting_for_tone(delta_tstates);
-			if (currently_playing) {
-				tape_audio_playback(true);
-			}
-		}
-		// Reset timing when tape starts playing and this is the first port read
-		if (currently_playing && !prev_audio_playing) {
-			last_clock = clock_cycle;
-		}
-
-		prev_audio_playing = currently_playing;		
-
-		// Clamp huge deltas that occur during major ROM processing
-		// Normal byte processing: 2000-5000 T-states (allow this)
-		// Major processing (decompression, etc.): 100000+ T-states (clamp this)
-		// We clamp to 5000 to allow legitimate byte processing but prevent huge jumps
-		const uint64_t MAX_TAPE_DELTA = 5000;
-		if (currently_playing && delta_tstates > MAX_TAPE_DELTA) {
-			delta_tstates = MAX_TAPE_DELTA; // Clamp, don't pause
-		}
-
-		// keyboard 
-		uint8_t key = (addr >> 8) & 0xFF;
-		uint8_t kbd = keyboard_get_map_addr(key);
-
-		// exclude bit 6 ear
-		*value = (kbd & 0xBF);
-
-		// get audio pulses
+	// Track tape playing state
+	bool currently_playing = tape_audio_is_active();
+	if (currently_playing == false && tape_audio_eof() == false) {
+		currently_playing = automata_port_is_waiting_for_tone(delta_tstates);
 		if (currently_playing) {
-			uint8_t next_pulse = tape_audio_next_pulse(delta_tstates);
-			if (next_pulse != 0xFF) {
-				next_pulse = next_pulse ? 0x40 : 0x00;
-				audio_set_level(next_pulse >> 2);
-				*value |= next_pulse;
-			}
-			else {
-				tape_audio_sync();
-			}
+			tape_audio_playback(true);
 		}
+	}
+	// Reset timing when tape starts playing and this is the first port read
+	if (currently_playing && !prev_audio_playing) {
+		last_clock = clock_cycle;
+	}
 
+	prev_audio_playing = currently_playing;
+
+	// Clamp huge deltas that occur during major ROM processing
+	// Normal byte processing: 2000-5000 T-states (allow this)
+	// Major processing (decompression, etc.): 100000+ T-states (clamp this)
+	// We clamp to 5000 to allow legitimate byte processing but prevent huge jumps
+	const uint64_t MAX_TAPE_DELTA = 5000;
+	if (currently_playing && delta_tstates > MAX_TAPE_DELTA) {
+		delta_tstates = MAX_TAPE_DELTA; // Clamp, don't pause
+	}	
+
+	// get audio pulses
+	if (currently_playing) {
+		uint8_t next_pulse = tape_audio_next_pulse(delta_tstates);
+		if (next_pulse != 0xFF) {
+			next_pulse = next_pulse ? 0x40 : 0x00;
+			audio_set_level((uint8_t)(next_pulse >> 2));
+			*value |= next_pulse;
+		}
+		else {
+			tape_audio_sync();
+		}
+	}
+}
+
+void ula_read_port_FE(uint16_t addr, uint8_t* value) {
+
+	// timing
+	auto cpu_cycles = cpu_get_cycles();
+
+	// keyboard 
+	uint8_t key = (uint8_t)((addr >> 8) & 0xFF);
+	uint8_t kbd = keyboard_get_map_addr(key);
+
+	// clean bit 6 ear
+	*value = (uint8_t)(kbd & 0xBF);
+
+	ula_read_tape(cpu_cycles, value);
+}
+
+void ula_read_port(uint16_t addr, uint8_t* value) {	
+
+	const uint16_t port = (uint16_t)(addr & 0x00FF);
+	if (port == kPortFE) {
+
+		ula_read_port_FE(addr, value);
 		return;
 	}
 
@@ -123,20 +167,20 @@ void ula_write_port_FE(uint8_t value) {
 	// mic = value & 0x8;
 	// ear = value & 0x10;
 
-	display_set_border_color(value & 0x7);
-	audio_set_level(value & 0x18);
+	display_set_border_color((uint32_t)(value & 0x7));
+	audio_set_level((uint8_t)(value & 0x18));
 
 }
 
 void ula_write_port(uint16_t addr, uint8_t value) {
 
-	if (addr == PAGING_CONTROL_PORT) {
+	if (addr == kPagingControlPort) {
 		memory_paging_bank_switch(value);
 	}
 	else {
 
 		switch (addr & 0x00FF) {
-		case PORT_FE:
+		case kPortFE:
 			ula_write_port_FE(value);
 			break;
 		default:

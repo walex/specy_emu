@@ -20,7 +20,7 @@ void audio_render_init(uint32_t sample_rate, audio_render_callback cb) {
 	SDL_zero(spec);
 	spec.format = SDL_AUDIO_S16;
 	spec.channels = 1;
-	spec.freq = sample_rate;
+	spec.freq = (int)sample_rate;
 	user_callback = cb;
 
 	audio_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, NULL, NULL);

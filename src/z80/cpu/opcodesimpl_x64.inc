@@ -991,6 +991,14 @@ inst_CALL PROC
 
 FETCH16 x_dx
 mov x_d16, x_a16
+
+push x_cx
+push x_dx
+mov x_c16, x_a16
+CALL_C_FUNC cpu_on_call_interceptor
+pop x_dx
+pop x_cx
+
 GET_REG_PC
 dec RegSP
 xor x_bx, x_bx
@@ -1001,8 +1009,6 @@ dec RegSP
 dec x_bx
 STORE8 x_bx, x_a8l
 SET_REG_PC x_d16
-mov x_c16, x_d16
-CALL_C_FUNC cpu_on_call_interceptor
 SET_WZ_FROM_VALUE_16 x_d16
 ret
 

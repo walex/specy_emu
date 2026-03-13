@@ -11,30 +11,42 @@ constexpr uint8_t kTapDataBlockTypeNumericArray = 1;
 constexpr uint8_t kTapDataBlockTypeCharacterArray = 2;
 constexpr uint8_t kTapDataBlockTypeCode = 3;
 
-struct tap_header {
+#if defined(_MSC_VER)
+#pragma pack(push, 1)
+#define PACKED
+#elif defined(__GNUC__) || defined(__clang__)
+#define PACKED __attribute__((packed))
+#else
+#define PACKED
+#endif
 
-	char file_name[10 + 1];
-	uint32_t length;
-	uint32_t offset;
-	uint32_t program_type;
+struct tap_header {
+	uint8_t type;
+	char file_name[10];
+	uint16_t data_length;
+	uint16_t auto_start_line;
 	uint16_t program_length;
 };
 
 struct tap_info {
 
 	tap_header header;
-	uint8_t* data;
 	uint32_t size;
 	uint32_t offset;
 	uint8_t crc;
+	uint8_t* data;
 	tap_info* next;
 };
 
 struct tap_info_head {
 
-	tap_info* node = nullptr;
 	uint32_t data_size = 0;
+	tap_info* node = nullptr;
 };
+
+#if defined(_MSC_VER)
+#pragma pack(pop)
+#endif
 
 tap_info_head* tap_load_from_file(const char* filename);
 void tap_free(tap_info_head* tape);

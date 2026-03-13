@@ -3,6 +3,15 @@
 #include <SDL3/SDL.h>
 
 #define MAIN_WINDOW_NAME "Specy Emulator"
+#define ON_DIALOG_OK() { \
+    auto callback_ptr = static_cast<file_dialog_func_ptr*>(userdata); \
+    if (callback_ptr) { \
+        if (*callback_ptr) { \
+            (*callback_ptr)(filelist); \
+        } \
+        delete callback_ptr; \
+    } \
+}
 
 enum SDL_EventTypeExt {
 SDL_EVENT_MESSAGE_BOX = SDL_EVENT_USER + 1,
@@ -20,16 +29,6 @@ static size_t display_buffer_height = 0;
 static size_t window_size_width = 0;
 static size_t window_size_height = 0;
 static uint64_t window_id = 0;
-
-#define ON_DIALOG_OK() { \
-    auto callback_ptr = static_cast<file_dialog_func_ptr*>(userdata); \
-    if (callback_ptr) { \
-        if (*callback_ptr) { \
-            (*callback_ptr)(filelist); \
-        } \
-        delete callback_ptr; \
-    } \
-}
 
 /* This function runs once at startup. */
 SDL_AppResult SDL_AppInit(void** /*appstate*/, int /*argc*/, char* /*argv[]*/ )

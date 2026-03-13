@@ -3,16 +3,13 @@
 #include "ula.h"
 #include "memory_paging.h"
 
-// intercept calls functions
-#define LD_BYTES 0x0556
-
 struct machine_info {
 	const char* rom_name;
 	size_t rom_size;
 	size_t ram_size;
 };
 
-std::map<uint32_t, machine_info> machines = {
+static const std::map<uint32_t, machine_info> machines = {
 	{kSystemSinclairSpectrum48, {SPECTRUM_48K_ROM_FILE, kROMSize, kRAMSize48}},
 	{kSystemSinclairSpectrum128, {SPECTRUM_128K_ROM_FILE, kROMSize, kRAMSize128}},
 	{kSystemTK95, {TK95_48K_ROM_FILE, kROMSize, kRAMSize48}},
@@ -21,7 +18,7 @@ std::map<uint32_t, machine_info> machines = {
 };
 
 static uint8_t* system_rom_pointer = nullptr;
-static int32_t system_machine_id = kSystemUnknown;
+static uint32_t system_machine_id = kSystemUnknown;
 
 size_t system_memory_load_rom(uint8_t* mem, const char* base_path, const char* rom_name) {
 
@@ -35,7 +32,7 @@ size_t system_memory_load_rom(uint8_t* mem, const char* base_path, const char* r
 	}
 
 	fseek(rom, 0, SEEK_END); // Move the file pointer to the end
-	size_t rom_size = ftell(rom);
+	size_t rom_size = (size_t)ftell(rom);
 	fseek(rom, 0, SEEK_SET);
 	fread(mem, rom_size, 1, rom);
 	fclose(rom);
@@ -43,7 +40,7 @@ size_t system_memory_load_rom(uint8_t* mem, const char* base_path, const char* r
 	return rom_size;
 }
 
-uint8_t* system_memory_create_48k_rom(const char* base_path, machine_info& machine_info, size_t mem_size) {
+uint8_t* system_memory_create_48k_rom(const char* base_path, const machine_info& machine_info, size_t mem_size) {
 
 	uint8_t* mem = new uint8_t[mem_size];
 	if (mem == nullptr) {
@@ -55,7 +52,7 @@ uint8_t* system_memory_create_48k_rom(const char* base_path, machine_info& machi
 	return mem;
 }
 
-uint8_t* system_memory_create_128k_rom(const char* base_path, machine_info& machine_info, size_t mem_size) {
+uint8_t* system_memory_create_128k_rom(const char* base_path, const machine_info& machine_info, size_t mem_size) {
 	uint8_t* mem = memory_paging_init();
 	if (mem == nullptr) {
 		perror("128k RAM memory error");
@@ -79,7 +76,7 @@ uint8_t* system_memory_create_128k_rom(const char* base_path, machine_info& mach
 uint8_t* system_memory_create(uint32_t machine_id, const char* base_path) {
 
 	auto it = machines.find(machine_id);
-	machine_info& machine_info = it->second;
+	const machine_info& machine_info = it->second;
 	size_t mem_size = machine_info.rom_size + machine_info.ram_size;
 	uint8_t* mem = nullptr;
 	switch (machine_id) {
@@ -112,7 +109,7 @@ int system_memory_init(uint32_t machine_id, const char* base_path) {
 		return -1;
 	}
 	
-	cpu_set_call_interceptor(LD_BYTES, system_memory_on_rom_call_LD_BYTES);
+	cpu_set_call_interceptor(kLD_BYTES, system_memory_on_rom_call_LD_BYTES);
 	system_machine_id = machine_id;
 	return 0;
 }

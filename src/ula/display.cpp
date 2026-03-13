@@ -44,7 +44,7 @@ __inline void display_get_byte_attrib(uint8_t* mem_video, uint8_t* mem_atrib_vid
 	int mem_index = (kScanConvert[y] << 5) + x;
 	int attrib_idx = (y >> 3) * 32 + x;
 	if (ula_has_snow_effect()) {
-		uint16_t r = cpu_get_register8(CPU_REGISTER_R) & 0x7F;
+		uint16_t r = (uint16_t)(cpu_get_register8(CPU_REGISTER_R) & 0x7F);
 		uint16_t base_mem_dir = (uint16_t)(0x4000 + mem_index);
 		base_mem_dir = (uint16_t)(base_mem_dir & 0xFF80);
 		base_mem_dir = (uint16_t)(base_mem_dir | r);
@@ -68,7 +68,7 @@ void display_draw(int y) {
 	int x;
 	uint32_t ink, paper, flash, bright;
 	uint8_t byte, attrib;
-	uint16_t frame_count = system_memory_get_system_var_value_16(kSysVarFrameCount);
+	uint16_t frame_count = system_memory_get_system_var_value_16(kFRAMES);
 
 	int buffer_width = (kDisplayResolutionX - kDisplayBufferResolutionX) / 2;
 	static size_t state_index = 0;
@@ -88,8 +88,8 @@ void display_draw(int y) {
 		for (int byte_x = 0; byte_x < 32; byte_x++) {
 			int buffer_x = byte_x * 8 + (kDisplayResolutionX - kDisplayBufferResolutionX) / 2;
 			display_get_byte_attrib(mem_video, mem_atrib_video, byte_x, screen_y, byte, attrib);
-			flash = attrib & 0x80;
-			bright = attrib & 0x40;
+			flash = (uint32_t)(attrib & 0x80);
+			bright = (uint32_t)(attrib & 0x40);
 			ink = KVideoColorPalleteHILO[attrib & 0x07][bright ? kBrightMode : kOpaqueMode];
 			paper = KVideoColorPalleteHILO[(attrib >> 3) & 0x07][bright ? kBrightMode : kOpaqueMode];
 			if (flash && (frame_count & kFlashFaseFrame))

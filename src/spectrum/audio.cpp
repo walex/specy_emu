@@ -50,7 +50,7 @@ void audio_thread_proc() {
     audio_render_init((uint32_t)kAudioSampleRate, nullptr);
     audio_thread_running.store(true);
     while (audio_thread_running.load()) {
-        for (int i = 0; i < buffsiz; i++)
+        for (size_t i = 0; i < buffsiz; i++)
             buffer16[i] = (int16_t)(tv_saturate(circular_buffer_pop_sample()) * 32767.0f);
         audio_render_play((uint8_t*)buffer16, buffsiz * 2);
         std::this_thread::yield();
@@ -82,12 +82,10 @@ void audio_end() {
 // Main function to send audio samples, called from the ULA emulation
 // `tstates_cpu_total` is the accumulated Z80 cycles since emulation start
 void audio_set_level(uint8_t value) {
-#ifdef CPU_CLOCK_SYNC
     //int new_mic = (value >> 3) & 1;
     int new_ear = (value >> 4) & 1;
     float lvl = new_ear ? 1.0f : 0.0f;
     current_level.store(lvl, std::memory_order_relaxed);
-#endif
 }
 
 void audio_tick(uint64_t delta_tstates) {

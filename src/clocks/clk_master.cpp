@@ -24,11 +24,11 @@ void clock_sync_func(clock_master_handle cmh, uint64_t total_cycles, uint64_t sy
 	cm->sync_cycles += delta_cycles;
 	if (cm->sync_cycles >= sync_cycles) {
 		std::chrono::high_resolution_clock::time_point now = std::chrono::high_resolution_clock::now();
-		double elapsed_cpu_time = sync_cycles / (cm->frequency / 1000000.0);  // microseconds
+		double elapsed_cpu_time = (double)sync_cycles / (cm->frequency / 1000000.0);  // microseconds
 		auto target_time = cm->clock + std::chrono::microseconds((int64_t)elapsed_cpu_time);
 		// Sleep until target time (smooth pacing)
 		if (now < target_time) {
-			const uint64_t delta_t = std::chrono::duration_cast<std::chrono::microseconds>(target_time - now).count();
+			const auto delta_t = std::chrono::duration_cast<std::chrono::microseconds>(target_time - now).count();
 			if (delta_t > 0) {
 				uint64_t delta_c = (total_cycles - last_total_cycles) / delta_t;
 				while (now < target_time) {

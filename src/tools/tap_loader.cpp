@@ -31,11 +31,7 @@ tap_info_head* tap_load_from_file(const char* filename) {
 			perror("expected header block");
 			break;
 		}
-		char file_name[10+1] = "";
-		memcpy(file_name, &header_block_info[2], 10);
-		uint16_t data_len = header_block_info[12] | (header_block_info[13] << 8);
-		uint16_t load_addr = header_block_info[14] | (header_block_info[15] << 8);
-		uint16_t program_len = header_block_info[16] | (header_block_info[17] << 8);
+		uint16_t data_len = (uint16_t)(header_block_info[12] | (header_block_info[13] << 8));
 
 		// data block
 		if (fread(&len, 2, 1, f) != 1) {
@@ -77,16 +73,11 @@ tap_info_head* tap_load_from_file(const char* filename) {
 		total_data_size += data_len + 1;
 
 		tap_info* info = new tap_info();
-		info->header.file_name[10] = 0;
-		memcpy(info->header.file_name, file_name, 10);
-		info->header.length = data_len;
-		info->header.program_length = program_len;
-		info->header.offset = load_addr;
-		info->header.program_type = header_block_info[1];
+		memcpy(&info->header, &header_block_info[1], sizeof(info->header));
 		info->data = data;
 		info->size = data_len;
-		info->offset = load_addr;
-		info->crc = crc;
+		//info->offset = load_addr;
+		//info->crc = crc;
 		info->next = nullptr;
 
 		if (list_head->node == nullptr) {
@@ -106,6 +97,8 @@ tap_info_head* tap_load_from_file(const char* filename) {
 }
 
 void tap_free(tap_info_head* tape) {
+	if (!tape)
+		return;
 	tap_info* current = tape->node;
 	while (current != nullptr) {
 		tap_info* next = current->next;

@@ -59,7 +59,7 @@ struct KeyMappingExt {
     std::vector<KeyMapping> shift_key_mapping;
 };
 
-std::map<int, KeyMapping> key_mapping_direct = {
+static const std::map<int, KeyMapping> key_mapping_direct = {
 
     { HOST_KEY_LCONTROL, ZX_KEYCODE_LSHIFT },
     { HOST_KEY_RCONTROL, ZX_KEYCODE_RSHIFT },
@@ -104,7 +104,7 @@ std::map<int, KeyMapping> key_mapping_direct = {
     { HOST_KEY_M, ZX_KEYCODE_M }
 };
 
-std::map<int, KeyMappingExt> key_mapping_extra = {
+static const std::map<int, KeyMappingExt> key_mapping_extra = {
     {HOST_KEY_BACKSPACE, {{{ZX_KEYCODE_0, ZX_KEYCODE_LSHIFT}}}},
     {HOST_KEY_MINUS, {{{ZX_KEYCODE_J, ZX_KEYCODE_RSHIFT}}, EDITOR_MODE_ALL, true,  {{ZX_KEYCODE_0, ZX_KEYCODE_RSHIFT}}}},
     {HOST_KEY_EQUALS, {{{ZX_KEYCODE_L, ZX_KEYCODE_RSHIFT}}, EDITOR_MODE_ALL, true,  {{ZX_KEYCODE_K, ZX_KEYCODE_RSHIFT}}}},
@@ -150,9 +150,9 @@ void keyboard_update_map_extra(const bool* keys, uint8_t key, uint8_t& value) {
     for (auto& [i, k] : key_mapping_extra) {
         if (keys[i] == true) {
 			if (k.editor_mode == EDITOR_MODE_E) {
-                int editor_mode = system_memory_get_system_var_value_8(kSysVarFrameCursorMode);
+                int editor_mode = system_memory_get_system_var_value_8(kMODE);
                 if (k.editor_mode != editor_mode) {
-                    system_memory_set_system_var_value_8(kSysVarFrameCursorMode, EDITOR_MODE_E);
+                    system_memory_set_system_var_value_8(kMODE, EDITOR_MODE_E);
                     forced_edit_mode_addr = key;
                 }
             }
@@ -185,7 +185,7 @@ uint8_t keyboard_get_map_addr(uint8_t addr) {
 
 	// if edit mode was forced and we finished to scan all keyboard lines then reset edit mode
     if (forced_edit_mode_addr == (uint16_t)addr) {
-        system_memory_set_system_var_value_8(kSysVarFrameCursorMode, EDITOR_MODE_CKL);
+        system_memory_set_system_var_value_8(kMODE, EDITOR_MODE_CKL);
         forced_edit_mode_addr = 0xFFFF;
     }    
 
@@ -196,7 +196,7 @@ uint8_t keyboard_get_map_addr(uint8_t addr) {
         // read pc keyboard shortcuts that are not directly mapped to the zx keyboard
         keyboard_update_map_extra(keys, addr, mapped_value);
     }
-    return ~mapped_value;
+    return (uint8_t)(~mapped_value);
 }
 
 void keyboard_tick(uint64_t /*delta_cycles*/) {
