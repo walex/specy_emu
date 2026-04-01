@@ -7,10 +7,17 @@ struct clock_master {
 	std::string name;
 	uint64_t cycles;
 	uint64_t sync_cycles;
+	uint64_t last_total_cycles;
 	std::list<std::function<void(uint64_t)>> callbacks;
 };
 
-static std::map<const char*, clock_master_handle> clock_masters;
+struct cmp {
+	bool operator()(const char* a, const char* b) const {
+		return std::strcmp(a, b) < 0;
+	}
+};
+
+static std::map<const char*, clock_master_handle, cmp> clock_masters;
 static bool cpu_speed_mode = false;
 using clock_sync_func_impl_ptr = void(*)(clock_master_handle, uint64_t, uint64_t, uint64_t&);
 
@@ -61,22 +68,40 @@ clock_master_handle clk_master_create(const char* name, double frequency_hz) {
 	cm->frequency = frequency_hz;
 	cm->cycles = 0;
 	cm->sync_cycles = 0;
+	cm->last_total_cycles = 0;
 	cm->clock = std::chrono::high_resolution_clock::now();
 	clock_masters[name] = cm;
-	return (void*)cm;
+	return (clock_master_handle)cm;
 }
 
-void clk_master_destroy(clock_master_handle cm) {
+void clk_master_reset(const char* name){
 
-	delete (clock_master*)cm;
+	clock_master* cm = (clock_master*)clk_master_get(name);
+	cm->cycles = 0;
+	cm->sync_cycles = 0;
+	cm->clock = std::chrono::high_resolution_clock::now();
+}
+
+
+void clk_master_destroy(const char* name) {
+
+	clock_master* cm = (clock_master*)clk_master_get(name);	
+	if (cm) {
+		delete cm;
+		clock_masters.erase(name);
+	}
+	else {
+		printf("Error destroying clock master %s\n", name);
+	}
+	
 }
 
 clock_master_handle clk_master_get(const char* name) {
 
-	for (const auto& [key, value] : clock_masters) {
-		if (strcmp(key, name) == 0) {
-			return value;
-		}
+	try {
+		return clock_masters.at(name);
+	} catch (const std::out_of_range&) {
+		printf("Error getting clock master %s\n", name);
 	}
 	return nullptr;
 }
@@ -92,10 +117,10 @@ void clk_master_tick(clock_master_handle cmh, uint64_t total_cycles) {
 
 void clk_master_sync(clock_master_handle cmh, uint64_t total_cycles, uint64_t sync_cycles) {
 
-	static uint64_t last_total_cycles = 0;
-	clock_sync_func_impl(cmh, total_cycles, sync_cycles, last_total_cycles);
+	clock_master* cm = (clock_master*)cmh;
+	clock_sync_func_impl(cmh, total_cycles, sync_cycles, cm->last_total_cycles);
 	clk_master_tick(cmh, total_cycles);
-	last_total_cycles = total_cycles;
+	cm->last_total_cycles = total_cycles;
 }
 
 double clk_master_get_frequency(clock_master_handle cmh) {

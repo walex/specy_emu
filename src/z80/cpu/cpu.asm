@@ -6,7 +6,6 @@
 
 BYTE_PTR TYPEDEF PTR BYTE
 memPtr BYTE_PTR 0
-onInitForceRETN db 0
 onStepForceNextOpcode dw 0FFFFh
 
 include x64_arch.inc
@@ -23,16 +22,24 @@ include interrupts.inc
 cpu_z80_init PROC
 ; params
 ; mem:PTR BYTE -> x_cx
-; force retn: BYTE -> x_d8l
 
 mov memPtr,x_cx
-mov onInitForceRETN,x_d8l
 invoke interrupts_set_im,0
 ret
 
 cpu_z80_init ENDP
 
+cpu_z80_end PROC
+
+mov memPtr,0
+mov onStepForceNextOpcode, 0FFFFh
+ret
+
+cpu_z80_end ENDP
+
 cpu_z80_step PROC
+; params
+; force retn: BYTE -> x_c8l
 
 .data
 
@@ -41,8 +48,7 @@ include opcodesdef.inc
 .code
 
 Z80Init:
-   cmp onInitForceRETN,1
-	mov onInitForceRETN,0
+   cmp x_c8l, 1
 	jz OpED45
 	mov x_a8l,reg_f_ant
 	mov x_a8h,RegF

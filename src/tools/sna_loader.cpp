@@ -10,7 +10,7 @@ int sna_loader_load_48k(const char* filename, uint8_t* ram_mem) {
 	fopen_s(&file, filename, "rb");
 	if (file == nullptr) {
 		perror("Error opening file");
-		return 0;
+		return -1;
 	}
 	
 	fread(&sna, sizeof(sna), 1, file);
@@ -33,7 +33,7 @@ int sna_loader_load_48k(const char* filename, uint8_t* ram_mem) {
 	cpu_set_register16(CPU_REGISTER_SP, sna.header.SP);
 	cpu_set_interrupt_mode(sna.header.int_mode);
 	display_set_border_color(sna.header.border_color);
-	return 1;
+	return 0;
 }
 
 void sna_loader_save_48k(const char* filename, uint8_t* ram_mem) {

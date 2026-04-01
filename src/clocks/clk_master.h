@@ -8,7 +8,8 @@ typedef void* clock_master_handle;
 using clock_master_clicks_callback_function = std::function<void(uint64_t)>;
 extern "C" {
 	clock_master_handle clk_master_create(const char* name, double frequency_hz);
-	void clk_master_destroy(clock_master_handle cm);
+	void clk_master_destroy(const char* name);
+	void clk_master_reset(const char* name);
 	double clk_master_get_frequency(clock_master_handle cmh);
 	uint64_t clk_master_get_cycles(clock_master_handle cmh);
 	void clk_master_tick(clock_master_handle cmh, uint64_t cycles);

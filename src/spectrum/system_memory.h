@@ -15,6 +15,8 @@ constexpr uint32_t kSystemTK90X = 0;
 constexpr uint32_t kSystemTK95 = 1;
 constexpr uint32_t kSystemSinclairSpectrum48 = 2;
 constexpr uint32_t kSystemSinclairSpectrum128 = 3;
+constexpr uint32_t kSystemMin = kSystemTK90X;
+constexpr uint32_t kSystemMax = kSystemSinclairSpectrum128;
 
 constexpr uint16_t kFRAMES = 0x5C78;
 constexpr uint16_t kMODE = 0x5C41;
@@ -27,6 +29,7 @@ constexpr size_t kRAMSize128 = 128 * 1024;
 
 int system_memory_init(uint32_t machine_id, const char* base_path);
 void system_memory_end();
+void system_memory_configure_interceptors();
 extern "C" {
 	uint8_t* system_memory_get_pointer(uint64_t offset = 0);
 }

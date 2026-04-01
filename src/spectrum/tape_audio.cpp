@@ -9,11 +9,9 @@
 #define SYNC2_T 735
 #define BIT0_T 855
 #define BIT1_T 1710
-#define PAUSE_T 3500000 // 1 sec
+#define PAUSE_T Z80_CPU_FREQ_HZ // 1 sec
 #define PILOT_HEADER 8063
 #define PILOT_DATA 3223
-
-static uint64_t sync_cycles = 0;
 
 struct TapePulse {
 	uint64_t end_cycle;   // absolute cycle when pulse ends
@@ -45,6 +43,7 @@ bool tape_active = false;
 
 // info mode
 static tap_info_head* tap_info_header = nullptr;
+static tap_info* aux = nullptr;
 
 void tape_audio_reset() {
 	current_ear = 0;
@@ -53,6 +52,9 @@ void tape_audio_reset() {
 		delete block;
 	}
 	tape_block_list.clear();
+	next_block = nullptr;
+	tap_info_header = nullptr;
+	aux = nullptr;
 }
 
 void tape_add_pause(std::vector<TapePulse>& pulses, uint32_t& t) {
@@ -173,12 +175,12 @@ void tape_audio_load_wav(const char* filename) {
 	uint8_t* wav_buffer;
 	size_t wav_size;
 	int freq;
+	tape_audio_reset();
 	audio_render_load_wav(filename, &wav_buffer, wav_size, freq);
 	if (wav_size > 0) {
 		// convert wav to tape pulses
 		uint8_t level = 0;
 		uint64_t cycles = 0;
-		tape_audio_reset();
 		// WAV format: 16bit signed PCM, mono, 44100Hz
 		const uint32_t CYCLES_PER_SAMPLE = Z80_CPU_FREQ_HZ / freq;
 		int16_t* samples = (int16_t*)wav_buffer;
@@ -215,15 +217,9 @@ void tape_audio_load_tap_raw(const char* filename) {
 	delete[] tap_buffer;
 }
 
-static tap_info* aux = nullptr;
 void tape_audio_next_data_block() {
 
-	static tap_info* info = nullptr;
-	if (!tap_info_header || !tap_info_header->node)
-		return;
-	if (!info)
-		info = aux = tap_info_header->node;
-	else if (aux->next)
+	if (aux)
 		aux = aux->next;
 }
 
@@ -249,7 +245,8 @@ void tape_audio_load_tap_info(const char* filename) {
 
 	tap_free(tap_info_header);
 	tap_info_header = tap_load_from_file(filename);
-	tape_audio_next_data_block();
+	if (tap_info_header && tap_info_header->node)
+		aux = tap_info_header->node;
 }
 
 void tape_audio_from_file(const char* filename) {

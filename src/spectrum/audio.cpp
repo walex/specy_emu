@@ -15,6 +15,7 @@ constexpr size_t kAudioSamplesBuffer = (size_t)(kAudioSampleRate*0.1);
 
 // Audio state variables
 static std::atomic<float> current_level(0.0);
+static double tstate_accum = 0.0;
 
 // audio thread
 static std::thread audio_thread;
@@ -55,6 +56,8 @@ void audio_thread_proc() {
         audio_render_play((uint8_t*)buffer16, buffsiz * 2);
         std::this_thread::yield();
     }
+    circular_buffer_end();
+    audio_render_end();
 }
 
 void audio_init() {
@@ -62,21 +65,21 @@ void audio_init() {
     if (audio_thread_running.load())
         return;
 
+    tstate_accum = 0.0;
     audio_thread = std::thread(audio_thread_proc);
     while (!audio_thread_running.load())
 		std::this_thread::yield();
-    audio_thread.detach();
 }
 
 // Shutdown audio system
 void audio_end() {
 
-    if (audio_thread_running.load())
+    if (audio_thread_running.load()) {
         audio_thread_running.store(false);
-    if (audio_thread.joinable())
-        audio_thread.join();
-    audio_render_end();
-    circular_buffer_end();
+        circular_buffer_enable(false);
+        if (audio_thread.joinable())
+            audio_thread.join();
+    }
 }
 
 // Main function to send audio samples, called from the ULA emulation
@@ -90,7 +93,6 @@ void audio_set_level(uint8_t value) {
 
 void audio_tick(uint64_t delta_tstates) {
 
-    static double tstate_accum = 0.0;
     double accum = tstate_accum;
     accum += (double)delta_tstates;
     while (accum >= kAudioSamplesCyclesCount) {

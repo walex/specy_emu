@@ -128,10 +128,12 @@ static uint16_t forced_edit_mode_addr = 0xFFFF;
 
 void keyboard_init(UlaKeyboardKeysCallback cb) {
     keyboard_keys_callback = cb;
+    keyboard_reset();
 }
 
 void keyboard_end() {
 
+    keyboard_keys_callback = nullptr;
 }
 
 void keyboard_update_map(const bool* keys, uint8_t key, uint8_t& value) {

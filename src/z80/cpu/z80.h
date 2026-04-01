@@ -29,8 +29,9 @@ typedef void(*clock_call_interceptor_handler)(void);
 #ifdef __cplusplus
 extern "C" {
 #endif
-	void cpu_init(uint8_t* memPtr, uint8_t force_retn);
-	extern void cpu_z80_step(void);
+	void cpu_init(uint8_t* memPtr);
+	void cpu_end();
+	extern void cpu_z80_step(uint8_t force_retn);
 	extern void cpu_force_next_opcode(uint16_t opcode);
 	void cpu_set_wait_state(uint64_t cycles);
 	void cpu_sync(uint8_t cycles);

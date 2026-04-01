@@ -4,7 +4,6 @@
 #include "z80.h"
 #include "system_memory.h"
 #include "video_render.h"
-#include "tempo.h"
 
 static std::thread display_thread;
 static std::atomic<bool> display_thread_running{ false };
@@ -32,10 +31,12 @@ bool display_is_running() {
 
 void display_end() {
 
-	if (display_thread_running.load())
+	if (display_thread_running.load()) {
 		display_thread_running.store(false);
-	if (display_thread.joinable())
-		display_thread.join();
+		line_drawn_semaphore.release();
+		if (display_thread.joinable())
+			display_thread.join();
+	}
 	
 }
 
@@ -110,20 +111,19 @@ void display_tick(uint64_t delta_cycles) {
 
 	static uint64_t cycle_in_frame = 0;
 	static int y = 0;
+
 	cycle_in_line += delta_cycles;
-	if (y == 0) {
-		ula_assert_INT_line();
-	}
 	if (cycle_in_line >= kHsyncCycles) {
 		cycle_in_frame += kHsyncCycles;
 		cycle_in_line -= kHsyncCycles;
+		if (y == 0) {
+			ula_assert_INT_line();
+		}
 		display_draw(y++);
 		if (y == kDisplayResolutionY) {
-			MEASURE_ELAPSED_TIME("display ready time:", 200,
-				y = 0;
-				line_drawn_semaphore.release();
-			);
+			y = 0;
 			cycle_in_frame = 0;
+			line_drawn_semaphore.release();			
 		}
 	}
 }
@@ -135,13 +135,13 @@ void display_thread_proc() {
 	video_render_init(display_buffer, kDisplayResolutionX, kDisplayResolutionY,
 		kWindowWidth, kWindowHeight);
 	display_thread_running.store(true);
-	while (display_thread_running.load()) {
+	while (true) {
 
-		MEASURE_ELAPSED_TIME("display scan time:", 100,
 		line_drawn_semaphore.acquire();
+		if (display_thread_running.load() == false)
+			break;
 		if (video_render_process() == false)
 			display_thread_running.store(false);
-			)		
 	}
 	video_render_end();
 }

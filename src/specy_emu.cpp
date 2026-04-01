@@ -37,33 +37,44 @@
 #include "system_menu.h"
 #include "file_system.h"
 
+static bool force_rtn_on_next_instruction = false;
+static bool system_reset_requested = false;
+
+struct cmd_line_args {
+	
+	uint32_t machine_id;
+};
+
+void specy_emu_gui_update() {
+
+	system_menu_update();
+}
+
 bool specy_emu_evaluate_keys(const bool* keys) {
 
 	return system_menu_evaluate_keyboard_state(keys);
 }
 
-void specy_load_file(const char* path, int& is_image_file) {
+void specy_emu_load_file(const char* path) {
 
 	std::string extension = std::filesystem::path(path).extension().string();
 	std::transform(extension.begin(), extension.end(), extension.begin(),
 		[](char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); });
 
 	if (extension == ".sna") {
-		is_image_file = sna_loader_load_48k(path, system_memory_get_pointer(0x4000));
+		force_rtn_on_next_instruction = (sna_loader_load_48k(path, system_memory_get_pointer(0x4000)) == 0);
 		return;
 	}
 
-	is_image_file = false;
 	if (extension == ".tap"
 		|| extension == ".wav"
 		) {
 		tape_audio_from_file(path);
-		//tape_audio_load_tap_info(path);
 		return;
 	}
 }
 
-void specy_save_file(const char* path) {
+void specy_emu_save_file(const char* path) {
 
 	std::string extension = std::filesystem::path(path).extension().string();
 	std::transform(extension.begin(), extension.end(), extension.begin(),
@@ -77,52 +88,130 @@ void specy_save_file(const char* path) {
 	printf("unsupported file format for saving: %s\n", extension.c_str());
 }
 
-int main(int /*argc*/, char* /*argv[]*/) {
-	
-	uint32_t machineId = kSystemSinclairSpectrum48;
-	static int is_image_file = false;
+void specy_emu_init_gui() {
 
-	// init menu
 	system_menu_set_callback(kSysMenuOpenFileCallback, [](void* params) {
-		specy_load_file((const char*)params, is_image_file);
+		specy_emu_load_file((const char*)params);
 		}
 	);
 	system_menu_set_callback(kSysMenuSaveFileCallback, [](void* params) {
-		specy_save_file((const char*)params);
+		specy_emu_save_file((const char*)params);
 		}
 	);
+	system_menu_set_callback(kSysMenuSystenResetCallback, [](void* /*params*/ ) {
+		system_reset_requested = true;
+		}
+	);
+}
 
-	// init system memory
-	auto roms_dir = get_executable_directory();
-	roms_dir = roms_dir.append("roms");
-	if (system_memory_init(machineId, roms_dir.string().c_str())) {
-		perror("rom init failed");
-		return -1;
+bool specy_emu_is_running() {
+
+	return ula_is_running();
+}
+
+void specy_emu_parse_args(int argc, char* argv[], cmd_line_args& args) {
+
+	if (argc > 1) {
+
+		try {
+			args.machine_id = std::stoul(argv[1]);
+			if (args.machine_id < kSystemMin || args.machine_id > kSystemMax) {
+				throw std::out_of_range("machine id out of range");
+			}
+		}
+		catch (const std::exception&) {
+			printf("invalid machine id argument, defaulting to 48k\n");
+			args.machine_id = kSystemSinclairSpectrum48;
+		}
 	}
+	else {
+		args.machine_id = kSystemSinclairSpectrum48;
+	}
+}
 
-	// init ULA
+void specy_emu_apply_pending_hacks() {
+
+	if (force_rtn_on_next_instruction == true) {
+		force_rtn_on_next_instruction = false;
+		cpu_z80_step(1);
+	}
+}
+
+int main(int argc, char* argv[]) {
+	
+	cmd_line_args args;
+
 	Ula_Callbacks ula_callbacks{
-		.ulaKeyboardKeysCallback = specy_emu_evaluate_keys
+				.ulaKeyboardKeysCallback = specy_emu_evaluate_keys
 	};
-	ula_init(system_memory_get_pointer(), &ula_callbacks);
 
-	//specy_load_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\exolon.sna", is_image_file);
-	//specy_load_file("C:\\Users\\wadrw\\Documents\\develop\\projects\\personal\\z80\\specy_emu\\media\\Renegade (1987)(Ocean Software).tap", is_image_file);
+	// parse command line arguments
+	specy_emu_parse_args(argc, argv, args);
 	
-	// init z80 cpu
-	cpu_init(system_memory_get_pointer(), (uint8_t)is_image_file);
+	// init app gui
+	specy_emu_init_gui();
 
-	// run z80 cpu
-	while (ula_is_running()) {
-		system_menu_update();
-		cpu_z80_step();
+	static uint32_t machine_id = args.machine_id;
+	while (true) {
+
+		// init system memory
+		auto roms_dir = get_executable_directory();
+		roms_dir = roms_dir.append("roms");
+		if (system_memory_init(machine_id, roms_dir.string().c_str())) {
+			perror("rom init failed");
+			return -1;
+		}
+
+		// init ULA
+		ula_init(system_memory_get_pointer(), &ula_callbacks);
+
+		// init z80 cpu
+		cpu_init(system_memory_get_pointer());
+
+		system_memory_configure_interceptors();
+
+		printf("system initialized, starting emulation loop...\n");
+
+		// z80 cpu run loop
+		while (specy_emu_is_running()) {
+
+			// update gui 
+			specy_emu_gui_update();
+
+			// execute hacks if apply
+			specy_emu_apply_pending_hacks();
+
+			// check if system reset requested
+			if (system_reset_requested) {
+			
+				printf("reboot requested.\n");
+				break;
+			}
+
+			// execcute next cpu instruction
+			cpu_z80_step(0);
+		}
+
+		cpu_end();
+
+		// release ula resources
+		ula_end();
+
+		// release memory resources
+		system_memory_end();
+
+		printf("system resources released.\n");
+
+		// check if system reset requested
+		if (!system_reset_requested)
+			// stop loop and exit
+			break;
+			
+		// restart loop
+		system_reset_requested = false;
+
+		printf("restarting system...\n");
 	}
 
-	// release ula resources
-	ula_end();
-
-	// release memory resources
-	system_memory_end();
-	
 	return 0;
 }

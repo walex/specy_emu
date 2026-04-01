@@ -20,6 +20,11 @@ void system_menu_set_callback(uint32_t cb_id, SystemMenuCallback cb) {
 	menu_callbacks[cb_id] = cb;
 }
 
+void system_menu_reset_request() {
+	
+	INVOKE_MENU_CALLBACK(kSysMenuSystenResetCallback, nullptr);
+}
+
 void system_menu_switch_cpu_mode() {
 	
 	static bool cpu_speed_mode = false;	
@@ -61,6 +66,9 @@ void system_menu_update() {
 	case HOST_KEY_CMD_3:
 		system_menu_switch_cpu_mode();
 		break;
+	case HOST_KEY_CMD_5:
+		system_menu_reset_request();
+		break;
 	}
 	command_pending.store(0);
 }
@@ -76,6 +84,8 @@ bool system_menu_evaluate_keyboard_state(const bool* keys) {
 		command_pending.store(HOST_KEY_CMD_2);
 	else if (keys[HOST_KEY_CMD_3])
 		command_pending.store(HOST_KEY_CMD_3);
+	else if (keys[HOST_KEY_CMD_5])
+		command_pending.store(HOST_KEY_CMD_5);
 	else
 		return false;
 	

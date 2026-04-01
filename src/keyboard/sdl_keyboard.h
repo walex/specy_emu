@@ -67,6 +67,7 @@
 #define HOST_KEY_CMD_2 SDL_SCANCODE_F2
 #define HOST_KEY_CMD_3 SDL_SCANCODE_F3
 #define HOST_KEY_CMD_4 SDL_SCANCODE_F4
+#define HOST_KEY_CMD_5 SDL_SCANCODE_F5
 
 inline const bool* keyboard_get_state(int* numKeys = nullptr) {
 	return SDL_GetKeyboardState(numKeys);

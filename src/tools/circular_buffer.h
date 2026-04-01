@@ -8,5 +8,6 @@ void circular_buffer_end();
 void circular_buffer_push_sample(float level);
 float circular_buffer_pop_sample();
 void circular_buffer_clear();
+void circular_buffer_enable(bool value);
 
 #endif

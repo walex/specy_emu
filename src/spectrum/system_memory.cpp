@@ -91,8 +91,14 @@ uint8_t* system_memory_create(uint32_t machine_id, const char* base_path) {
 }
 
 void system_memory_free() {
-	if (system_rom_pointer)
-		memory_paging_end();
+	if (system_rom_pointer) {
+		if (system_machine_id == kSystemSinclairSpectrum128)
+			memory_paging_end();
+		else
+			delete[] system_rom_pointer;
+		system_rom_pointer = nullptr;
+	}
+	system_machine_id = kSystemUnknown;
 }
 
 void system_memory_on_rom_call_LD_BYTES() {
@@ -109,13 +115,16 @@ int system_memory_init(uint32_t machine_id, const char* base_path) {
 		return -1;
 	}
 	
-	cpu_set_call_interceptor(kLD_BYTES, system_memory_on_rom_call_LD_BYTES);
 	system_machine_id = machine_id;
 	return 0;
 }
 
 void system_memory_end() {
 	system_memory_free();	
+}
+
+void system_memory_configure_interceptors() {
+	cpu_set_call_interceptor(kLD_BYTES, system_memory_on_rom_call_LD_BYTES);
 }
 
 uint32_t system_memory_get_machine_id() {

@@ -12,11 +12,15 @@
 constexpr uint16_t kPagingControlPort = 0x7FFD;
 constexpr uint16_t kPortFE = 0xFE;
 static clock_master_handle master_clock;
+static uint64_t last_cycles = 0;
+static uint64_t last_clock = 0;
 
 void ula_on_cpu_cycles(uint64_t total_cycles);
 
 void ula_init(uint8_t* system_memory, Ula_Callbacks* cb) {
 
+	last_cycles = 0;
+	last_clock = 0;
 	master_clock = clk_master_create("cpu_sync_clock", Z80_CPU_FREQ_HZ);
 	clk_master_subscribe_sync_callback(master_clock, ula_on_cpu_cycles);
 	display_init(system_memory);
@@ -33,7 +37,7 @@ void ula_end() {
 	keyboard_end();
 	display_end();
 	audio_end();
-	clk_master_destroy(master_clock);
+	clk_master_destroy("cpu_sync_clock");
 }
 
 void ula_on_tape_load_block_from_info() {
@@ -46,7 +50,7 @@ void ula_on_tape_load_block_from_info() {
 	uint8_t a = (uint8_t)(af >> 8); // a == 0 header, a == 0xFF data
 
 	uint8_t* data = nullptr;
-	size_t size;
+	size_t size = 0;
 	
 	if (a == 0) {
 		data = tape_audio_get_header_block_raw(size);
@@ -78,9 +82,6 @@ void ula_on_tape_load_block() {
 
 void ula_on_cpu_cycles(uint64_t total_cycles) {
 
-	static uint64_t last_cycles = 0;
-	static uint64_t int_cycles = 0;
-
 	uint64_t delta_cycles = total_cycles - last_cycles;
 	audio_tick(delta_cycles);
 	display_tick(delta_cycles);
@@ -90,7 +91,6 @@ void ula_on_cpu_cycles(uint64_t total_cycles) {
 
 void ula_read_tape(uint64_t clock_cycle, uint8_t* value) {
 
-	static uint64_t last_clock = 0;
 	static bool prev_audio_playing = false;
 
 	uint64_t delta_tstates = clock_cycle - last_clock;

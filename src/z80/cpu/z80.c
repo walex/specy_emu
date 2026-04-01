@@ -1,7 +1,10 @@
 #include "z80.h"
 #include "clk_master.h"
+#include <memory.h>
 
-extern void cpu_z80_init(uint8_t* memPtr, uint8_t force_retn);
+extern void cpu_z80_init(uint8_t* memPtr);
+extern void cpu_z80_end(void);
+
 void cpu_set_register_AF(uint16_t);
 void cpu_set_register_AF_(uint16_t);
 void cpu_set_register_BC(uint16_t);
@@ -70,7 +73,7 @@ static uint64_t clk_cycles = 0;
 static register_setter_function register_setters[CPU_REGISTER_PC + 1];
 static register_getter_function register_getters[CPU_REGISTER_PC + 1];
 
-void cpu_init(uint8_t* memPtr, uint8_t force_retn) {
+void cpu_init(uint8_t* memPtr) {
     
     register_setters[CPU_REGISTER_AF] = cpu_set_register_AF;
     register_setters[CPU_REGISTER_AF_] = cpu_set_register_AF_;
@@ -104,11 +107,19 @@ void cpu_init(uint8_t* memPtr, uint8_t force_retn) {
     register_getters[CPU_REGISTER_IFF2] = cpu_get_register_IFF2;
     register_getters[CPU_REGISTER_PC] = cpu_get_register_PC;
 
-    cpu_z80_init(memPtr, force_retn);
+    clk_cycles = 0;
+    call_interceptors_size = 0;
+
+    cpu_z80_init(memPtr);
 }
 
-void cpu_set_wait_state(uint64_t cycles) {
+void cpu_end() {
     
+    cpu_z80_end();
+    memset(&call_interceptors[0], 0, sizeof(call_interceptor_data) * MAX_INTERCEPTOR_HANDLERS);
+}
+
+void cpu_set_wait_state(uint64_t cycles) {    
     clk_cycles += cycles;
 }
 
@@ -134,7 +145,6 @@ void cpu_set_call_interceptor(uint16_t addr, clock_call_interceptor_handler hand
 }
 
 void cpu_on_call_interceptor(uint16_t addr) {
-
     CALL_INTERCEPTOR(addr);
 }
 
