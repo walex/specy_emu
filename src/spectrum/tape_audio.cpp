@@ -3,6 +3,7 @@
 #include "z80.h"
 #include "system_memory.h"
 #include "tap_loader.h"
+#include "audio.h"
 
 #define PILOT_PULSE_T 2168
 #define SYNC1_T 667
@@ -13,56 +14,41 @@
 #define PILOT_HEADER 8063
 #define PILOT_DATA 3223
 
-struct TapePulse {
-	uint64_t end_cycle;   // absolute cycle when pulse ends
-	uint8_t  ear_level;   // 0 o 1
-};
+static struct _tape_audio_data {
+public:
+	_tape_audio_data();
+	~_tape_audio_data();
+	void reset();
+	bool is_active() const;
+	void is_active(bool value);
+	uint8_t ear_level() const;
+	void ear_level(uint8_t value);
+	void next();
+	bool load(const char* filename);
+	tap_info_head* get_header() const;
+	void add_pulse(tap_info* info, uint64_t& cycles, uint8_t& level);
+	uint8_t next_pulse(uint64_t cycles);
+	uint8_t* read_block(uint8_t block_type, size_t& size);
+	bool has_pulses() const;
+	void set_fast_mode(bool value) { fast_mode = value; }
+	bool get_fast_mode() const { return fast_mode; }
+private:
+	// info
+	tap_info_head* tap_info_header;
+	tap_info* aux;
+	uint8_t current_ear;
+	// enable
+	bool tape_active;
+	// mode
+	bool fast_mode;
+} tape_audio_data;
 
-struct TapePulsesBlock {
-	TapePulsesBlock(bool is_continuous = false) {
-		pulses.reserve(1024 * 1024);
-		tape_pulse_index = 0;
-		start_cycle = 0;
-		sync_cycles = 0;
-		idx = 0;
-		this->is_continuous = is_continuous;
-	}
-	uint64_t start_cycle;
-	uint64_t sync_cycles;
-	std::vector<TapePulse> pulses;
-	size_t tape_pulse_index;
-	size_t idx;
-	bool is_continuous = false;
-};
-
-// puslse mode
-static std::list<TapePulsesBlock*> tape_block_list;
-static TapePulsesBlock* next_block = nullptr;
-uint8_t current_ear = 0;
-bool tape_active = false;
-
-// info mode
-static tap_info_head* tap_info_header = nullptr;
-static tap_info* aux = nullptr;
-
-void tape_audio_reset() {
-	current_ear = 0;
-	tape_active = false;
-	for (auto block : tape_block_list) {
-		delete block;
-	}
-	tape_block_list.clear();
-	next_block = nullptr;
-	tap_info_header = nullptr;
-	aux = nullptr;
-}
-
-void tape_add_pause(std::vector<TapePulse>& pulses, uint32_t& t) {
+void tape_add_pause(std::vector<tap_pulse_data>& pulses, uint32_t& t) {
 	t += PAUSE_T;
 	pulses.push_back({ t, 0 }); // EAR down during pause
 }
 
-void tape_add_pulse(std::vector<TapePulse>& pulses, uint64_t& t, uint32_t duration, uint8_t& level) {
+void tape_add_pulse(std::vector<tap_pulse_data>& pulses, uint64_t& t, uint32_t duration, uint8_t& level) {
 	t += duration;
 	pulses.push_back({ t, level });
 	level ^= 1;
@@ -70,112 +56,59 @@ void tape_add_pulse(std::vector<TapePulse>& pulses, uint64_t& t, uint32_t durati
 
 uint8_t tape_audio_next_pulse(uint64_t cycles) {	
 
-	if (!tape_active)
+	if (!tape_audio_data.is_active())
 		return 0xFF;
 
-	if (!next_block) {
-		tape_active = false;
-		return 0xFF;
-	}
-
-	next_block->sync_cycles += cycles;
-	auto& idx = next_block->idx;
-	while (idx < next_block->pulses.size() &&
-		next_block->sync_cycles >= (next_block->pulses[idx].end_cycle))
-		current_ear = next_block->pulses[idx++].ear_level;
-
-	if (idx == next_block->pulses.size()) {
-		delete next_block;
-		next_block = nullptr;
-		return 0xFF;
-	}
-	return current_ear;
+	return tape_audio_data.next_pulse(cycles);	
 }
 
-void tape_audio_set_bytes(uint8_t* data, size_t size) {
-	uint8_t* data_end = data + size;
+uint8_t* tape_audio_read_block(uint8_t block_type, size_t& size) {
+	
+	size = 0;
+	if (!tape_audio_data.is_active())
+		return nullptr;
+
+	return tape_audio_data.read_block(block_type, size);
+}
+
+void tape_audio_add_pulses_from_bytes(std::vector<tap_pulse_data>& pulses, uint64_t& cycles, uint8_t& level, uint8_t* data, size_t size) {
+	
+	for (uint16_t i = 0; i < size; i++) {
+		uint8_t byte = data[i];
+		for (int b = 7; b >= 0; b--) {
+			uint32_t duration = (byte & (1 << b)) ? BIT1_T : BIT0_T;
+			tape_add_pulse(pulses, cycles, duration, level);
+			tape_add_pulse(pulses, cycles, duration, level);
+		}
+	}
+}
+
+void tape_audio_set_bytes_from_tap_info(tap_info_head* header) {
+
 	uint64_t cycles = 0;
 	uint8_t level = 1;
 
-	tape_audio_reset();
+	if (!header || !header->node) {
+		printf("No TAP info available\n");
+		return;
+	}
 	
-	while (data + 2 <= data_end) {
-		uint16_t block_size = (uint16_t)(data[0] | (data[1] << 8));
-		data += 2;
+	tap_info* info = header->node;
+	while (info) {
 
-		if (data + block_size > data_end) break;
+		tape_audio_data.add_pulse(info, cycles, level);
 
-		tape_block_list.push_back(new TapePulsesBlock());
-		TapePulsesBlock& block = *tape_block_list.back();
-		block.start_cycle = cycles;
-		block.sync_cycles = cycles;
-		uint8_t flag = data[0];
-		bool is_header = (flag == 0x00);
-
-		// Pilot tone
-		int pilot_count = is_header ? PILOT_HEADER : PILOT_DATA;
-		for (int i = 0; i < pilot_count; i++)
-			tape_add_pulse(block.pulses, cycles, PILOT_PULSE_T, level);
-
-		// Sync pulses
-		tape_add_pulse(block.pulses, cycles, SYNC1_T, level);
-		tape_add_pulse(block.pulses, cycles, SYNC2_T, level);
-
-		// Data bits
-		for (uint16_t i = 0; i < block_size; i++) {
-			uint8_t byte = data[i];
-			for (int b = 7; b >= 0; b--) {
-				uint32_t duration = (byte & (1 << b)) ? BIT1_T : BIT0_T;
-				tape_add_pulse(block.pulses, cycles, duration, level);
-				tape_add_pulse(block.pulses, cycles, duration, level);
-			}
-		}
-
-		data += block_size;
-
-		// Pause between blocks (critical!)
-		// Force EAR to 0 at start of pause if it's not already
-		if (level != 0) {
-			block.pulses.push_back({ cycles, 0 });
-			level = 0;
-		}
-		// Maintain EAR at 0 during pause
-		cycles += PAUSE_T;
-		block.pulses.push_back({ cycles, 0 });
+		// next block
+		info = info->next;
 	}
-}
-
-bool tape_audio_is_active() {
-	return tape_active;
-}
-
-bool tape_audio_eof() {
-	return !(next_block != nullptr && next_block->pulses.size() > 0);
-}
-
-bool tape_audio_sync() {
-
-	tape_active = false;
-	if (next_block) {
-		if (next_block->is_continuous == true)
-			return (next_block->pulses.size() > 0);
-		delete next_block;
-		next_block = nullptr;
-	}
-	if (!tape_block_list.empty()) {
-		next_block = tape_block_list.front();
-		tape_block_list.pop_front();
-		return (next_block->pulses.size() > 0);
-	}
-	return false;
 }
 
 void tape_audio_load_wav(const char* filename) {
-
+	/*
 	uint8_t* wav_buffer;
 	size_t wav_size;
 	int freq;
-	tape_audio_reset();
+	tape_audio_data.reset();
 	audio_render_load_wav(filename, &wav_buffer, wav_size, freq);
 	if (wav_size > 0) {
 		// convert wav to tape pulses
@@ -186,7 +119,7 @@ void tape_audio_load_wav(const char* filename) {
 		int16_t* samples = (int16_t*)wav_buffer;
 		size_t sample_count = wav_size / sizeof(int16_t);
 		TapePulsesBlock* tb = new TapePulsesBlock(true);
-		tape_block_list.push_back(tb);
+		//tape_block_list.push_back(tb);
 		for (size_t i = 0; i < sample_count; i++) {
 			int16_t sample = samples[i];
 			uint8_t sample_level = (sample >= 0) ? 1 : 0;
@@ -201,59 +134,22 @@ void tape_audio_load_wav(const char* filename) {
 		}
 		audio_render_free_wav(wav_buffer);
 	}
-	
+	*/
 }
 
-void tape_audio_load_tap_raw(const char* filename) {
+void tape_audio_load_tap(const char* filename) {
 
-	uint8_t* tap_buffer;
-	size_t tap_size;
-	tap_file_to_bytes(filename, &tap_buffer, &tap_size);
-	if (tap_size == 0) {
+	if (!tape_audio_data.load(filename))
 		printf("Error loading TAP file: %s\n", filename);
-		return;
-	}
-	tape_audio_set_bytes(tap_buffer, tap_size);
-	delete[] tap_buffer;
-}
-
-void tape_audio_next_data_block() {
-
-	if (aux)
-		aux = aux->next;
-}
-
-uint8_t* tape_audio_get_header_block_raw(size_t& size) {
-	
-	size = 0;
-	if (!aux)
-		return nullptr;
-	size = sizeof(aux->header);
-	return (uint8_t*)&aux->header;
-}
-
-uint8_t* tape_audio_get_data_block_raw(size_t& size) {
-
-	size = 0;
-	if (!aux)
-		return nullptr;
-	size = aux->size;
-	return (uint8_t*)&aux->data;
-}
-
-void tape_audio_load_tap_info(const char* filename) {
-
-	tap_free(tap_info_header);
-	tap_info_header = tap_load_from_file(filename);
-	if (tap_info_header && tap_info_header->node)
-		aux = tap_info_header->node;
+	else
+		tape_audio_set_bytes_from_tap_info(tape_audio_data.get_header());	
 }
 
 void tape_audio_from_file(const char* filename) {
 	std::string file_str(filename);
 	std::string ext = file_str.substr(file_str.find_last_of(".") + 1);
 	if (ext == "tap" || ext == "TAP") {
-		tape_audio_load_tap_raw(filename);
+		tape_audio_load_tap(filename);
 	}
 	else if (ext == "wav" || ext == "WAV") {
 		tape_audio_load_wav(filename);
@@ -263,14 +159,223 @@ void tape_audio_from_file(const char* filename) {
 	}
 }
 
-void tape_audio_playback(bool enable) {
+void tape_audio_next_block() {	
+	tape_audio_data.next();
+}
+
+void tape_audio_next_pulses_block() {
+	tape_audio_set_fast_mode(false);
+	tape_audio_next_block();
+}
+
+void tape_audio_set_fast_mode(bool value) {
+	tape_audio_data.set_fast_mode(value);
+}
+
+bool tape_audio_get_fast_mode() {
+	return tape_audio_data.get_fast_mode();
+}
+
+uint8_t tape_audio_pulse_step(uint64_t delta_cycles) {
+
+	uint8_t next_pulse = tape_audio_next_pulse(delta_cycles);
+	if (next_pulse != 0xFF) {
+		next_pulse = next_pulse ? 0x40 : 0x00;
+		audio_set_level((uint8_t)(next_pulse >> 2));
+		return next_pulse;
+	}
+
+	return 0xFF;
+}
+
+uint8_t tape_audio_block_step() {
+
+	uint16_t pc = cpu_get_register16(CPU_REGISTER_PC);
+	uint16_t af = cpu_get_register16(CPU_REGISTER_AF); // a
+	uint16_t ix = cpu_get_register16(CPU_REGISTER_IX); // copy addr
+	uint16_t de = cpu_get_register16(CPU_REGISTER_DE); // copy size
+	uint16_t hl = cpu_get_register16(CPU_REGISTER_HL); // a
+	uint8_t a = (uint8_t)(af >> 8); // a == 0 header, a == 0xFF data
+
+	uint8_t* data = nullptr;
+	size_t size = 0;
+
+	data = tape_audio_read_block(a, size);
+	if (!data) {
+		printf("Error getting %s block", a ? "data" : "header");
+		return 0;
+	}
+	if (size-2 != de) {
+		printf("Error incorrect block size in:%u tape:%u", de, (uint16_t)(size));
+		return 0;
+	}
+	data++;
+	memcpy(system_memory_get_pointer(ix), data, de);
+
+	af |= 1;
+	cpu_set_register16(CPU_REGISTER_AF, af);
+	cpu_force_next_opcode(RET_OPCODE);
+	tape_audio_data.is_active(false);
+	return 0;
+}
+
+void tape_audio_block_sync() {
+	if (tape_audio_get_fast_mode()) {
+		tape_audio_next_block();
+		tape_audio_block_step();
+	}
+}
+
+bool tape_audio_is_active() {
+	return tape_audio_data.is_active();
+}
+
+_tape_audio_data::_tape_audio_data() : fast_mode(true) {
+	reset();
+}
+
+_tape_audio_data::~_tape_audio_data() {
+	reset();
+}
+
+void _tape_audio_data::reset() {
+	current_ear = 0;
+	tape_active = false;
+	tap_info_header = nullptr;
+	aux = nullptr;
+	tap_loader_info_free(tap_info_header);
+}
+
+bool _tape_audio_data::is_active() const {
+	return tape_active;
+}
+
+void _tape_audio_data::is_active(bool value) {
+	tape_active = value;
+}
+
+uint8_t _tape_audio_data::ear_level() const {
+	return current_ear;
+}
+
+void _tape_audio_data::ear_level(uint8_t value) {
+	current_ear = value;
+}
+
+void _tape_audio_data::next() {
+	if (!aux) {
+		if (tap_info_header && tap_info_header->node)
+			aux = tap_info_header->node;
+		this->is_active(aux != nullptr);
+	}
+	else if (aux->next) {
+		aux = aux->next;
+		this->is_active(true);
+	} else
+		this->is_active(false);
 	
-	if ((tape_active = enable) == false)
+}
+
+bool _tape_audio_data::load(const char* filename) {
+	this->reset();
+	tap_info_header = tap_loader_info_from_file(filename);
+	if (tap_info_header && tap_info_header->node)
+		tape_audio_set_bytes_from_tap_info(this->get_header());
+	return (tap_info_header != nullptr);
+}
+
+tap_info_head* _tape_audio_data::get_header() const {
+	return tap_info_header;
+}
+
+void _tape_audio_data::add_pulse(tap_info* info, uint64_t& cycles, uint8_t& level) {
+	if (!info)
 		return;
-	if (next_block)
-		tape_active = (next_block->pulses.size() > 0);
-	else
-		tape_active = false;
-	if (!tape_active)
-		tape_active = tape_audio_sync();
+	auto& block = info->pulses;
+	block.start_cycle = cycles;
+	block.sync_cycles = cycles;
+	bool is_header = info->is_header;
+	size_t block_size;
+	uint8_t* data;
+	if (is_header) {
+		block_size = sizeof(tap_header);
+		data = (uint8_t*)info->data;
+	}
+	else {
+		block_size = ((tap_data*)info->data)->length;
+		data = ((tap_data*)info->data)->bytes;
+	}
+	// Pilot tone
+	int pilot_count = is_header ? PILOT_HEADER : PILOT_DATA;
+	for (int i = 0; i < pilot_count; i++)
+		tape_add_pulse(block.data, cycles, PILOT_PULSE_T, level);
+
+	// Sync pulses
+	tape_add_pulse(block.data, cycles, SYNC1_T, level);
+	tape_add_pulse(block.data, cycles, SYNC2_T, level);
+
+	// Data bits
+	tape_audio_add_pulses_from_bytes(block.data, cycles, level, data, block_size);
+
+	// Pause between blocks (critical!)
+	// Force EAR to 0 at start of pause if it's not already
+	if (level != 0) {
+		block.data.push_back({ cycles, 0 });
+		level = 0;
+	}
+	// Maintain EAR at 0 during pause
+	cycles += PAUSE_T;
+	block.data.push_back({ cycles, 0 });
+}
+
+uint8_t* _tape_audio_data::read_block(uint8_t block_type, size_t& size) {
+
+	if (!aux) {
+		this->is_active(false);
+		return nullptr;
+	}
+
+	bool request_ok = (block_type == 0 && aux->is_header == true) || (block_type == 0xFF && aux->is_header == false);
+	if (!request_ok) {
+
+		printf("Error: requested block type %u does not match current block type", block_type);
+		this->is_active(false);
+		return nullptr;
+	}
+
+	uint8_t* data;
+	if (block_type == 0) {
+		size = sizeof(tap_header);
+		data = (uint8_t*)aux->data;
+	}
+	else {
+		size = ((tap_data*)aux->data)->length;
+		data = ((tap_data*)aux->data)->bytes;
+	}
+	return data;
+}
+
+uint8_t _tape_audio_data::next_pulse(uint64_t cycles) {
+
+	if (!aux || !aux->pulses.data.size()) {
+		this->is_active(false);
+		return 0xFF;
+	}
+
+	std::vector<tap_pulse_data>& pulse_data = aux->pulses.data;
+	aux->pulses.sync_cycles += cycles;
+	auto& idx = aux->pulses.idx;
+	while (idx < pulse_data.size() &&
+		aux->pulses.sync_cycles >= (pulse_data[idx].end_cycle))
+		this->ear_level(pulse_data[idx++].ear_level);
+
+	if (idx == pulse_data.size()) {
+		pulse_data.clear();
+		return 0xFF;
+	}
+	return this->ear_level();
+}
+
+bool _tape_audio_data::has_pulses() const {
+	return (aux != nullptr) && (aux->pulses.data.size() > 0);
 }

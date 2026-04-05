@@ -34,6 +34,14 @@ void system_menu_switch_cpu_mode() {
 	video_render_show_message("Specy", cpu_speed_mode ? "CPU speed mode switched to fast" : "CPU speed mode switched to normal");
 }
 
+void system_menu_switch_tap_mode() {
+
+	static bool cpu_tap_mode_fast = false;
+	cpu_tap_mode_fast = !cpu_tap_mode_fast;
+	tape_audio_set_fast_mode(cpu_tap_mode_fast);
+	video_render_show_message("Specy", cpu_tap_mode_fast ? "TAP load mode switched to fast" : "CPU speed mode switched to normal");
+}
+
 void system_menu_open_file_dialog() {
 	
 	video_render_open_file_dialog([](const char* const* filelist) {
@@ -65,6 +73,9 @@ void system_menu_update() {
 		break;
 	case HOST_KEY_CMD_3:
 		system_menu_switch_cpu_mode();
+		break;
+	case HOST_KEY_CMD_4:
+		system_menu_switch_tap_mode();
 		break;
 	case HOST_KEY_CMD_5:
 		system_menu_reset_request();

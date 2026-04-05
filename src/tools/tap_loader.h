@@ -20,27 +20,63 @@ constexpr uint8_t kTapDataBlockTypeCode = 3;
 #define PACKED
 #endif
 
+struct tap_level {
+	uint64_t end_cycle;   // absolute cycle when pulse ends
+	uint8_t  ear_level;   // 0 o 1
+};
+
+struct tap_pulse_data {
+	uint64_t end_cycle;   // absolute cycle when pulse ends
+	uint8_t  ear_level;   // 0 o 1
+};
+
+struct tap_pulse_block {
+
+	tap_pulse_block(bool is_continuous = false) {
+		data.reserve(1024 * 1024);
+		tape_pulse_index = 0;
+		start_cycle = 0;
+		sync_cycles = 0;
+		idx = 0;
+		this->is_continuous = is_continuous;
+	}
+	uint64_t start_cycle;
+	uint64_t sync_cycles;
+	std::vector<tap_pulse_data> data;
+	size_t tape_pulse_index;
+	size_t idx;
+	bool is_continuous = false;
+};
+
 struct tap_header {
+
+	uint8_t flag;
 	uint8_t type;
 	char file_name[10];
 	uint16_t data_length;
 	uint16_t auto_start_line;
 	uint16_t program_length;
+	uint8_t crc;
+};
+
+struct tap_data {
+
+	size_t length;
+	uint8_t* bytes;
 };
 
 struct tap_info {
-
-	tap_header header;
-	uint32_t size;
-	uint32_t offset;
-	uint8_t crc;
-	uint8_t* data;
+	tap_info(size_t index) : index(index) {}
+	bool is_header;
+	void* data;
 	tap_info* next;
+	tap_pulse_block pulses;
+	size_t index;
 };
 
 struct tap_info_head {
 
-	uint32_t data_size = 0;
+	size_t block_count = 0;
 	tap_info* node = nullptr;
 };
 
@@ -48,8 +84,9 @@ struct tap_info_head {
 #pragma pack(pop)
 #endif
 
-tap_info_head* tap_load_from_file(const char* filename);
-void tap_free(tap_info_head* tape);
-void tap_file_to_bytes(const char* filename, uint8_t** buffer_out, size_t* size_out);
-
+tap_info_head* tap_loader_info_from_file(const char* filename);
+void tap_loader_info_free(tap_info_head* tape);
+void tap_loader_bytes_from_file(const char* filename, uint8_t** buffer_out, size_t* size_out);
+void tap_loader_set_fast_mode(bool enable);
+bool tap_loader_get_fast_mode();
 #endif

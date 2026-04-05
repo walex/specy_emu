@@ -1,9 +1,124 @@
 #include "tap_loader.h"
 #include "tape_audio.h"
 
-tap_info_head* tap_load_from_file(const char* filename) {
+static bool tap_loader_fast_mode = false;
 
-	uint32_t total_data_size = 0;
+void tap_loader_on_file_error(FILE* f, const char* msg) {
+
+	if (feof(f))
+		perror("file reading end");
+	else
+		perror(msg);
+}
+
+uint16_t tap_loader_read_header(FILE* f, uint8_t header_block_info[kTapHeaderBlockSize]) {
+
+	if (fread(header_block_info, 1, 1, f) != 1) {
+
+		tap_loader_on_file_error(f, "error reading header block info flag");
+		return 0;
+	}
+	if (header_block_info[0] != kTapHeaderBlockId) {
+
+		tap_loader_on_file_error(f, "expected header block");
+		return 0;
+	}
+	if (fread(&header_block_info[1], kTapHeaderBlockSize-1, 1, f) != 1) {
+
+		tap_loader_on_file_error(f, "error reading header block info");
+		return 0;
+	}
+	
+	return (uint16_t)(header_block_info[12] | (header_block_info[13] << 8));
+}
+
+uint8_t* tap_loader_read_data(FILE* f, uint16_t& len) {
+
+	uint8_t data_type_flag;
+	if (fread(&data_type_flag, 1, 1, f) != 1) {
+
+		tap_loader_on_file_error(f, "error reading data type flag");
+		return nullptr;
+	}
+
+	if (data_type_flag != kTapDataBlockId) {
+
+		tap_loader_on_file_error(f, "expected data block");
+		return nullptr;
+	}
+
+	uint8_t* data = new uint8_t[len]; // data plus flag and crc byte
+	data[0] = data_type_flag;
+	if (fread(&data[1], len-2, 1, f) != 1) {
+
+		tap_loader_on_file_error(f, "error reading data block");
+		delete[] data;
+		return nullptr;
+	}
+	if (fread(&data[len - 1], 1, 1, f) != 1) {
+
+		tap_loader_on_file_error(f, "error reading crc of data block");
+		delete[] data;
+		return nullptr;
+	}
+	return data;
+}
+
+tap_info_head* tap_loader_info_from_file(const char* filename) {
+
+	size_t block_index = 0;
+	FILE* f = nullptr;
+	fopen_s(&f, filename, "rb");
+	if (!f) return nullptr;
+	tap_info_head* list_head = new tap_info_head();
+	uint8_t header_block_info[kTapHeaderBlockSize];
+	tap_info* last = nullptr;
+	while (!feof(f)) {
+
+		// block len
+		uint16_t len;
+		if (fread(&len, 2, 1, f) != 1) {
+
+			tap_loader_on_file_error(f, "error reading header block size");
+			break;
+		}
+		uint8_t* data = nullptr;
+		if (len == kTapHeaderBlockSize) {
+			if (!(tap_loader_read_header(f, header_block_info)))
+				break;
+			tap_header* header = new tap_header();
+			memcpy(header, &header_block_info[0], sizeof(tap_header));
+			data = (uint8_t*)header;
+		}
+		else {
+			if (!(data = tap_loader_read_data(f, len)))
+				break;
+			tap_data* tdata = new tap_data();
+			tdata->bytes = data;
+			tdata->length = (size_t)len; // data plus flag and crc byte
+			data = (uint8_t*)tdata;
+		}		
+		tap_info* info = new tap_info(block_index++);
+		info->is_header = (len == kTapHeaderBlockSize);
+		info->data = data;
+		info->next = nullptr;
+		if (last == nullptr) {
+			list_head->node = info;
+		}
+		else
+			last->next = info;
+		list_head->block_count++;
+		last = info;
+	}
+	fclose(f);
+	return list_head;
+}
+
+tap_info_head* tap_loader_info_from_file2(const char* filename) {
+
+	size_t block_count = 0;
+	size_t block_index = 0;
+	size_t total_data_size = 0;
 	FILE* f = nullptr;
 	fopen_s(&f, filename, "rb");
 	if (!f) return nullptr;
@@ -14,21 +129,24 @@ tap_info_head* tap_load_from_file(const char* filename) {
 		// header block
 		uint16_t len;
 		if (fread(&len, 2, 1, f) != 1) {
-			perror("error reading header block size");
+
+			tap_loader_on_file_error(f, "error reading header block size");
 			break;
 		}
 
 		if (len != kTapHeaderBlockSize) {
-			perror("invalid header block size");
+
+			tap_loader_on_file_error(f, "invalid header block size");
 			break;
 		}
 		if (fread(header_block_info, len, 1, f) != 1) {
-			perror("error reading header block info");
+
+			tap_loader_on_file_error(f, "error reading header block info");
 			break;
 		}
 		if (header_block_info[0] != kTapHeaderBlockId) {
 			
-			perror("expected header block");
+			tap_loader_on_file_error(f, "expected header block");
 			break;
 		}
 		uint16_t data_len = (uint16_t)(header_block_info[12] | (header_block_info[13] << 8));
@@ -36,80 +154,104 @@ tap_info_head* tap_load_from_file(const char* filename) {
 		// data block
 		if (fread(&len, 2, 1, f) != 1) {
 
-			perror("error reading data block size");
+			tap_loader_on_file_error(f, "error reading data block size");
 			break;
 		}
 
 		if (data_len != (len-2)) {
-			perror("data length and header length value mismatch");
+			tap_loader_on_file_error(f, "data length and header length value mismatch");
 			break;
 		}
 
 		uint8_t data_type_flag;
 		if (fread(&data_type_flag, 1, 1, f) != 1) {
 
-			perror("error reading data type flag");
-			break;
-		}
-		if (data_type_flag != kTapDataBlockId) {
-			perror("expected data block");
+			tap_loader_on_file_error(f, "error reading data type flag");
 			break;
 		}
 
-		uint8_t* data = new uint8_t[data_len];
-		if (fread(data, data_len, 1, f) != 1) {
-			perror("error reading data block");
+		if (data_type_flag != kTapDataBlockId) {
+
+			tap_loader_on_file_error(f, "expected data block");
+			break;
+		}
+
+		uint8_t* data = new uint8_t[data_len + 2]; // data plus flag and crc byte
+		data[0] = data_type_flag;
+		if (fread(&data[1], data_len, 1, f) != 1) {
+
+			tap_loader_on_file_error(f, "error reading data block");
 			delete[] data;
 			break;
 		}
 		uint8_t crc;
 		if (fread(&crc, 1, 1, f) != 1) {
-			perror("error reading crc of data block");
+
+			tap_loader_on_file_error(f, "error reading crc of data block");
 			delete[] data;
 			break;
 		}
+		data[data_len+1] = crc;
 
 		// data_len + 1 (for crc)
 		total_data_size += data_len + 1;
 
-		tap_info* info = new tap_info();
-		memcpy(&info->header, &header_block_info[1], sizeof(info->header));
-		info->data = data;
-		info->size = data_len;
-		//info->offset = load_addr;
-		//info->crc = crc;
-		info->next = nullptr;
-
-		if (list_head->node == nullptr) {
+		tap_info* info = new tap_info(block_index++);
+		info->data = (uint8_t*)new tap_header();
+		tap_header* header = (tap_header*)info->data;
+		memcpy(header, &header_block_info[0], sizeof(tap_header));
+		info->is_header = true;
+		info->next = new tap_info(block_index++);
+		
+		if (list_head->node == nullptr)
 			list_head->node = info;
-		}
 		else {
 			tap_info* current = list_head->node;
-			while (current->next != nullptr) {
+			while (current->next != nullptr)
 				current = current->next;
-			}
 			current->next = info;
 		}
+		block_count += 2;
+		info = info->next;
+		info->data = (uint8_t*)new tap_data();
+		info->is_header = false;
+		info->next = nullptr;
+		tap_data* tdata = (tap_data*)info->data;
+		tdata->bytes = data;
+		tdata->length = (size_t)(data_len + 2); // data plus flag and crc byte
 	}
-	list_head->data_size = total_data_size;
+//	list_head->data_size = total_data_size;
+	list_head->block_count = block_count;
 	fclose(f);
 	return list_head;
 }
 
-void tap_free(tap_info_head* tape) {
+void tap_loader_info_free(tap_info_head* tape) {
 	if (!tape)
 		return;
 	tap_info* current = tape->node;
 	while (current != nullptr) {
 		tap_info* next = current->next;
-		delete[] current->data;
+		if (current->is_header == true) {
+			tap_header* header = (tap_header*)current->data;
+			if (header)
+				delete header;
+		}
+		else {
+			tap_data* data = (tap_data*)current->data;
+			if (data) {
+				if (data->bytes)
+					delete[] data->bytes;
+				delete data;
+			};
+		}
 		delete current;
 		current = next;
 	}
 	delete tape;
 }
 
-void tap_file_to_bytes(const char* filename, uint8_t** buffer_out, size_t* size_out) {
+void tap_loader_bytes_from_file(const char* filename, uint8_t** buffer_out, size_t* size_out) {
 
 	size_t file_size = *size_out = 0;
 	FILE* f = nullptr;
@@ -130,4 +272,14 @@ void tap_file_to_bytes(const char* filename, uint8_t** buffer_out, size_t* size_
 		}
 	}
 	fclose(f);
+}
+
+void tap_loader_set_fast_mode(bool enable) {
+
+	tap_loader_fast_mode = enable;
+}
+
+bool tap_loader_get_fast_mode() {
+
+	return tap_loader_fast_mode;
 }

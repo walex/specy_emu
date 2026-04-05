@@ -40,44 +40,10 @@ void ula_end() {
 	clk_master_destroy("cpu_sync_clock");
 }
 
-void ula_on_tape_load_block_from_info() {
-	
-	uint16_t pc = cpu_get_register16(CPU_REGISTER_PC);
-	uint16_t af = cpu_get_register16(CPU_REGISTER_AF); // a
-	uint16_t ix = cpu_get_register16(CPU_REGISTER_IX); // copy addr
-	uint16_t de = cpu_get_register16(CPU_REGISTER_DE); // copy size
-	uint16_t hl = cpu_get_register16(CPU_REGISTER_HL); // a
-	uint8_t a = (uint8_t)(af >> 8); // a == 0 header, a == 0xFF data
-
-	uint8_t* data = nullptr;
-	size_t size = 0;
-	
-	if (a == 0) {
-		data = tape_audio_get_header_block_raw(size);
-		
-	}
-	else if (a == 0xFF) {
-		data = tape_audio_get_data_block_raw(size);
-		tape_audio_next_data_block();		
-	}
-	if (!data) {
-		printf("Error getting %s block", a ? "data" : "header");
-		return;
-	}
-	if (size != de) {
-		printf("Error incorrect block size in:%u tape:%u", de, (uint16_t)(size));
-		return;
-	}
-	memcpy(system_memory_get_pointer(ix), data, size);
-
-	af |= 1;
-	cpu_set_register16(CPU_REGISTER_AF,af);
-	cpu_force_next_opcode(RET_OPCODE);	
-}
-
 void ula_on_tape_load_block() {
 
-	tape_audio_sync();
+	tape_audio_block_sync();
+	printf("ROM requested tape block load, syncing tape audio\n");
 }
 
 void ula_on_cpu_cycles(uint64_t total_cycles) {
@@ -98,12 +64,13 @@ void ula_read_tape(uint64_t clock_cycle, uint8_t* value) {
 
 	// Track tape playing state
 	bool currently_playing = tape_audio_is_active();
-	if (currently_playing == false && tape_audio_eof() == false) {
+	if (currently_playing == false) {
 		currently_playing = automata_port_is_waiting_for_tone(delta_tstates);
 		if (currently_playing) {
-			tape_audio_playback(true);
+			tape_audio_next_pulses_block();
 		}
 	}
+
 	// Reset timing when tape starts playing and this is the first port read
 	if (currently_playing && !prev_audio_playing) {
 		last_clock = clock_cycle;
@@ -120,17 +87,10 @@ void ula_read_tape(uint64_t clock_cycle, uint8_t* value) {
 		delta_tstates = MAX_TAPE_DELTA; // Clamp, don't pause
 	}	
 
+	static bool fast_mode = false;
 	// get audio pulses
 	if (currently_playing) {
-		uint8_t next_pulse = tape_audio_next_pulse(delta_tstates);
-		if (next_pulse != 0xFF) {
-			next_pulse = next_pulse ? 0x40 : 0x00;
-			audio_set_level((uint8_t)(next_pulse >> 2));
-			*value |= next_pulse;
-		}
-		else {
-			tape_audio_sync();
-		}
+		*value |= tape_audio_pulse_step(delta_tstates);
 	}
 }
 
@@ -174,7 +134,7 @@ void ula_write_port_FE(uint8_t value) {
 
 void ula_write_port(uint16_t addr, uint8_t value) {
 
-	if (addr == kPagingControlPort) {
+	if (addr == kPagingControlPort && system_memory_get_machine_id() == kSystemSinclairSpectrum128) {
 		memory_paging_bank_switch(value);
 	}
 	else {
