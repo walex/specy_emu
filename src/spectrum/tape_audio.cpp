@@ -21,6 +21,7 @@ public:
 	void reset();
 	bool is_active() const;
 	void is_active(bool value);
+	bool is_playing();
 	uint8_t ear_level() const;
 	void ear_level(uint8_t value);
 	void next();
@@ -230,7 +231,15 @@ bool tape_audio_is_active() {
 	return tape_audio_data.is_active();
 }
 
-_tape_audio_data::_tape_audio_data() : fast_mode(true) {
+bool tape_audio_is_playing() {
+	return tape_audio_data.is_playing();
+}
+
+void tape_audio_reset() {
+	tape_audio_data.reset();
+}
+
+_tape_audio_data::_tape_audio_data() : fast_mode(false) {
 	reset();
 }
 
@@ -252,6 +261,10 @@ bool _tape_audio_data::is_active() const {
 
 void _tape_audio_data::is_active(bool value) {
 	tape_active = value;
+}
+
+bool _tape_audio_data::is_playing() {
+	return (aux != nullptr);
 }
 
 uint8_t _tape_audio_data::ear_level() const {

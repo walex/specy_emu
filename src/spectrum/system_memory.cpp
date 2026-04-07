@@ -123,7 +123,7 @@ void system_memory_end() {
 	system_memory_free();	
 }
 
-void system_memory_configure_interceptors() {
+void system_memory_configure_hooks() {
 	cpu_set_call_interceptor(kLD_BYTES, system_memory_on_rom_call_LD_BYTES);
 }
 

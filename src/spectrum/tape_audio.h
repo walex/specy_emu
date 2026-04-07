@@ -13,4 +13,6 @@ void tape_audio_set_fast_mode(bool value);
 bool tape_audio_get_fast_mode();
 void tape_audio_next_pulses_block();
 uint8_t tape_audio_pulse_step(uint64_t delta_cycles);
+bool tape_audio_is_playing();
+void tape_audio_reset();
 #endif

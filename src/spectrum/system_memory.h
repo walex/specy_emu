@@ -29,7 +29,7 @@ constexpr size_t kRAMSize128 = 128 * 1024;
 
 int system_memory_init(uint32_t machine_id, const char* base_path);
 void system_memory_end();
-void system_memory_configure_interceptors();
+void system_memory_configure_hooks();
 extern "C" {
 	uint8_t* system_memory_get_pointer(uint64_t offset = 0);
 }

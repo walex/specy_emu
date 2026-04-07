@@ -168,7 +168,11 @@ int main(int argc, char* argv[]) {
 		// init z80 cpu
 		cpu_init(system_memory_get_pointer());
 
-		system_memory_configure_interceptors();
+		// configure memoru hooks
+		system_memory_configure_hooks();
+
+		// reset tape audio
+		tape_audio_reset();
 
 		printf("system initialized, starting emulation loop...\n");
 

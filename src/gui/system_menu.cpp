@@ -1,4 +1,5 @@
 #include "system_menu.h"
+#include "ula.h"
 #include "keyboard.h"
 #include "video_render.h"
 #include "clk_master.h"
@@ -37,6 +38,10 @@ void system_menu_switch_cpu_mode() {
 void system_menu_switch_tap_mode() {
 
 	static bool cpu_tap_mode_fast = false;
+	if (tape_audio_is_playing() == true) {
+		video_render_show_message("Specy", "Cannot switch TAP load mode while tape is active");
+		return;
+	}
 	cpu_tap_mode_fast = !cpu_tap_mode_fast;
 	tape_audio_set_fast_mode(cpu_tap_mode_fast);
 	video_render_show_message("Specy", cpu_tap_mode_fast ? "TAP load mode switched to fast" : "CPU speed mode switched to normal");
@@ -95,6 +100,8 @@ bool system_menu_evaluate_keyboard_state(const bool* keys) {
 		command_pending.store(HOST_KEY_CMD_2);
 	else if (keys[HOST_KEY_CMD_3])
 		command_pending.store(HOST_KEY_CMD_3);
+	else if (keys[HOST_KEY_CMD_4])
+		command_pending.store(HOST_KEY_CMD_4);
 	else if (keys[HOST_KEY_CMD_5])
 		command_pending.store(HOST_KEY_CMD_5);
 	else
