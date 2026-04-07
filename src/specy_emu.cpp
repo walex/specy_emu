@@ -151,12 +151,12 @@ int main(int argc, char* argv[]) {
 	// init app gui
 	specy_emu_init_gui();
 
-	static uint32_t machine_id = args.machine_id;
-	bool program_running = true;
-	while (program_running) {
+	uint32_t machine_id = args.machine_id;
+	bool main_program_loop_running = true;
+	while (main_program_loop_running == true) {
 
 		// no loop unless system restart is requested
-		program_running = false;
+		main_program_loop_running = false;
 
 		// init system memory
 		auto roms_dir = get_executable_directory();
@@ -190,9 +190,9 @@ int main(int argc, char* argv[]) {
 			specy_emu_apply_pending_hacks();
 
 			// check for system reset request
-			if (system_reset_requested) {
+			if (system_reset_requested == true) {
 				
-				program_running = true;
+				main_program_loop_running = true;
 				system_reset_requested = false;
 				printf("reboot requested.\nrestarting system...\n");
 				break;
