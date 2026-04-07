@@ -34,10 +34,10 @@ void display_end() {
 	if (display_thread_running.load()) {
 		display_thread_running.store(false);
 		line_drawn_semaphore.release();
-		if (display_thread.joinable())
-			display_thread.join();
 	}
-	
+	if (display_thread.joinable()) {
+		display_thread.join();
+	}	
 }
 
 __inline void display_get_byte_attrib(uint8_t* mem_video, uint8_t* mem_atrib_video, int x, int y, uint8_t& byte, uint8_t& attrib) {

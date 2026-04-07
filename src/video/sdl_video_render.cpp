@@ -58,15 +58,6 @@ SDL_AppResult SDL_AppInit(void** /*appstate*/, int /*argc*/, char* /*argv[]*/ )
     return SDL_APP_CONTINUE;  /* carry on with the program! */
 }
 
-/* This function runs when a new event (mouse input, keypresses, etc) occurs. */
-SDL_AppResult SDL_AppEvent(void* /*appstate*/, SDL_Event* event)
-{
-    if (event->type == SDL_EVENT_QUIT) {
-        return SDL_APP_SUCCESS;  /* end the program, reporting success to the OS. */
-    }
-    return SDL_APP_CONTINUE;  /* carry on with the program! */
-}
-
 /* This function runs once per frame, and is the heart of the program. */
 SDL_AppResult SDL_AppIterate(void* /*appstate*/)
 {
@@ -90,6 +81,18 @@ void SDL_AppQuit(void* /*appstate*/, SDL_AppResult /*result*/)
 {
     SDL_DestroyTexture(texture);
     /* SDL will clean up the window/renderer for us. */
+
+    if (renderer) {
+        SDL_DestroyRenderer(renderer);
+        renderer = nullptr;
+    }
+
+    if (window) {
+        SDL_DestroyWindow(window);
+        window = nullptr;
+    }
+
+    SDL_QuitSubSystem(SDL_INIT_VIDEO);
 }
 
 bool video_render_process() {

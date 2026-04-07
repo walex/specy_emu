@@ -38,6 +38,7 @@ void audio_render_end() {
 	if (audio_stream) {
 		SDL_DestroyAudioStream(audio_stream);
 		SDL_QuitSubSystem(SDL_INIT_AUDIO);
+		audio_stream = nullptr;
 	}
 }
 

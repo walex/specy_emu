@@ -152,7 +152,11 @@ int main(int argc, char* argv[]) {
 	specy_emu_init_gui();
 
 	static uint32_t machine_id = args.machine_id;
-	while (true) {
+	bool program_running = true;
+	while (program_running) {
+
+		// no loop unless system restart is requested
+		program_running = false;
 
 		// init system memory
 		auto roms_dir = get_executable_directory();
@@ -182,13 +186,15 @@ int main(int argc, char* argv[]) {
 			// update gui 
 			specy_emu_gui_update();
 
-			// execute hacks if apply
+			// apply hacks
 			specy_emu_apply_pending_hacks();
 
-			// check if system reset requested
+			// check for system reset request
 			if (system_reset_requested) {
-			
-				printf("reboot requested.\n");
+				
+				program_running = true;
+				system_reset_requested = false;
+				printf("reboot requested.\nrestarting system...\n");
 				break;
 			}
 
@@ -196,6 +202,7 @@ int main(int argc, char* argv[]) {
 			cpu_z80_step(0);
 		}
 
+		// end cpu
 		cpu_end();
 
 		// release ula resources
@@ -204,17 +211,10 @@ int main(int argc, char* argv[]) {
 		// release memory resources
 		system_memory_end();
 
+		// end SDL
+		SDL_Quit();
+
 		printf("system resources released.\n");
-
-		// check if system reset requested
-		if (!system_reset_requested)
-			// stop loop and exit
-			break;
-			
-		// restart loop
-		system_reset_requested = false;
-
-		printf("restarting system...\n");
 	}
 
 	return 0;
