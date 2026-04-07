@@ -15,7 +15,7 @@ void audio_cb(void* userdata, SDL_AudioStream* stream, int additional_amount, in
 
 void audio_render_init(uint32_t sample_rate, audio_render_callback cb) {
 
-	SDL_Init(SDL_INIT_AUDIO);
+	SDL_InitSubSystem(SDL_INIT_AUDIO);
 	SDL_AudioSpec spec;
 	SDL_zero(spec);
 	spec.format = SDL_AUDIO_S16;

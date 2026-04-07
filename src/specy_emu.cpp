@@ -37,8 +37,10 @@
 #include "system_menu.h"
 #include "file_system.h"
 
-static bool force_rtn_on_next_instruction = false;
-static bool system_reset_requested = false;
+static struct specy_emu_settings {
+	bool force_rtn_on_next_instruction = false;
+	bool system_reset_requested = false;
+} specy_settings;
 
 struct cmd_line_args {
 	
@@ -62,7 +64,7 @@ void specy_emu_load_file(const char* path) {
 		[](char c) { return static_cast<char>(std::tolower(static_cast<unsigned char>(c))); });
 
 	if (extension == ".sna") {
-		force_rtn_on_next_instruction = (sna_loader_load_48k(path, system_memory_get_pointer(0x4000)) == 0);
+		specy_settings.force_rtn_on_next_instruction = (sna_loader_load_48k(path, system_memory_get_pointer(0x4000)) == 0);
 		return;
 	}
 
@@ -99,7 +101,7 @@ void specy_emu_init_gui() {
 		}
 	);
 	system_menu_set_callback(kSysMenuSystenResetCallback, [](void* /*params*/ ) {
-		system_reset_requested = true;
+		specy_settings.system_reset_requested = true;
 		}
 	);
 }
@@ -131,8 +133,8 @@ void specy_emu_parse_args(int argc, char* argv[], cmd_line_args& args) {
 
 void specy_emu_apply_pending_hacks() {
 
-	if (force_rtn_on_next_instruction == true) {
-		force_rtn_on_next_instruction = false;
+	if (specy_settings.force_rtn_on_next_instruction == true) {
+		specy_settings.force_rtn_on_next_instruction = false;
 		cpu_z80_step(1);
 	}
 }
@@ -142,7 +144,7 @@ int main(int argc, char* argv[]) {
 	cmd_line_args args;
 
 	Ula_Callbacks ula_callbacks{
-				.ulaKeyboardKeysCallback = specy_emu_evaluate_keys
+		.ulaKeyboardKeysCallback = specy_emu_evaluate_keys
 	};
 
 	// parse command line arguments
@@ -183,17 +185,17 @@ int main(int argc, char* argv[]) {
 		// z80 cpu run loop
 		while (specy_emu_is_running()) {
 
-			// update gui 
+			// update gui
 			specy_emu_gui_update();
 
 			// apply hacks
 			specy_emu_apply_pending_hacks();
 
 			// check for system reset request
-			if (system_reset_requested == true) {
+			if (specy_settings.system_reset_requested == true) {
 				
 				main_program_loop_running = true;
-				system_reset_requested = false;
+				specy_settings.system_reset_requested = false;
 				printf("reboot requested.\nrestarting system...\n");
 				break;
 			}
@@ -210,9 +212,6 @@ int main(int argc, char* argv[]) {
 
 		// release memory resources
 		system_memory_end();
-
-		// end SDL
-		SDL_Quit();
 
 		printf("system resources released.\n");
 	}
