@@ -153,17 +153,17 @@ int main(int argc, char* argv[]) {
 	// init app gui
 	specy_emu_init_gui();
 
-	uint32_t machine_id = args.machine_id;
-	bool main_program_loop_running = true;
-	while (main_program_loop_running == true) {
+	// program loop
+	bool program_running = true;
+	while (program_running == true) {
 
 		// no loop unless system restart is requested
-		main_program_loop_running = false;
+		program_running = false;
 
 		// init system memory
 		auto roms_dir = get_executable_directory();
 		roms_dir = roms_dir.append("roms");
-		if (system_memory_init(machine_id, roms_dir.string().c_str())) {
+		if (system_memory_init(args.machine_id, roms_dir.string().c_str())) {
 			perror("rom init failed");
 			return -1;
 		}
@@ -194,7 +194,7 @@ int main(int argc, char* argv[]) {
 			// check for system reset request
 			if (specy_settings.system_reset_requested == true) {
 				
-				main_program_loop_running = true;
+				program_running = true;
 				specy_settings.system_reset_requested = false;
 				printf("reboot requested.\nrestarting system...\n");
 				break;

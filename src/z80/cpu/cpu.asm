@@ -48,6 +48,15 @@ include opcodesdef.inc
 .code
 
 Z80Init:
+	
+	; preserve stack
+	push rbp
+	mov rbp, rsp
+	push rbx
+	push rsi
+	push rdi
+	sub  rsp, 32
+
    cmp x_c8l, 1
 	jz OpED45
 	mov x_a8l,reg_f_ant
@@ -7200,6 +7209,13 @@ OpFDF9:
 	invoke acumulate_opcode_cycles,10
 	jmp Z80StepEnd
 Z80StepEnd:
+	; restore stack
+	add  rsp, 32
+	pop  rdi
+	pop  rsi
+	pop  rbx
+	pop  rbp
+	; return
 	xor x_ax,x_ax
 	ret
 cpu_z80_step ENDP
