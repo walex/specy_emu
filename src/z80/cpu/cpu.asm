@@ -57,7 +57,7 @@ Z80Init:
 	push rdi
 	sub  rsp, 32
 
-   cmp x_c8l, 1
+	cmp x_c8l, 1
 	jz OpED45
 	mov x_a8l,reg_f_ant
 	mov x_a8h,RegF
@@ -171,7 +171,7 @@ Op0F:
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 Op10:
-   ; DJNZ D cycles: 13/8
+   ; DJNZ e cycles: 13/8
 	invoke inst_DJNZ,memPtr
 	mov x_a16, RegBC
 	shr x_a16,8
@@ -217,7 +217,7 @@ Op17:
 	invoke acumulate_opcode_cycles,4
 	jmp Z80StepEnd
 Op18:
-   ; JR D cycles: 12
+   ; JR e cycles: 12
 	invoke relative_addressing_mode,memPtr
 	SET_WZ_FROM_REG_PC memPtr
 	invoke acumulate_opcode_cycles,12
@@ -1422,7 +1422,7 @@ OpED:
 	IncRegR
 	ProcessNextOpcode _TOpED
 OpED00:
-   ; IN0 B,(N) cycles: 12
+   ; IN B,(N) cycles: 12
 	invoke immediate_addressing_mode,memPtr
 	xor x_bx,x_bx
 	mov x_b8l,[reg_di]
@@ -1431,7 +1431,7 @@ OpED00:
 	invoke acumulate_opcode_cycles,12
 	jmp Z80StepEnd
 OpED01:
-   ; OUT0 (N),B cycles: 13
+   ; OUT (N),B cycles: 13
 	invoke immediate_addressing_mode,memPtr
 	xor x_bx,x_bx
 	mov x_b8l,[reg_di]
@@ -1448,7 +1448,7 @@ OpED08:
 	invoke acumulate_opcode_cycles,12
 	jmp Z80StepEnd
 OpED09:
-   ; OUT0 (N),C cycles: 13
+   ; OUT (N),C cycles: 13
 	invoke immediate_addressing_mode,memPtr
 	xor x_bx,x_bx
 	mov x_b8l,[reg_di]
@@ -1538,7 +1538,7 @@ OpED4B:
 	invoke acumulate_opcode_cycles,20
 	jmp Z80StepEnd
 OpED4C:
-   ; MLT BC cycles: 17
+   ; NEG cycles: 17
 	invoke inst_NEG
 	invoke acumulate_opcode_cycles,17
 	jmp Z80StepEnd
@@ -1550,7 +1550,7 @@ OpED4D:
 	invoke acumulate_opcode_cycles,14
 	jmp Z80StepEnd
 OpED4E:
-   ;ED46E IM 0 8 2
+   ;ED4E IM 0 8 2
 	invoke interrupts_set_im,0
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
@@ -1586,12 +1586,12 @@ OpED53:
 	invoke acumulate_opcode_cycles,20
 	jmp Z80StepEnd
 OpED54:
-   ;ED54 NEG 8 2
+   ;ED54 NEG cycles: 8
 	invoke inst_NEG
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
 OpED55:
-   ;ED55 RETN 14 4
+   ;ED55 RETN cycles: 14
 	invoke inst_RET,memPtr
 	invoke interrupts_restore
 	invoke acumulate_opcode_cycles,14
@@ -1634,7 +1634,7 @@ OpED5B:
 	invoke acumulate_opcode_cycles,20
 	jmp Z80StepEnd
 OpED5C:
-   ; MLT DE cycles: 17
+   ; NEG DE cycles: 17
 	invoke inst_NEG
 	invoke acumulate_opcode_cycles,17
 	jmp Z80StepEnd
@@ -1682,18 +1682,18 @@ OpED63:
 	invoke acumulate_opcode_cycles,20
 	jmp Z80StepEnd
 OpED64:
-   ; TST N cycles: 10
+   ; NEG cycles: 10
 	invoke inst_NEG
 	invoke acumulate_opcode_cycles,10
 	jmp Z80StepEnd
 OpED65:
-   ;ED64 RETN 14 4
+   ;ED65 RETN cycles: 14
 	invoke inst_RET,memPtr
 	invoke interrupts_restore
 	invoke acumulate_opcode_cycles,14
 	jmp Z80StepEnd
 OpED66:
-   ;ED66 IM 0 8 2
+   ;ED66 IM 0 cycles: 8
 	invoke interrupts_set_im,0
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
@@ -1729,18 +1729,18 @@ OpED6B:
 	invoke acumulate_opcode_cycles,20
 	jmp Z80StepEnd
 OpED6C:
-   ; MLT HL cycles: 17
+   ; NEG cycles: 17
 	invoke inst_NEG
 	invoke acumulate_opcode_cycles,17
 	jmp Z80StepEnd
 OpED6D:
-   ;ED6D RETN 14 4
+   ;ED6D RETN cycles: 14
 	invoke inst_RET,memPtr
 	invoke interrupts_restore
 	invoke acumulate_opcode_cycles,14
 	jmp Z80StepEnd
 OpED6E:
-   ;ED6E IM 0 8 2
+   ;ED6E IM 0 cycles: 8
 	invoke interrupts_set_im,0
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
@@ -1776,18 +1776,18 @@ OpED73:
 	invoke acumulate_opcode_cycles,20
 	jmp Z80StepEnd
 OpED74:
-   ; TSTIO N cycles: 12
+   ; NEG cycles: 12
 	invoke inst_NEG
 	invoke acumulate_opcode_cycles,12
 	jmp Z80StepEnd
 OpED75:
-   ;ED75 RETN 14 4
+   ;ED75 RETN cycles: 14
 	invoke inst_RET,memPtr
 	invoke interrupts_restore
 	invoke acumulate_opcode_cycles,14
 	jmp Z80StepEnd
 OpED76:
-   ; SLP cycles: 8
+   ; IM 1 cycles: 8
 	invoke interrupts_set_im,1
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
@@ -1820,18 +1820,18 @@ OpED7B:
 	invoke acumulate_opcode_cycles,20
 	jmp Z80StepEnd
 OpED7C:
-   ; MLT SP cycles: 17
+   ; NEG cycles: 17
 	invoke inst_NEG
 	invoke acumulate_opcode_cycles,17
 	jmp Z80StepEnd
 OpED7D:
-   ;ED7D RETN 14 4
+   ;ED7D RETN cycles: 14
 	invoke inst_RET,memPtr
 	invoke interrupts_restore
 	invoke acumulate_opcode_cycles,14
 	jmp Z80StepEnd
 OpED7E:
-   ;ED7E IM 2 8 2
+   ;ED7E IM 2 cycles: 8
 	invoke interrupts_set_im,2
 	invoke acumulate_opcode_cycles,8
 	jmp Z80StepEnd
@@ -7369,6 +7369,7 @@ cpu_set_register_PC PROC
 cpu_set_register_PC ENDP
 
 cpu_set_register_IFF2 PROC
+	mov IFF2,x_c8l
 	mov IFF2,x_c8l
 	ret
 cpu_set_register_IFF2 ENDP

@@ -28,6 +28,9 @@
 // https://github.com/superzazu/z80/blob/master/z80.c#L256
 // https://skoolkit.ca/disassemblies/
 
+// https://wiki.speccy.org/cursos/ensamblador/rutinas_save_load
+// https://softspectrum48.weebly.com/notes/category/tape-loading
+
 #include "z80.h"
 #include "ula.h"
 #include "system_memory.h"

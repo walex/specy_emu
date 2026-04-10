@@ -1,5 +1,4 @@
 #include "tape_audio.h"
-#include "audio_render.h"
 #include "z80.h"
 #include "system_memory.h"
 #include "tap_loader.h"
@@ -25,7 +24,8 @@ public:
 	uint8_t ear_level() const;
 	void ear_level(uint8_t value);
 	void next();
-	bool load(const char* filename);
+	bool load_tap(const char* filename);
+	bool load_wav(const char* filename);
 	tap_info_head* get_header() const;
 	void add_pulse(tap_info* info, uint64_t& cycles, uint8_t& level);
 	uint8_t next_pulse(uint64_t cycles);
@@ -105,42 +105,46 @@ void tape_audio_set_bytes_from_tap_info(tap_info_head* header) {
 }
 
 void tape_audio_load_wav(const char* filename) {
-	/*
-	uint8_t* wav_buffer;
-	size_t wav_size;
-	int freq;
-	tape_audio_data.reset();
-	audio_render_load_wav(filename, &wav_buffer, wav_size, freq);
-	if (wav_size > 0) {
-		// convert wav to tape pulses
-		uint8_t level = 0;
-		uint64_t cycles = 0;
-		// WAV format: 16bit signed PCM, mono, 44100Hz
-		const uint32_t CYCLES_PER_SAMPLE = Z80_CPU_FREQ_HZ / freq;
-		int16_t* samples = (int16_t*)wav_buffer;
-		size_t sample_count = wav_size / sizeof(int16_t);
-		TapePulsesBlock* tb = new TapePulsesBlock(true);
-		//tape_block_list.push_back(tb);
-		for (size_t i = 0; i < sample_count; i++) {
-			int16_t sample = samples[i];
-			uint8_t sample_level = (sample >= 0) ? 1 : 0;
-			if (sample_level != level) {
-				// level change, add pulse
-				tape_add_pulse(tb->pulses, cycles, CYCLES_PER_SAMPLE, level);
-			}
-			else {
-				// same level, just advance cycles
-				cycles += CYCLES_PER_SAMPLE;
-			}
-		}
-		audio_render_free_wav(wav_buffer);
+
+	if (!tape_audio_data.load_wav(filename)) {
+		printf("Error loading TAP file: %s\n", filename);
+		return;
 	}
-	*/
+
+	tap_info_head* header = tape_audio_data.get_header();
+	if (!header || !header->node) {
+		printf("No WAV info available\n");
+		return;
+	}
+
+	// convert wav to tape pulses
+	uint8_t level = 1;
+	uint64_t cycles = 0;
+	// WAV format: 16bit signed PCM, mono, 44100Hz
+	const uint32_t CYCLES_PER_SAMPLE = Z80_CPU_FREQ_HZ / header->node->freq;
+	int16_t* samples = (int16_t*)((tap_data*)header->node->data)->bytes;
+	size_t wav_size = ((tap_data*)header->node->data)->length;
+	size_t sample_count = wav_size / sizeof(int16_t);
+	auto& block = header->node->pulses;
+	block.start_cycle = cycles;
+	block.sync_cycles = cycles;
+	for (size_t i = 0; i < sample_count; i++) {
+		int16_t sample = samples[i];
+		uint8_t sample_level = (sample >= 0) ? 1 : 0;
+		if (sample_level != level) {
+			// level change, add pulse
+			tape_add_pulse(block.data, cycles, CYCLES_PER_SAMPLE, level);
+		}
+		else {
+			// same level, just advance cycles
+			cycles += CYCLES_PER_SAMPLE;
+		}
+	}
 }
 
 void tape_audio_load_tap(const char* filename) {
 
-	if (!tape_audio_data.load(filename))
+	if (!tape_audio_data.load_tap(filename))
 		printf("Error loading TAP file: %s\n", filename);
 	else
 		tape_audio_set_bytes_from_tap_info(tape_audio_data.get_header());	
@@ -289,11 +293,17 @@ void _tape_audio_data::next() {
 	
 }
 
-bool _tape_audio_data::load(const char* filename) {
+bool _tape_audio_data::load_tap(const char* filename) {
 	this->reset();
-	tap_info_header = tap_loader_info_from_file(filename);
+	tap_info_header = tap_loader_info_from_tap_file(filename);
 	if (tap_info_header && tap_info_header->node)
 		tape_audio_set_bytes_from_tap_info(this->get_header());
+	return (tap_info_header != nullptr);
+}
+
+bool _tape_audio_data::load_wav(const char* filename) {
+	this->reset();
+	tap_info_header = tap_loader_info_from_wav_file(filename);
 	return (tap_info_header != nullptr);
 }
 

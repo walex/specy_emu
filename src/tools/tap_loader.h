@@ -32,20 +32,18 @@ struct tap_pulse_data {
 
 struct tap_pulse_block {
 
-	tap_pulse_block(bool is_continuous = false) {
+	tap_pulse_block() {
 		data.reserve(1024 * 1024);
 		tape_pulse_index = 0;
 		start_cycle = 0;
 		sync_cycles = 0;
 		idx = 0;
-		this->is_continuous = is_continuous;
 	}
 	uint64_t start_cycle;
 	uint64_t sync_cycles;
 	std::vector<tap_pulse_data> data;
 	size_t tape_pulse_index;
 	size_t idx;
-	bool is_continuous = false;
 };
 
 struct tap_header {
@@ -72,10 +70,12 @@ struct tap_info {
 	tap_info* next;
 	tap_pulse_block pulses;
 	size_t index;
+	int freq;
 };
 
 struct tap_info_head {
 
+	bool is_continous;
 	size_t block_count = 0;
 	tap_info* node = nullptr;
 };
@@ -84,7 +84,8 @@ struct tap_info_head {
 #pragma pack(pop)
 #endif
 
-tap_info_head* tap_loader_info_from_file(const char* filename);
+tap_info_head* tap_loader_info_from_tap_file(const char* filename);
+tap_info_head* tap_loader_info_from_wav_file(const char* filename);
 void tap_loader_info_free(tap_info_head* tape);
 void tap_loader_bytes_from_file(const char* filename, uint8_t** buffer_out, size_t* size_out);
 void tap_loader_set_fast_mode(bool enable);

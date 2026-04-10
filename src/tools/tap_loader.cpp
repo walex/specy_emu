@@ -1,5 +1,7 @@
 #include "tap_loader.h"
 #include "tape_audio.h"
+#include "audio_render.h"
+#include "z80.h"
 
 static bool tap_loader_fast_mode = false;
 
@@ -40,11 +42,11 @@ uint8_t* tap_loader_read_data(FILE* f, uint16_t& len) {
 		tap_loader_on_file_error(f, "error reading data type flag");
 		return nullptr;
 	}
-
+	
 	if (data_type_flag != kTapDataBlockId) {
 
 		tap_loader_on_file_error(f, "expected data block");
-		return nullptr;
+		//return nullptr;
 	}
 
 	uint8_t* data = new uint8_t[len]; // data plus flag and crc byte
@@ -64,13 +66,40 @@ uint8_t* tap_loader_read_data(FILE* f, uint16_t& len) {
 	return data;
 }
 
-tap_info_head* tap_loader_info_from_file(const char* filename) {
+tap_info_head* tap_loader_info_from_wav_file(const char* filename) {
+
+	uint8_t* wav_buffer;
+	size_t wav_size;
+	int freq;
+	audio_render_load_wav(filename, &wav_buffer, wav_size, freq);
+	if (wav_size > 0) {
+		tap_info_head* list_head = new tap_info_head();
+		list_head->is_continous = true;
+		tap_data* tdata = new tap_data();
+		tdata->bytes = new uint8_t[wav_size];
+		tdata->length = wav_size; // data plus flag and crc byte
+		tap_info* info = new tap_info(0);
+		info->freq = freq;
+		info->is_header = false;
+		info->data = (uint8_t*)tdata;
+		info->next = nullptr;	
+		list_head->node = info;
+		list_head->block_count = 1;
+		memcpy(tdata->bytes, wav_buffer, wav_size);
+		audio_render_free_wav(wav_buffer);
+		return list_head;
+	}
+	return nullptr;
+}
+
+tap_info_head* tap_loader_info_from_tap_file(const char* filename) {
 
 	size_t block_index = 0;
 	FILE* f = nullptr;
 	fopen_s(&f, filename, "rb");
 	if (!f) return nullptr;
 	tap_info_head* list_head = new tap_info_head();
+	list_head->is_continous = false;
 	uint8_t header_block_info[kTapHeaderBlockSize];
 	tap_info* last = nullptr;
 	while (!feof(f)) {

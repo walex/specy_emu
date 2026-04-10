@@ -1,6 +1,6 @@
 .data
 EXTERNDEF check_contained_memory_c:PROC
-
+EXTERNDEF print_opcode:PROC
 .code
 
 CopyMemToMem8 MACRO org, dest
@@ -569,5 +569,8 @@ ProcessNextOpcode MACRO JumpTable
 	mov x_cx,OFFSET JumpTable   ; Load the base address of the jump table into RBP
 	mov x_bx,[x_cx + x_ax*PTR_SIZE]      ; Load the function address from the table
 	inc RegPC
+	;xor x_cx, x_cx
+	;mov x_c16, x_a16
+	;CALL_C_FUNC print_opcode
 	jmp x_bx
 ENDM

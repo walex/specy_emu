@@ -49,6 +49,13 @@ void ula_end() {
 
 void ula_on_tape_load_block() {
 
+	//uint16_t pc = cpu_get_register16(CPU_REGISTER_PC);
+	//uint16_t af = cpu_get_register16(CPU_REGISTER_AF); // a
+	//uint16_t ix = cpu_get_register16(CPU_REGISTER_IX); // copy addr
+	//uint16_t de = cpu_get_register16(CPU_REGISTER_DE); // copy size
+	//uint16_t hl = cpu_get_register16(CPU_REGISTER_HL); // a
+	//uint8_t a = (uint8_t)(af >> 8); // a == 0 header, a == 0xFF data
+
 	tape_audio_block_sync();
 	printf("ROM requested tape block load, syncing tape audio\n");
 }
