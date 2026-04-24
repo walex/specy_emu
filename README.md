@@ -18,7 +18,7 @@
 - 3. Open visual studio project generated at src/build.
 - 4. Build.
 
-### Emulator command keys
+## Emulator command keys
 
 - F1: Loads tap/wav/sna file into emulator.
 - F2: Save tap/sna from emulator memory.
