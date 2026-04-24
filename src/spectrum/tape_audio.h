@@ -1,7 +1,7 @@
-#ifndef _TAPE_AUDIO_H_
-#define _TAPE_AUDIO_H_
+#ifndef __TAPE_AUDIO_H__
+#define __TAPE_AUDIO_H__
 
-#include "platform.h"
+#include "platform.hpp"
 void tape_audio_block_sync();
 
 uint8_t tape_audio_next_pulse(uint64_t cycles);

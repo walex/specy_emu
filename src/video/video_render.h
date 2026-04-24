@@ -1,7 +1,7 @@
 #ifndef __VIDEO_RENDER_H__
 #define __VIDEO_RENDER_H__
 
-#include "platform.h"
+#include "platform.hpp"
 
 using file_dialog_func_ptr = std::function<void(const char* const*)>;
 

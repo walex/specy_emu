@@ -1,7 +1,7 @@
-#ifndef _KEYBOARD_HPP_
-#define _KEYBOARD_HPP_
+#ifndef __KEYBOARD_HPP__
+#define __KEYBOARD_HPP__
 
-#include "platform.h"
+#include "platform.hpp"
 
 // #ifdef USE_SDL3
 #include "sdl_keyboard.h"

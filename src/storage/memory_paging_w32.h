@@ -1,9 +1,9 @@
 #ifdef WINDOWS_PLATFORM
 
-#ifndef __MEMORY_PAGE_W32__
-#define __MEMORY_PAGE_W32__
+#ifndef __MEMORY_PAGING_W32__
+#define __MEMORY_PAGING_W32__
 
-#include "platform.h"
+#include "platform.hpp"
 
 #if defined(_MSC_VER)
 #pragma comment(lib, "onecore.lib")

@@ -1,7 +1,7 @@
-#ifndef _SPECY_MEM_H_
-#define _SPECY_MEM_H_
+#ifndef __SYSTEM_MEMORY_H__
+#define __SYSTEM_MEMORY_H__
 
-#include "platform.h"
+#include "platform.hpp"
 
 #define MAX_ROM_NAME_SIZE 256
 #define SPECTRUM_48K_ROM_FILE "spec_48.rom"

@@ -1,7 +1,7 @@
-#ifndef _AUDIO_HPP_
-#define _AUDIO_HPP_
+#ifndef __AUDIO_H__
+#define __AUDIO_H__
 
-#include "platform.h"
+#include "platform.hpp"
 
 void audio_init();
 void audio_end();

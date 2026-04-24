@@ -1,7 +1,7 @@
-#ifndef _AUDIO_RENDER_H_
-#define _AUDIO_RENDER_H_
+#ifndef __AUDIO_RENDER_H__
+#define __AUDIO_RENDER_H__
 
-#include "platform.h"
+#include "platform.hpp"
 
 typedef void(*audio_render_callback)(uint8_t* buffer, int len);
 

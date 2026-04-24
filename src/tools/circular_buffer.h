@@ -1,7 +1,7 @@
 #ifndef __CIRCULAR_BUFFER_H__
 #define __CIRCULAR_BUFFER_H__
 
-#include "platform.h"
+#include "platform.hpp"
 
 void circular_buffer_init(size_t size);
 void circular_buffer_end();

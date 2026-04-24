@@ -1,5 +1,5 @@
-#ifndef __Platform_h__
-#define __Platform_h__
+#ifndef __Platform_hpp__
+#define __Platform_hpp__
 
 #ifdef _WIN32
 
@@ -202,12 +202,14 @@ namespace cv {
 };
 #endif
 
+#include <limits>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 #include <stack>
 #include <list>
+#include <queue>
 #include <semaphore>
 #include <mutex>
 #include <chrono>

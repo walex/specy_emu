@@ -1,7 +1,7 @@
-#ifndef _SNA_LOADER_H_
-#define _SNA_LOADER_H_
+#ifndef __SNA_LOADER_H__
+#define __SNA_LOADER_H__
 
-#include "platform.h"
+#include "platform.hpp"
 
 /*
 

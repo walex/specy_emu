@@ -4,7 +4,7 @@
 typedef void* clock_master_handle;
 
 #ifdef __cplusplus
-#include "platform.h"
+#include "platform.hpp"
 using clock_master_clicks_callback_function = std::function<void(uint64_t)>;
 extern "C" {
 	clock_master_handle clk_master_create(const char* name, double frequency_hz);

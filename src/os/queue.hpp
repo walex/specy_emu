@@ -1,9 +1,10 @@
-#pragma once
+#ifndef __QUEUE_HPP__
+#define __QUEUE_HPP__
 
-#include "platform.h"
+#include "platform.hpp"
 
 namespace stdext {
-	template <typename T, int maxElements = std::numeric_limits<int>::max()>
+	template <typename T, int maxElements = (std::numeric_limits<int>::max)()>
 	class Queue : private std::queue<T>
 	{
 	public:
@@ -37,13 +38,10 @@ namespace stdext {
 			}
 			return false;
 		}
-		void drain(std::function<void(T&)> cb) {
-			std::lock_guard lck(mtx);
-			while (this->size() > 0) {
-				auto t = std::move(this->front());
-				reinterpret_cast<std::queue<T>*>(this)->pop();
+		void pop_all(std::function<void(T&)> cb) {
+			T t;
+			while (this->pop(t) == true)
 				cb(t);
-			}
 		}
 		size_t size() {
 			return reinterpret_cast<std::queue<T>*>(this)->size();
@@ -53,3 +51,5 @@ namespace stdext {
 		std::counting_semaphore<maxElements> sem{ 0 };
 	};
 }
+
+#endif

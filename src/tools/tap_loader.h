@@ -1,7 +1,7 @@
-#ifndef _TAP_LOADER_H_
-#define _TAP_LOADER_H_
+#ifndef __TAP_LOADER_H__
+#define __TAP_LOADER_H__
 
-#include "platform.h"
+#include "platform.hpp"
 
 constexpr uint8_t kTapHeaderBlockId = 0;
 constexpr uint8_t kTapDataBlockId = 0xFF;

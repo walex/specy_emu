@@ -1,9 +1,9 @@
-#ifndef _ULA_HPP_
-#define _ULA_HPP_
+#ifndef __ULA_H__
+#define __ULA_H__
 
 #ifdef __cplusplus
 
-#include "platform.h"
+#include "platform.hpp"
 #include "keyboard.h"
 
 struct Ula_Callbacks {

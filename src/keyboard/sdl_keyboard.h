@@ -1,7 +1,7 @@
-#ifndef _SDL_KEYBOARD_H_
-#define _SDL_KEYBOARD_H_
+#ifndef __SDL_KEYBOARD_H__
+#define __SDL_KEYBOARD_H__
 
-#include "platform.h"
+#include "platform.hpp"
 #include <SDL3/SDL.h>
 
 #define HOST_KEY_LCONTROL SDL_SCANCODE_LCTRL

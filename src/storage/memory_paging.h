@@ -1,7 +1,7 @@
-#ifndef __SPECY_MEMORY_H__
-#define __SPECY_MEMORY_H__
+#ifndef __MEMORY_PAGING__
+#define __MEMORY_PAGING__
 
-#include "platform.h"
+#include "platform.hpp"
 
 constexpr uint32_t kBankROMIndex0 = 8;
 constexpr uint32_t kBankROMIndex1 = 9;

@@ -1,7 +1,7 @@
-#ifndef __TIME_H__
-#define __TIME_H__
+#ifndef __TEMPO_H__
+#define __TEMPO_H__
 
-#include "platform.h"
+#include "platform.hpp"
 
 #ifdef ENABLE_TEMPO
 

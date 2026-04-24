@@ -1,7 +1,7 @@
-#ifndef __SYSTEM_MENU_H_
-#define __SYSTEM_MENU_H_
+#ifndef __SYSTEM_MENU_H__
+#define __SYSTEM_MENU_H__
 
-#include "platform.h"
+#include "platform.hpp"
 
 using SystemMenuCallback = void(*)(void*);
 const uint32_t kSysMenuOpenFileCallback = 1;

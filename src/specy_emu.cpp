@@ -39,6 +39,7 @@
 #include "sna_loader.h"
 #include "system_menu.h"
 #include "file_system.h"
+#include "queue.hpp"
 
 static struct specy_emu_settings {
 	bool force_rtn_on_next_instruction = false;
@@ -130,7 +131,7 @@ void specy_emu_parse_args(int argc, char* argv[], cmd_line_args& args) {
 		}
 	}
 	else {
-		args.machine_id = kSystemSinclairSpectrum48;
+		args.machine_id = kSystemTK95;
 	}
 }
 
@@ -167,7 +168,7 @@ int main(int argc, char* argv[]) {
 		auto roms_dir = get_executable_directory();
 		roms_dir = roms_dir.append("roms");
 		if (system_memory_init(args.machine_id, roms_dir.string().c_str())) {
-			perror("rom init failed");
+			perror("rom init failed.");
 			return -1;
 		}
 
@@ -203,7 +204,7 @@ int main(int argc, char* argv[]) {
 				break;
 			}
 
-			// execcute next cpu instruction
+			// execute next cpu instruction
 			cpu_z80_step(0);
 		}
 
@@ -218,6 +219,6 @@ int main(int argc, char* argv[]) {
 
 		printf("system resources released.\n");
 	}
-
+	printf("bye.");
 	return 0;
 }
