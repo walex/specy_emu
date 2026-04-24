@@ -2,9 +2,9 @@
 
 ------
 
-## Prerequisites
+## Windows
 
-### Windows
+### Prerequisites
 
 - CMake 3.10 or higher.
 - Python 3.
