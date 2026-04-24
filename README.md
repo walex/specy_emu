@@ -10,7 +10,7 @@
 - Python 3.
 - Visual Studio 2026 (Community, Professional or Enterprise).
 
-#### Compile
+### Compile
 
 - 1. Execute "x64 Native Tools Command Prompt for VS" from start menu.
 - 2. Inside command prompt go to repos's src folder.
@@ -18,7 +18,7 @@
 - 3. Open visual studio project generated at src/build.
 - 4. Build.
 
-#### Emulator command keys
+### Emulator command keys
 
 - F1: Loads tap/wav/sna file into emulator.
 - F2: Save tap/sna from emulator memory.
